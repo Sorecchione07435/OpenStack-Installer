@@ -1,23 +1,18 @@
-# Bytecode Python
-__pycache__/
-*.pyc
+
+**/__pycache__/
+**/*.pyc
 *.pyo
 *.pyd
 
-# Environment
 venv/
 .env/
 
-# VS Code
 .vscode/
 *.code-workspace
 
-# Logs
 *.log
 
-# Config locali
 *.conf
 
-# OS files
 .DS_Store
 Thumbs.db
