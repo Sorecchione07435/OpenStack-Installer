@@ -1,9 +1,9 @@
 # Configure the Compute service (Nova)
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import os
@@ -14,11 +14,8 @@ def install_pkgs():
 
     packages = ["nova-api", "nova-conductor", "nova-novncproxy", "nova-scheduler"]
 
-    success =  apt_install(packages, ux_text=f"Installing Nova packages...")
+    if not apt_install(packages, ux_text=f"Installing Nova packages...") : return False
 
-    if not success:
-            return False
-    
     return True
 
 def conf_nova(config):
@@ -97,25 +94,21 @@ def conf_nova(config):
 
     print()
 
-    if not api_db_migration_cmd_result:
-         return False
+    if not api_db_migration_cmd_result: return False
     
     register_cell0_migration_cmd_result = run_command(register_cell0_migration_cmd, "Registering Nova cell0 in the database...")
 
-    if not register_cell0_migration_cmd_result:
-         return False
+    if not register_cell0_migration_cmd_result: return False
     
     create_cell1_migration_cmd_result = run_command(create_cell1_migration_cmd, "Creating initial Nova cell1 for VM scheduling...", ignore_exit_codes=[2])
 
-    if not create_cell1_migration_cmd_result:
-         return False
+    if not create_cell1_migration_cmd_result: return False
     
     print()
     
     db_migration_cmd_result = run_command(db_migration_cmd, "Running Nova DB Migrations...")
 
-    if not db_migration_cmd_result:
-        return False
+    if not db_migration_cmd_result: return False
     
     return True
 
@@ -123,8 +116,7 @@ def finalize():
      
     print()
 
-    if not run_command(["systemctl", "restart", "nova-api", "nova-scheduler", "nova-conductor", "nova-novncproxy"], "Restarting Nova services..."):
-        return False
+    if not run_command(["systemctl", "restart", "nova-api", "nova-scheduler", "nova-conductor", "nova-novncproxy"], "Restarting Nova services..."): return False
     
     return True
 
@@ -155,25 +147,20 @@ def add_default_keypair(config):
     create_cmd = ["openstack", "keypair", "create", key_name, "--private-key", key_file]
     success = run_command(create_cmd, "Creating default keypair...")
 
-    if not success:
-        return False
+    if not success: return False
 
     print(f"{colors.YELLOW}Keypair '{key_name}' created and saved to {key_file}.{colors.RESET}")
     return True
 
 def run_setup_nova(config):
      
-     if not install_pkgs():
-        return False
+     if not install_pkgs(): return False
      
-     if not conf_nova(config):
-        return False
+     if not conf_nova(config): return False
      
-     if not finalize():
-        return False
+     if not finalize(): return False
      
-     if not add_default_keypair(config):
-         return False
+     if not add_default_keypair(config): return False
      
      print(f"\n{colors.GREEN}Nova configured successfully!{colors.RESET}\n")
      return True

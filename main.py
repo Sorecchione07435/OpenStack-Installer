@@ -5,11 +5,11 @@ import shutil
 import sys
 
 from .deploy import deploy
-from .utils import colors
-from .utils.net_utils import get_active_interface, get_network_info, get_default_interface_ip
-from .generate_allinone_conf import generate_config_file, config_openstack, get_config_file_path
-from .utils.check_deployment import check_deployment, check_env_variables
-from .utils.launch_instance import launch
+from .utils.core import colors
+from .utils.network.net_utils import get_active_interface, get_network_info, get_default_interface_ip
+from .config_manager import generate_config_file, config_openstack, get_config_file_path
+from .utils.tasks.check_deployment import check_deployment, check_env_variables
+from .utils.tasks.launch_instance import launch
 
 def print_banner():
     print(f"{colors.BRIGHT_BLUE}Welcome to Debian OpenStack Installer Utility{colors.RESET}\n")

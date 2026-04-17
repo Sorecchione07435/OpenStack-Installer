@@ -1,9 +1,9 @@
 # Configure the Networking service (Neutron) with OVS bridges
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import os
@@ -12,7 +12,7 @@ import shutil
 import json
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-openvswitch_interfaces_template_file = os.path.join(BASE_DIR, "templates/openvswitch_interfaces.tpl")
+openvswitch_bridges_interfaces_template_file = os.path.join(BASE_DIR, "templates/openvswitch_bridges_interfaces.tpl")
 
 neutron_conf="/etc/neutron/neutron.conf"
 conf_ml2="/etc/neutron/plugins/ml2/ml2_conf.ini"
@@ -26,13 +26,10 @@ def install_pkgs():
 
     apt_update()
 
-    packages = ["neutron-server", "neutron-plugin-ml2", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "openvswitch-switch"]
+    openvswitch_packages = ["neutron-server", "neutron-plugin-ml2", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "openvswitch-switch"]
 
-    success =  apt_install(packages, ux_text=f"Installing Neutron packages...")
+    if not apt_install(openvswitch_packages, ux_text=f"Installing Neutron packages...") : return False
 
-    if not success:
-            return False
-    
     return True
 
 def conf_openvswitch_bridges(config):
@@ -88,21 +85,22 @@ def conf_openvswitch_bridges(config):
 
     print()
 
-    with open(openvswitch_interfaces_template_file, "r") as f:
+    with open(openvswitch_bridges_interfaces_template_file, "r") as f:
         template = f.read()
 
     bridges_interfaces_content = template.format(
-    public_iface=public_iface,
-    public_bridge=public_bridge,
-    ip_address=ip_address,
-    ip_address_netmask=ip_address_netmask,
-    subnet_address_gateway=subnet_address_gateway,
-    subnet_address_dns_servers=subnet_address_dns_servers,
-    internal_bridge=internal_bridge
-)
+        public_iface=public_iface,
+        public_bridge=public_bridge,
+        ip_address=ip_address,
+        ip_address_netmask=ip_address_netmask,
+        subnet_address_gateway=subnet_address_gateway,
+        subnet_address_dns_servers=subnet_address_dns_servers,
+        internal_bridge=internal_bridge
+    )
+
     with open(INTERFACES_FILE, "w") as f:
-        f.write(bridges_interfaces_content)
-    
+     f.write(bridges_interfaces_content)
+        
     interfaces_dir = "/etc/network/interfaces.d/"
     backup_dir = "/root/net-backup"
     os.makedirs(backup_dir, exist_ok=True)
@@ -144,8 +142,7 @@ def conf_openvswitch_bridges(config):
 
     full_networking_restart_cmds_result = run_command(["bash", "-c", full_networking_restart_cmds], "Restarting Networking service...")
 
-    if not full_networking_restart_cmds_result:
-         return False
+    if not full_networking_restart_cmds_result: return False
 
     return True
 
@@ -234,27 +231,19 @@ def conf_neutron(config):
     "neutron-db-manage", "--config-file", neutron_conf,  "--config-file", conf_ml2, "upgrade", "head"
 ]
     
-    neutron_db_migration_cmd_result = run_command(neutron_db_migration_cmd, "Running Neutron DB Migrations...")
+    if not run_command(neutron_db_migration_cmd, "Running Neutron DB Migrations...") : return False
 
-    if not neutron_db_migration_cmd_result:
-         return False
-    
     return True
 
 def finalize():
            
     print()
 
-    if not run_command(["systemctl", "restart", "nova-api"], "Restarting Nova API service...", False, None, 3, 5):
-        return False
+    if not run_command(["systemctl", "restart", "nova-api"], "Restarting Nova API service...", False, None, 3, 5): return False
     
-    if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron services...", False, None, 3, 5):
-        return False
-        #run_sync_command_with_retry(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], 5, 5)
-    
+    if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron services...", False, None, 3, 5): return False
+
     return True
-
-
 
 def create_networks(config):
      
@@ -383,22 +372,16 @@ def run_setup_neutron(config):
      
      config_openvswitch_bridges = get(config, "bridge.CREATE_BRIDGES", "no") == "yes"
 
-     if not install_pkgs():
-          return False
+     if not install_pkgs(): return False
      
      if config_openvswitch_bridges:
-        if not conf_openvswitch_bridges(config):
-            return False
+        if not conf_openvswitch_bridges(config) : return False
         
-     if not conf_neutron(config):
-          return False
+     if not conf_neutron(config) : return False
      
-     if not finalize():
-          return False
+     if not finalize() : return False
      
-     if not create_networks(config):
-          return False
+     if not create_networks(config): return False
      
      print(f"\n{colors.GREEN}Neutron configured successfully!{colors.RESET}\n")
-
      return True

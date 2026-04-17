@@ -1,5 +1,5 @@
 import subprocess
-from .spinner import Spinner
+from ..core.spinner import Spinner
 from ..utils import colors
 
 def run_command(command, message="Processing", width=60):

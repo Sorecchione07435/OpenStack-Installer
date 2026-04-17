@@ -1,9 +1,9 @@
 # Configure the Placement service (Placement)
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 placement_conf = "/etc/placement/placement.conf"
@@ -12,10 +12,7 @@ def install_pkgs():
 
     packages = ["placement-api"]
 
-    success =  apt_install(packages, ux_text=f"Installing Placement package...")
-
-    if not success:
-            return False
+    if not apt_install(packages, ux_text=f"Installing Placement package..."): return False
     
     return True
 
@@ -44,10 +41,7 @@ def conf_placement(config):
     "sudo", "-u", "placement",
     "placement-manage", "db", "sync"
 ]
-    migration_result = run_command(db_migration_cmd, "Running Placement DB Migrations...")
-
-    if not migration_result:
-        return False
+    if not run_command(db_migration_cmd, "Running Placement DB Migrations...") : return False
     
     return True
 
@@ -55,21 +49,17 @@ def finalize():
      
     print()
 
-    if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."):
-        return False
+    if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."): return False
     
     return True
 
 def run_setup_placement(config):
      
-     if not install_pkgs():
-          return False
+     if not install_pkgs(): return False
      
-     if not conf_placement(config):
-          return False
+     if not conf_placement(config): return False
      
-     if not finalize():
-          return False
+     if not finalize(): return False
      
      print(f"\n{colors.GREEN}Placement configured successfully!{colors.RESET}\n")
      return True

@@ -57,12 +57,11 @@ def run_command(
 
             # Se non è l'ultimo tentativo → retry
             if attempt < retries:
-                spinner.stop("RETRY", color="yellow", witdth=80)
+                spinner.stop("RETRY", color="yellow", width=80)
                 time.sleep(delay)
                 attempt += 1
                 continue
 
-            # Ultimo tentativo fallito
             if ignore_errors:
                 spinner.stop("WARNING", color="green")
                 print(f"{colors.GREEN}A command failed but was ignored as non-critical{colors.RESET}\n")

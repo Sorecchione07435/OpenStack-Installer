@@ -1,9 +1,9 @@
 # Configure the Block Storage service (Cinder)
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import pwd
@@ -42,10 +42,7 @@ def install_pkgs():
 
     packages = ["cinder-scheduler", "cinder-api", "cinder-volume", "tgt"]
 
-    success =  apt_install(packages, ux_text=f"Installing Cinder packages...")
-
-    if not success:
-            return False
+    if not apt_install(packages, ux_text=f"Installing Cinder packages...") : return False
     
     return True
 
@@ -70,11 +67,9 @@ def conf_lvm(config):
 
          fallocate_cmd_result = run_command(fallocate_cmd, "Allocating LVM Disk Image...")
 
-         if not fallocate_cmd_result:
-              return False
+         if not fallocate_cmd_result: return False
          
-         if not ensure_system_user_with_run_command("cinder"):
-              return False
+         if not ensure_system_user_with_run_command("cinder"): return False
          
          uid = pwd.getpwnam("cinder").pw_uid
          gid = grp.getgrnam("cinder").gr_gid
@@ -86,8 +81,7 @@ def conf_lvm(config):
        if not run_command(
             ["losetup", lvm_loop_dev, lvm_image_file_path],
             message=f"Associating {lvm_image_file_path} to {lvm_loop_dev}"
-        ):
-           return False
+        ): return False
     
     check_cmd = ["pvs"]
     pvs_result = run_command_sync(
@@ -103,8 +97,7 @@ def conf_lvm(config):
        if not  run_command(
             ["pvcreate", lvm_loop_dev],
             message=f"Creating physical volume on {lvm_loop_dev}"
-        ):
-           return False
+        ): return False
     
     try:
         output = subprocess.check_output(["vgs"], text=True)
@@ -115,8 +108,7 @@ def conf_lvm(config):
         if not run_command(
             ["vgcreate", VG_NAME, lvm_loop_dev],
             message=f"Creating volume group {VG_NAME}"
-        ):
-            return False
+        ): return False
     
     with open(cinder_conf_path, "w") as fconf:
         fconf.write(line)
@@ -158,8 +150,7 @@ WantedBy=multi-user.target
     with open(SERVICE_PATH, "w") as f:
         f.write(service_content)
 
-    if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."):
-        return False
+    if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): return False
 
     return True
 
@@ -206,8 +197,7 @@ def conf_cinder(config):
 ]
     migration_result = run_command(db_migration_cmd, "Running Cinder DB Migrations...")
 
-    if not migration_result:
-        return False
+    if not migration_result: return False
     
     return True
 
@@ -215,27 +205,21 @@ def finalize():
 
     print()
 
-    if not run_command(["systemctl", "restart", "cinder-scheduler", "cinder-volume", "apache2", "tgt"], "Restarting Cinder services...", False, None, 3, 5):
-       return False
+    if not run_command(["systemctl", "restart", "cinder-scheduler", "cinder-volume", "apache2", "tgt"], "Restarting Cinder services...", False, None, 3, 5): return False
     
     return True
 
 def run_setup_cinder(config):
 
-    if not install_pkgs():
-        return False
+    if not install_pkgs(): return False
     
-    if not conf_lvm(config):
-        return False
+    if not conf_lvm(config): return False
     
-    if not setup_loopback_service(config):
-        return False
+    if not setup_loopback_service(config): return False
     
-    if not conf_cinder(config):
-        return False
+    if not conf_cinder(config): return False
     
-    if not finalize():
-        return False
+    if not finalize(): return False
     
     print(f"\n{colors.GREEN}Cinder configured successfully!{colors.RESET}\n")
     return True

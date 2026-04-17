@@ -8,7 +8,7 @@ import shutil
 import base64
 from pathlib import Path
 
-from . import colors
+from .. import colors
 
 logger = logging.getLogger(__name__)
 

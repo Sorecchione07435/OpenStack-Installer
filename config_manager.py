@@ -3,9 +3,9 @@ import shutil
 import uuid
 import yaml
 from dotenv import dotenv_values
-from .utils.net_utils import get_network_info
-from .utils.conf_utils import has_hw_virtualization, get_free_loop, generate_password
-from .utils.config_parser import set
+from .utils.network.net_utils import get_network_info
+from .utils.core.system_utils import has_hw_virtualization, get_free_loop, generate_password
+from .utils.config.parser import set
 
 import ipaddress
 
@@ -63,6 +63,7 @@ def config_openstack(lvm_image_size_in_gb=None):
     config_dict["public_network"]["PUBLIC_SUBNET_GATEWAY"] = gateway
     config_dict["public_network"]["PUBLIC_SUBNET_DNS_SERVERS"] = "8.8.8.8"
 
+    config_dict["bridge"]["CREATE_BRIDGES"] = "yes"
     config_dict["bridge"]["PUBLIC_BRIDGE_INTERFACE"] = iface
 
     config_dict["cinder"]["INSTALL_CINDER"] = "yes"

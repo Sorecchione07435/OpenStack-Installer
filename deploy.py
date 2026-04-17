@@ -1,9 +1,9 @@
-from .utils.apt_utils import apt_update, apt_install
-from .utils.config_parser import parse_config, get, to_bool
-from .utils.config_parser import parse_config, get, resolve_vars
+from .utils.apt.apt import apt_update, apt_install
+from .utils.config.parser import parse_config, get, to_bool
+from .utils.config.parser import parse_config, get, resolve_vars
 from .utils import colors
-from .utils.conf_utils import has_hw_virtualization
-from .utils.net_utils import get_active_interface
+from .utils.core.system_utils import has_hw_virtualization
+from .utils.network.net_utils import get_active_interface
 
 from .services.prereqs import run_setup_prereqs
 from .services.mariadb import run_setup_mariadb
@@ -53,45 +53,35 @@ def deploy(config_file):
     print("OpenStack Deployment Started\n")
     
     print("Setting up prerequirements... \n")
-    if not run_setup_prereqs(config):
-        return False
+    if not run_setup_prereqs(config):  return False
 
     print("Setting up MariaDB... \n")
-    if not run_setup_mariadb(config):
-        return False
+    if not run_setup_mariadb(config): return False
 
     print("Setting up Keystone... \n")
-    if not run_setup_keystone(config):
-        return False
+    if not run_setup_keystone(config): return False
 
     print("Setting up Glance... \n")
-    if not run_setup_glance(config):
-        return False
+    if not run_setup_glance(config): return False
     
     if install_cinder:
         print("Setting up Cinder... \n")
-        if not run_setup_cinder(config):
-            return False
+        if not run_setup_cinder(config): return False
         
     print("Setting up Placement... \n")
-    if not run_setup_placement(config):
-        return False
+    if not run_setup_placement(config): return False
     
     print("Setting up Nova... \n")
-    if not run_setup_nova(config):
-        return False
+    if not run_setup_nova(config): return False
     
     print("Setting up a Compute Node... \n")
-    if not run_setup_nova_compute(config):
-        return False
+    if not run_setup_nova_compute(config): return False
 
     print("Setting up Neutron... \n")
-    if not run_setup_neutron(config):
-        return False
+    if not run_setup_neutron(config): return False
     
     print("Setting up Horizon...\n")
-    if not run_setup_horizon(config):
-        return False
+    if not run_setup_horizon(config): return False
     
     print(f"\n*** {colors.GREEN}OpenStack Deployment Completed Successfully!{colors.RESET} ***")
 

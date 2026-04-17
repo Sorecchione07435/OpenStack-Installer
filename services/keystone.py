@@ -1,9 +1,9 @@
 # Configure the Identity service (Keystone)
 
-from ..utils.run_command_utils import run_command
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import os
@@ -15,9 +15,8 @@ def install_pkgs():
 
     packages = ["keystone", "apache2"]
 
-    success =  apt_install(packages, ux_text=f"Installing Keystone packages...")
-    if not success:
-            return False
+    if not apt_install(packages, ux_text=f"Installing Keystone packages...") : return False
+
     return True
 
 def conf_keystone(config):
@@ -84,10 +83,8 @@ def finalize():
     message = f"Restarting Apache2..."
     restart_cmd = ["systemctl", "restart", "apache2"]
 
-    result = run_command(restart_cmd, message)
+    if not  run_command(restart_cmd, message) : return False
 
-    if not result:
-            return False
     return True
     
 def create_projects_and_demo_user(config):
@@ -111,8 +108,7 @@ def create_projects_and_demo_user(config):
 
     create_service_project_cmd_result = run_command(create_service_project_cmd, "Creating service project...")
 
-    if not create_service_project_cmd_result:
-         return False
+    if not create_service_project_cmd_result: return False
     
     create_demo_user_cmds = [""
         'openstack project create --domain default --description "Demo Project" demo --or-show',
@@ -125,8 +121,7 @@ def create_projects_and_demo_user(config):
     
     full_create_demo_user_cmds_result = run_command(["bash", "-c", full_create_demo_user_cmds], "Creating User role and demo user...")
 
-    if not full_create_demo_user_cmds_result:
-         return False
+    if not full_create_demo_user_cmds_result: return False
     
     return True
 
@@ -168,18 +163,16 @@ def create_services_users(config):
 
     full_services_user_create_cmds_result = run_command(["bash", "-c", full_services_user_create_cmds], "Creating Services Users...")
 
-    if not full_services_user_create_cmds_result:
-        return False
+    if not full_services_user_create_cmds_result: return False
     
     full_services_create_cmds_result = run_command(["bash", "-c", full_services_create_cmds], "Creating Services...")
 
-    if not full_services_create_cmds_result:
-        return False
+    if not full_services_create_cmds_result: return False
     
     full_services_role_add_cmds_result = run_command(["bash", "-c", full_services_role_add_cmds], "Adding Service User Roles...")
     
-    if not full_services_role_add_cmds_result:
-         return False
+    if not full_services_role_add_cmds_result: return False
+
     return True
 
 def create_services_endpoints(config):
@@ -229,10 +222,7 @@ def create_services_endpoints(config):
 
     full_cmd = " ; ".join(services_endpoints_create_cmds)
 
-    result = run_command(["bash", "-c", full_cmd], "Creating Services Endpoints...")
-
-    if not result:
-         return False
+    if not run_command(["bash", "-c", full_cmd], "Creating Services Endpoints...") : return False
 
     return True
 
@@ -280,26 +270,19 @@ export OS_IMAGE_API_VERSION=2
 
 def run_setup_keystone(config):
 
-    if not install_pkgs():
-         return False
+    if not install_pkgs(): return False
     
-    if not conf_keystone(config):
-        return False
+    if not conf_keystone(config): return False
     
-    if not finalize():
-         return False
+    if not finalize(): return False
     
-    if not create_projects_and_demo_user(config):
-         return False
+    if not create_projects_and_demo_user(config): return False
     
-    if not create_services_users(config):
-         return False
+    if not create_services_users(config): return False
     
-    if not create_services_endpoints(config):
-         return False
+    if not create_services_endpoints(config): return False
     
-    if not generate_environment_cli_scripts(config):
-         return False
+    if not generate_environment_cli_scripts(config): return False
     
     print(f"\n{colors.GREEN}Keystone configured successfully!{colors.RESET}\n")
     return True

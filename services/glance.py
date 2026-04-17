@@ -1,9 +1,9 @@
 # Configure the Image service (Glance)
 
-from ..utils.run_command_utils import run_command, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import urllib.request
@@ -17,10 +17,8 @@ def install_pkgs():
 
     packages = ["glance-api"]
 
-    success =  apt_install(packages, ux_text=f"Installing Glance package...")
+    if not apt_install(packages, ux_text=f"Installing Glance package..."): return False
 
-    if not success:
-            return False
     return True
 
 def conf_glance(config):
@@ -60,11 +58,8 @@ def conf_glance(config):
 def finalize():
     restart_cmd = ["systemctl", "restart", "glance-api"]
 
-    result = run_command_sync(restart_cmd)
+    if not run_command_sync(restart_cmd) : return False
 
-    if not result:
-            return False
-    
     return True
 
 def upload_cirros_image(config):
@@ -87,10 +82,7 @@ def upload_cirros_image(config):
     image_name = "cirros"
     image_file_path = "/tmp/cirros-0.4.0-x86_64-disk.img"
     
-    download_result = run_command_sync([ "wget", "-O", image_file_path, cirros_image_url])
-
-    if not download_result:
-        return False
+    if not run_command_sync([ "wget", "-O", image_file_path, cirros_image_url]) : return False
     
     run_command_sync(["openstack", "image", "delete", "cirros"])
 
@@ -105,8 +97,7 @@ def upload_cirros_image(config):
 
     create_image_result = run_command(create_cirros_image_cmd, f"Adding cirros image...")
 
-    if not create_image_result:
-        return False
+    if not create_image_result : return False
     
     os.remove(image_file_path)
 
@@ -115,17 +106,13 @@ def upload_cirros_image(config):
     
 def run_setup_glance(config):
      
-     if not install_pkgs():
-        return False
+     if not install_pkgs(): return False
      
-     if not conf_glance(config):
-        return False
+     if not conf_glance(config): return False
      
-     if not finalize():
-        return False
+     if not finalize(): return False
      
-     if not upload_cirros_image(config):
-        return False
+     if not upload_cirros_image(config): return False
 
      print(f"\n{colors.GREEN}Glance configured successfully!{colors.RESET}\n")
      return True

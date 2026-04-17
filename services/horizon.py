@@ -1,9 +1,9 @@
 # Configure the Dashboard (Horizon)
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import os
@@ -14,10 +14,11 @@ apache_conf = "/etc/apache2/conf-enabled/openstack-dashboard.conf"
 
 def install_pkgs():
     apt_update()
+
     packages = ["openstack-dashboard"]
-    success = apt_install(packages, ux_text=f"Installing OpenStack Dashboard package...")
-    if not success:
-        return False
+    
+    if not apt_install(packages, ux_text=f"Installing OpenStack Dashboard package...") : return False
+
     return True
 
 def set_memcached(settings_file="/etc/openstack-dashboard/local_settings.py", host="127.0.0.1", port=11211):
@@ -107,19 +108,18 @@ Alias /dashboard/static /var/lib/openstack-dashboard/static/
 
 def finalize():
     print()
-    if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."):
-        return False
+
+    if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."): return False
     
     return True
 
 def run_setup_horizon(config):
-    if not install_pkgs():
-        return False
+
+    if not install_pkgs(): return False
 
     conf_horizon(config)
 
-    if not finalize():
-        return False
+    if not finalize(): return False
 
     print(f"\n{colors.GREEN}Horizon configured successfully!{colors.RESET}")
     return True

@@ -1,9 +1,9 @@
 # Configure an Compute Node
 
-from ..utils.run_command_utils import run_command, run_sync_command_with_retry, run_command_sync
-from ..utils.apt_utils import apt_install, apt_update
-from ..utils.config_parser import parse_config, get, resolve_vars
-from ..utils.config_ini_set import set_conf_option
+from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync
+from ..utils.apt.apt import apt_install, apt_update
+from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.config.setter import set_conf_option
 from ..utils import colors
 
 import os
@@ -15,11 +15,8 @@ def install_pkgs():
 
     packages = ["nova-compute"]
 
-    success =  apt_install(packages, ux_text=f"Installing Nova Compute package...")
+    if not apt_install(packages, ux_text=f"Installing Nova Compute package...") : return False
 
-    if not success:
-            return False
-    
     return True
 
 def conf_nova_compute(config):
@@ -34,10 +31,8 @@ def finalize():
 
     print()
 
-    if not run_command(["systemctl", "restart", "nova-api", "nova-scheduler", "nova-compute", "apache2"], "Restarting Nova Compute services..."):
-        return False
+    if not run_command(["systemctl", "restart", "nova-api", "nova-scheduler", "nova-compute", "apache2"], "Restarting Nova Compute services..."): return False
     
- 
     cell_discover_hosts_migration_cmd = [
     "sudo", "-u", "nova",
     "nova-manage", "cell_v2", "discover_hosts", "--verbose"
@@ -45,8 +40,7 @@ def finalize():
     
     cell_discover_hosts_migration_cmd_result = run_command(cell_discover_hosts_migration_cmd, "Discovering the Compute Node on Cell0...")
 
-    if not cell_discover_hosts_migration_cmd_result:
-        return False
+    if not cell_discover_hosts_migration_cmd_result: return False
 
     return True
 
@@ -86,16 +80,13 @@ def create_default_flavors(config):
     
 def run_setup_nova_compute(config):
      
-     if not install_pkgs():
-        return False
+     if not install_pkgs(): return False
      
      conf_nova_compute(config)
      
-     if not finalize():
-        return False
+     if not finalize(): return False
      
-     if not create_default_flavors(config):
-        return False
+     if not create_default_flavors(config): return False
      
      print(f"\n{colors.GREEN}Compute Node configured successfully!{colors.RESET}\n")
      return True
