@@ -1,7 +1,10 @@
 import subprocess
 import os
 import logging
+import time
 from dataclasses import dataclass, field
+
+MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 #logger = logging.get#logger(__name__)
@@ -74,7 +77,6 @@ def check_deployment(include_endpoints: bool = True):
         ], os.path.isfile),
     ]
 
-    # 👇 SOLO se richiesto
     if include_endpoints:
         checks.append(
             ("Endpoints", ["identity", "compute", "image", "network", "volumev3"], check_endpoint)
@@ -116,9 +118,9 @@ def check_env_variables():
         error_msg = []
 
         if missing:
-            error_msg.append(f"Variabili mancanti: {', '.join(missing)}")
+            error_msg.append(f"Missing vars: {', '.join(missing)}")
         if empty:
-            error_msg.append(f"Variabili vuote: {', '.join(empty)}")
+            error_msg.append(f"Empty vars: {', '.join(empty)}")
 
         raise RuntimeError(" | ".join(error_msg))
 
@@ -128,12 +130,10 @@ if __name__ == "__main__":
     print(outcome)
 
     if not outcome.ok:
-        print("\n❌ Problemi nella configurazione base. Skip controllo OpenStack.")
         exit(1)
 
     try:
         check_env_variables()
-        logging.info("Variabili d'ambiente OK")
     except RuntimeError as e:
         logging.error(f"Errore variabili d'ambiente: {e}")
         exit(1)
@@ -142,3 +142,9 @@ if __name__ == "__main__":
     print(endpoint_result)
 
     exit(0 if endpoint_result.ok else 1)
+
+
+def mark_deployment_complete():
+    os.makedirs(os.path.dirname(MARKER_FILE), exist_ok=True)
+    with open(MARKER_FILE, "w") as f:
+        f.write(f"Deployment completed at {time.ctime()}\n")

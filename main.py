@@ -3,17 +3,17 @@ import ipaddress
 import os
 import shutil
 import sys
+import uuid
 
 from .deploy import deploy
 from .utils.core import colors
 from .utils.network.net_utils import get_active_interface, get_network_info, get_default_interface_ip
-from .config_manager import generate_config_file, config_openstack, get_config_file_path
-from .utils.tasks.check_deployment import check_deployment, check_env_variables
+from .config_manager import generate_config_file, config_openstack
+from .utils.tasks.check_deployment import check_deployment, check_env_variables, MARKER_FILE
 from .utils.tasks.launch_instance import launch
 
 def print_banner():
     print(f"{colors.BRIGHT_BLUE}Welcome to Debian OpenStack Installer Utility{colors.RESET}\n")
-
 
 def build_parser() -> argparse.ArgumentParser:
 
@@ -30,37 +30,43 @@ def build_parser() -> argparse.ArgumentParser:
         required=True
     )
 
-    # deploy-allinone
-    deploy_allinone_p = sub.add_parser(
-        "deploy-allinone",
-        help="Deploy a full OpenStack all-in-one"
+    # deploy
+    deploy_p = sub.add_parser(
+        "deploy",
+        help="Start the OpenStack Deployment"
     )
 
-    deploy_allinone_p.add_argument(
+    deploy_p.add_argument(
+        "--allinone",
+        action="store_true",
+        help="Runs a complete OpenStack deployment using an automatically generated configuration."
+    )
+
+    deploy_p.add_argument(
+        "--config-file",
+        help="Path to the configuration file"
+    )
+
+    deploy_p.add_argument(
+        "--install-cinder",
+        type=str,
+        default="yes",
+        dest="install_cinder",
+        help="Choosing whether to install the Cinder (Block Storage) service"
+    )
+
+    deploy_p.add_argument(
         "--lvm-image-size-in-gb",
         type=int,
         default=5,
         help="Size of the Cinder LVM image in GB"
     )
 
-    # deploy
-    deploy_p = sub.add_parser(
-        "deploy",
-        help="Deploy OpenStack from a config file"
-    )
-    deploy_p.add_argument(
-        "config_file",
-        help="Path to the configuration file"
-    )
-
     # generate-config
-    gen_p = sub.add_parser(
-        "generate-config",
-        help="Generate a template configuration file"
-    )
-    gen_p.add_argument(
-        "file",
-        help="Output path (file or directory)"
+    parser.add_argument(
+        "--generate-config",
+        help="Generate a template configuration file",
+        metavar="FILE"
     )
 
     # launch
@@ -69,11 +75,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Launch an OpenStack instance"
     )
 
-    launch_p.add_argument("--name", default="cirros-instance")
-    launch_p.add_argument("--image", default="cirros")
-    launch_p.add_argument("--flavor", default="m1.tiny")
-    launch_p.add_argument("--network", default="test")
-    launch_p.add_argument("--password", default="")
+    launch_p.add_argument(
+        "--name",
+        default=f"instance-{uuid.uuid4().hex[:8]}",
+        help="Name of the instance to launch. Defaults to a random generic instance name."
+        )
+    
+    launch_p.add_argument(
+        "--image",
+        default="cirros",
+        help="Name of the image to use for the instance. Defaults to 'cirros'."
+    )
+    launch_p.add_argument(
+        "--flavor",
+        default="m1.tiny",
+        help="Flavor (size) of the instance. Defaults to 'm1.tiny'."
+    )
+    launch_p.add_argument(
+        "--network",
+        default="internal",
+        help="Network to attach the instance to. Defaults to 'internal'."
+    )
+    launch_p.add_argument(
+        "--password",
+        default="",
+        help="Password for the admin instance user."
+    )
 
     return parser
 
@@ -83,25 +110,27 @@ def cmd_generate_config(args):
     shutil.copy(src_file, dst_file)
     print(f"Configuration file generated in '{dst_file}'")
 
-
 def cmd_deploy(args):
-    deploy(args.config_file)
 
+    if args.allinone:
 
-def cmd_deploy_allinone(_args):
+        config_file_path = generate_config_file()
 
-    size = _args.lvm_image_size_in_gb
+        if args.install_cinder == "yes":
+            size = args.lvm_image_size_in_gb
+            config_openstack("yes", config_file_path, size if size is not None else 5)
+        else:
+            config_openstack("no", config_file_path, None)
 
-    if size is not None and size <= 0:
-        print(f"{colors.RED}Invalid LVM image size specified. It must be positive.{colors.RESET}")
+        deploy(config_file_path)
+
+    elif args.config_file:
+        deploy(args.config_file)
+    else:
+        print(f"{colors.RED}Error: you must specify either --allinone or --config-file.{colors.RESET}\n")
+        print("To view all available arguments for the openstack install deploy command, run: 'openstack_installer deploy --help'")
+              
         sys.exit(1)
-
-    generate_config_file()
-
-    config_openstack(size if size is not None else 5)
-
-    deploy(get_config_file_path())
-
 
 def cmd_launch(args):
 
@@ -110,10 +139,10 @@ def cmd_launch(args):
         launch_p.exit()
 
     base_check = check_deployment(include_endpoints=False)
-    if not base_check.ok:
+    if not base_check.ok or not os.path.exists(MARKER_FILE):
         print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
-        print(f"{colors.YELLOW}  • Run 'deploy-allinone' for a full automated deployment{colors.RESET}")
-        print(f"{colors.YELLOW}  • Or run 'deploy <config_file>' with a custom config{colors.RESET}\n")
+        print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
+        print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
         return
 
     try:
@@ -132,13 +161,9 @@ def cmd_launch(args):
 
     launch(name=args.name, image=args.image, flavor=args.flavor, network=args.network, password=args.password)
 
-    
-
-
 COMMANDS = {
-    "generate-config": cmd_generate_config,
+    "--generate-config": cmd_generate_config,
     "deploy":          cmd_deploy,
-    "deploy-allinone": cmd_deploy_allinone,
     "launch":          cmd_launch,
 }
 

@@ -54,7 +54,6 @@ def conf_keystone(config):
          "Setting up Keystone Credentials Database...")
     ]
 
-
     for cmd, message in fernet_credentials_setup_cmds:
         success = run_command(cmd, message)
         if not success:
@@ -126,6 +125,7 @@ def create_projects_and_demo_user(config):
     return True
 
 def create_services_users(config):
+
     print()
 
     service_password = get(config, "passwords.SERVICE_PASSWORD")
@@ -176,6 +176,9 @@ def create_services_users(config):
     return True
 
 def create_services_endpoints(config):
+
+    print()
+
     ip_address = get(config, "network.HOST_IP")
     install_cinder = get(config, "cinder.INSTALL_CINDER", "no") == "yes"
 

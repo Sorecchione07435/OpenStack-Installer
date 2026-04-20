@@ -99,7 +99,7 @@ def conf_openvswitch_bridges(config):
     )
 
     with open(INTERFACES_FILE, "w") as f:
-     f.write(bridges_interfaces_content)
+        f.write(bridges_interfaces_content)
         
     interfaces_dir = "/etc/network/interfaces.d/"
     backup_dir = "/root/net-backup"
@@ -228,8 +228,7 @@ def conf_neutron(config):
 
     neutron_db_migration_cmd = [
     "sudo", "-u", "neutron",
-    "neutron-db-manage", "--config-file", neutron_conf,  "--config-file", conf_ml2, "upgrade", "head"
-]
+    "neutron-db-manage", "--config-file", neutron_conf,  "--config-file", conf_ml2, "upgrade", "head"]
     
     if not run_command(neutron_db_migration_cmd, "Running Neutron DB Migrations...") : return False
 

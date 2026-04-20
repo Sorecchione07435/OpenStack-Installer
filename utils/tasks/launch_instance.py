@@ -6,11 +6,18 @@ import logging
 import uuid
 import shutil
 import base64
+import crypt
+import secrets
 from pathlib import Path
 
 from ..core import colors
 
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parents[2] 
+
+linux_yaml_cloud_config_template_file_path = os.path.join(BASE_DIR, "templates/cloud-config/linux.yaml")
+linux_no_root_yaml_cloud_config_template_file_path = os.path.join(BASE_DIR, "templates/cloud-config/linux_no_root.yaml")
 
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/")
 DEFAULT_FLAVOR  = "m1.tiny"
@@ -130,8 +137,9 @@ def get_default_network(preferred: str | None = None) -> str:
     sys.exit(1)
 
 
-def generate_user_config(ostype: str, default_user: str, password: str) -> str:
+def generate_user_config(ostype: str, default_user: str, password: str, public_key: str = None) -> str:
    
+    linux_config_drive = ""
     password_b64 = base64.b64encode(password.encode('utf-16-le')).decode('ascii')
 
     windows_config_drive = f"""<powershell>
@@ -146,20 +154,20 @@ def generate_user_config(ostype: str, default_user: str, password: str) -> str:
     Enable-LocalUser -Name $username
     </powershell>
     """
-    linux_config_drive = f"""#cloud-config
-    users:
-    - name: {default_user}
-        sudo: ALL=(ALL) NOPASSWD:ALL
-        lock_passwd: false
 
-    chpasswd:
-    list: |
-        {default_user}:{password}
-    expire: False
+    salt = crypt.mksalt(crypt.METHOD_SHA512)
+    password_hash = crypt.crypt(password, salt)
 
-    ssh_pwauth: True
-    """
-    
+    template_path = linux_no_root_yaml_cloud_config_template_file_path if default_user != "root" else linux_yaml_cloud_config_template_file_path
+
+    with open(template_path, "r") as f:
+        template = f.read()
+        linux_config_drive = template.format(
+            default_user=default_user,
+            password_hash=password_hash,
+            public_key=public_key,
+        )
+
     code = uuid.uuid4().hex
     base_path = f"/tmp/config_drive_{code}"
     openstack_path = os.path.join(base_path, "openstack", "latest")
@@ -186,7 +194,7 @@ def generate_user_config(ostype: str, default_user: str, password: str) -> str:
 def create_server(name: str, image_id: str, flavor_id: str,
                   network_id: str, keypair_name: str) -> str:
 
-    print(f"Launching instance '{name}' ...")
+    print(f"Launching instance '{name}' ...\n")
 
     result = _run([
         "openstack", "server", "create",
@@ -212,12 +220,13 @@ def create_server_with_password(
     keypair_name: str,
     os_type: str,
     username: str,
-    password: str
+    password: str,
+    public_key: str = None,
 ) -> str:
 
     config_drive_file_path = generate_user_config(os_type, username, password)
 
-    print(f"\nLaunching instance '{name}' ...")
+    print(f"\nLaunching instance '{name}' ...\n")
 
     try:
         result = _run([
@@ -280,7 +289,7 @@ def print_summary(name: str, fip: str, key_path: str, is_password: bool,
     os_type = (os_type or "").lower()
 
     print(f"{colors.GREEN}Instance '{name}' successfully started{colors.RESET}\n")
-    print(f"Attached Floating IP : {fip}")
+    print(f"Attached Floating IP : {fip}\n")
 
     if os_type == "linux":
         ssh_cmd = f"ssh -i {key_path} {username}@{fip}"
@@ -311,6 +320,7 @@ def launch(
     password: str       = ""
 ) -> None:
 
+    os.makedirs(SSH_KEY_PATH, exist_ok=True)
     key_path = os.path.join(SSH_KEY_PATH, f"id_{name}")
 
     keypair = ensure_keypair(key_path, name)
@@ -327,6 +337,9 @@ def launch(
     os_admin_user = (props.get("os_admin_user") or "")
 
     password_enabled = True
+
+    with open(f"{key_path}.pub", "r") as f:
+        public_key = f.read().strip()
 
     if "cirros" in image_name:
         password_enabled = False
@@ -345,7 +358,8 @@ def launch(
             keypair,
             os_type,
             os_admin_user,
-            password
+            password,
+            public_key
         )
     else:
         server_id = create_server(

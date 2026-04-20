@@ -13,6 +13,9 @@ def set_openstack_release(config):
     _ = run_command(cmd, message, ignore_errors=True)
 
 def install_pkgs():
+
+    print()
+    
     apt_update()
 
     packages = ["wget", "rabbitmq-server", "python3-openstackclient", "memcached"]

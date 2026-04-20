@@ -73,9 +73,6 @@ def create_default_flavors(config):
 
     full_default_flavors_create_cmds_result = run_command(["bash", "-c", full_default_flavors_create_cmds], "Creating default flavors...", True)
 
-    #if not full_default_flavors_create_cmds_result:
-    #     return False
-    
     return True
     
 def run_setup_nova_compute(config):

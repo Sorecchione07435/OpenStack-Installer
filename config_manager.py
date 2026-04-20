@@ -11,7 +11,7 @@ import ipaddress
 
 config_file_path = ""
 
-def generate_config_file():
+def generate_config_file() -> str:
 
     global config_file_path
     config_file_path = f"/root/openstack-config-{uuid.uuid4().hex}.yaml"
@@ -19,10 +19,10 @@ def generate_config_file():
     src_file = os.path.join(script_dir, "templates/conf_template.yaml")
     shutil.copy(src_file, config_file_path)
 
-def config_openstack(lvm_image_size_in_gb=None):
-    global config_file_path
+    return config_file_path
 
-    # carica yaml
+def config_openstack(install_cinder: str = "yes", config_file_path: str = "", lvm_image_size_in_gb=None):
+
     try:
         with open(config_file_path, "r") as f:
             config_dict = yaml.safe_load(f) or {}
@@ -66,7 +66,11 @@ def config_openstack(lvm_image_size_in_gb=None):
     config_dict["bridge"]["CREATE_BRIDGES"] = "yes"
     config_dict["bridge"]["PUBLIC_BRIDGE_INTERFACE"] = iface
 
-    config_dict["cinder"]["INSTALL_CINDER"] = "yes"
+    if install_cinder == "yes":
+        config_dict["cinder"]["INSTALL_CINDER"] = "yes"
+    else:
+        config_dict["cinder"]["INSTALL_CINDER"] = "no"
+
     config_dict["cinder"]["CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME"] = get_free_loop()
     config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"] = "/var/lib/cinder/images/cinder-volumes.img"
 
@@ -77,6 +81,3 @@ def config_openstack(lvm_image_size_in_gb=None):
 
     with open(config_file_path, "w") as f:
         yaml.dump(config_dict, f, default_flow_style=False)
-
-def get_config_file_path():
-    return config_file_path

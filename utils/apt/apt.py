@@ -11,9 +11,9 @@ def run_command(command, message="Processing", width=50):
         result = subprocess.run(
             command,
             check=True,
-            stdout=subprocess.PIPE,  # cattura stdout
-            stderr=subprocess.PIPE,  # cattura stderr
-            text=True                # output in stringa
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True 
         )
     except subprocess.CalledProcessError as e:
         spinner.stop("ERROR", color="red", width=60)
@@ -25,7 +25,7 @@ def run_command(command, message="Processing", width=50):
 
         print(f"\n{colors.RED}Execution of command '{' '.join(command)}' failed with non-zero exit code: {e.returncode}{colors.RESET}")
         if combined_output:
-            print("\nCommand Last Output:\n")
+            print("\nCommand Last Output:")
             print(combined_output)
         return False
 
@@ -47,7 +47,7 @@ def apt_install(packages, ux_text=None):
     else:
         message = ux_text
 
-    cmd = ["sudo", "apt", "install", "-y"] + packages
+    cmd = ["apt", "install", "-y"] + packages
 
     success = run_command(cmd, message)
     return success

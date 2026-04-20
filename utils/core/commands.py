@@ -9,7 +9,7 @@ def run_command_output(cmd, ignore_errors=False):
 
     try:
         result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        return result.stdout.strip()  # restituisce solo l'output, senza spazi finali
+        return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         if ignore_errors:
             return e.stdout.strip() if e.stdout else ""
@@ -64,7 +64,7 @@ def run_command(
 
             if ignore_errors:
                 spinner.stop("WARNING", color="green", width=60)
-                print(f"{colors.GREEN}A command failed but was ignored as non-critical{colors.RESET}\n")
+                print(f"{colors.GREEN}A command failed but was ignored as non-critical{colors.RESET}")
             else:
 
                 combined_output = ""
@@ -76,7 +76,7 @@ def run_command(
                 spinner.stop("ERROR", color="red", width=60)
                 print(f"\n{colors.RED}Execution of command '{' '.join(cmd)}' failed with non-zero exit code: {e.returncode}{colors.RESET}")
                 if combined_output:
-                    print("\nCommand Last Output:\n")
+                    print("\nCommand Last Output:")
                     print(combined_output)
                 return False
 

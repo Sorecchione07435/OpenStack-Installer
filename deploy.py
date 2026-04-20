@@ -4,6 +4,7 @@ from .utils.config.parser import parse_config, get, resolve_vars
 from .utils.core import colors
 from .utils.core.system_utils import has_hw_virtualization
 from .utils.network.net_utils import get_active_interface
+from .utils.tasks.check_deployment import mark_deployment_complete, MARKER_FILE
 
 from .services.prereqs import run_setup_prereqs
 from .services.mariadb import run_setup_mariadb
@@ -93,5 +94,7 @@ def deploy(config_file):
     print(f"{colors.YELLOW}Tip:{colors.RESET} Use the ADMIN credentials you configured in your config file to log in.")
     print(f"{colors.YELLOW}Note:{colors.RESET} Make sure your firewall allows HTTP/HTTPS access to this host.")
     print(f"{colors.YELLOW}Credentials Scripts:{colors.RESET} You can find them in /root/admin-openrc.sh and /root/demo-openrc.sh\n")
+
+    mark_deployment_complete()
 
     return True
