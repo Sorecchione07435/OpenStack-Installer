@@ -14,7 +14,7 @@ from ..core import colors
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parents[2] 
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 linux_yaml_cloud_config_template_file_path = os.path.join(BASE_DIR, "templates/cloud-config/linux.yaml")
 linux_no_root_yaml_cloud_config_template_file_path = os.path.join(BASE_DIR, "templates/cloud-config/linux_no_root.yaml")
@@ -24,6 +24,7 @@ DEFAULT_FLAVOR  = "m1.tiny"
 DEFAULT_IMAGE   = "cirros"
 DEFAULT_NETWORK = "internal"
 EXTERNAL_NET    = "public"
+
 
 def _run(args: list[str], check=True) -> subprocess.CompletedProcess:
     try:
@@ -47,11 +48,11 @@ def _os_value(*args) -> str:
     result = _run(["openstack"] + list(args) + ["-f", "value"])
     return result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
 
+
 def ensure_keypair(key_path: str = SSH_KEY_PATH, name: str = None) -> str:
 
     keypair_name = f"{name}-keypair"
 
-    # Local key
     if not os.path.isfile(key_path):
         print(f"Creating local '{keypair_name}' ssh key at {key_path}")
         subprocess.run(
@@ -72,30 +73,29 @@ def ensure_keypair(key_path: str = SSH_KEY_PATH, name: str = None) -> str:
 
     return keypair_name
 
+
 def get_image_properties(image_id: str) -> dict:
     import json
 
     out = _os("image", "show", image_id, "-f", "json")
     data = json.loads(out)
-
     props = data.get("properties") or {}
 
     return {
-        "name": data.get("name"),
-        "os_distro": props.get("os_distro", "").lower(),
-        "os_type": props.get("os_type", "").lower(),
-        "os_version": props.get("os_version"),
+        "name":         data.get("name"),
+        "os_distro":    props.get("os_distro", "").lower(),
+        "os_type":      props.get("os_type", "").lower(),
+        "os_version":   props.get("os_version"),
         "os_admin_user": props.get("os_admin_user")
     }
 
-def get_default_image(preferred: str = DEFAULT_IMAGE) -> str:
 
+def get_default_image(preferred: str = DEFAULT_IMAGE) -> str:
     out = _os("image", "list", "--status", "active", "-f", "value", "-c", "ID", "-c", "Name")
     for line in out.splitlines():
         parts = line.split(None, 1)
         if len(parts) == 2 and preferred.lower() in parts[1].lower():
             return parts[0]
-    # fallback: first available image
     first = out.splitlines()[0].split()[0] if out else None
     if not first:
         logger.error("No images found. Upload one first using: openstack image create")
@@ -113,7 +113,6 @@ def get_default_flavor(preferred: str = DEFAULT_FLAVOR) -> str:
 
 
 def get_default_network(preferred: str | None = None) -> str:
-
     out = _os("network", "list", "-f", "value", "-c", "ID", "-c", "Name")
     lines = [line.split(None, 1) for line in out.splitlines() if line.strip()]
 
@@ -137,9 +136,42 @@ def get_default_network(preferred: str | None = None) -> str:
     sys.exit(1)
 
 
-def generate_user_config(ostype: str, default_user: str, password: str, public_key: str = None) -> str:
-   
-    linux_config_drive = ""
+def get_server_id(name: str) -> str:
+    """Resolve server name to ID. Fails if multiple servers share the same name."""
+    out = _os("server", "list", "--name", f"^{name}$",
+              "-f", "value", "-c", "ID", "-c", "Name")
+    matches = [line.split(None, 1) for line in out.splitlines() if line.strip()]
+
+    # Filter exact name matches (--name uses regex, so double-check)
+    exact = [srv_id for srv_id, srv_name in matches if srv_name.strip() == name]
+
+    if not exact:
+        logger.error(f"No server found with name '{name}'")
+        sys.exit(1)
+    if len(exact) > 1:
+        logger.error(
+            f"Multiple servers found with name '{name}': {exact}\n"
+            f"Use a unique name or pass the server ID directly."
+        )
+        sys.exit(1)
+    return exact[0]
+
+
+def get_floating_ip_id(fip_address: str) -> str:
+    """Resolve floating IP address to its ID."""
+    out = _os("floating", "ip", "list",
+              "--floating-ip-address", fip_address,
+              "-f", "value", "-c", "ID")
+    fip_id = out.strip().splitlines()[0] if out.strip() else ""
+    if not fip_id:
+        logger.error(f"Floating IP {fip_address} not found")
+        sys.exit(1)
+    return fip_id
+
+
+def generate_user_config(ostype: str, default_user: str, password: str,
+                          public_key: str = None) -> str:
+
     password_b64 = base64.b64encode(password.encode('utf-16-le')).decode('ascii')
 
     windows_config_drive = f"""<powershell>
@@ -158,7 +190,11 @@ def generate_user_config(ostype: str, default_user: str, password: str, public_k
     salt = crypt.mksalt(crypt.METHOD_SHA512)
     password_hash = crypt.crypt(password, salt)
 
-    template_path = linux_no_root_yaml_cloud_config_template_file_path if default_user != "root" else linux_yaml_cloud_config_template_file_path
+    template_path = (
+        linux_no_root_yaml_cloud_config_template_file_path
+        if default_user != "root"
+        else linux_yaml_cloud_config_template_file_path
+    )
 
     with open(template_path, "r") as f:
         template = f.read()
@@ -171,12 +207,11 @@ def generate_user_config(ostype: str, default_user: str, password: str, public_k
     code = uuid.uuid4().hex
     base_path = f"/tmp/config_drive_{code}"
     openstack_path = os.path.join(base_path, "openstack", "latest")
-
     os.makedirs(openstack_path, exist_ok=True)
 
     ostype = (ostype or "").lower()
 
-    if (ostype or "").lower() == "windows":
+    if ostype == "windows":
         content = windows_config_drive
     elif ostype == "linux":
         content = linux_config_drive
@@ -184,23 +219,22 @@ def generate_user_config(ostype: str, default_user: str, password: str, public_k
         raise ValueError("ostype must be 'windows' or 'linux'")
 
     file_path = os.path.join(openstack_path, "user_data")
-
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
 
     return file_path
-    
+
 
 def create_server(name: str, image_id: str, flavor_id: str,
                   network_id: str, keypair_name: str) -> str:
-
+    """Create server and return its ID."""
     print(f"Launching instance '{name}' ...\n")
 
     result = _run([
         "openstack", "server", "create",
-        "--image",   image_id,
-        "--flavor",  flavor_id,
-        "--network", network_id,
+        "--image",    image_id,
+        "--flavor",   flavor_id,
+        "--network",  network_id,
         "--key-name", keypair_name,
         "--wait",
         "-f", "value", "-c", "id",
@@ -211,6 +245,7 @@ def create_server(name: str, image_id: str, flavor_id: str,
         logger.error("Server creation failed:\n" + result.stderr)
         sys.exit(1)
     return server_id
+
 
 def create_server_with_password(
     name: str,
@@ -223,32 +258,29 @@ def create_server_with_password(
     password: str,
     public_key: str = None,
 ) -> str:
-
-    config_drive_file_path = generate_user_config(os_type, username, password)
+    """Create server with cloud-init user config and return its ID."""
+    config_drive_file_path = generate_user_config(os_type, username, password, public_key)
 
     print(f"\nLaunching instance '{name}' ...\n")
 
     try:
         result = _run([
             "openstack", "server", "create",
-            "--image", image_id,
-            "--flavor", flavor_id,
-            "--network", network_id,
-            "--key-name", keypair_name,
+            "--image",        image_id,
+            "--flavor",       flavor_id,
+            "--network",      network_id,
+            "--key-name",     keypair_name,
             "--config-drive", "true",
-            "--user-data", config_drive_file_path,
+            "--user-data",    config_drive_file_path,
             "--wait",
-            "-f", "value",
-            "-c", "id",
+            "-f", "value", "-c", "id",
             name
         ])
 
         server_id = result.stdout.strip()
-
         if not server_id:
             logger.error("Server creation failed:\n" + result.stderr)
             sys.exit(1)
-
         return server_id
 
     finally:
@@ -256,7 +288,9 @@ def create_server_with_password(
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(config_drive_file_path)))
             shutil.rmtree(base_dir, ignore_errors=True)
 
+
 def allocate_floating_ip(external_net: str = EXTERNAL_NET) -> str:
+    """Allocate a floating IP and return its address."""
     print("Allocating floating IP ...")
     fip = _os_value("floating", "ip", "create", "-c", "floating_ip_address", external_net)
     if not fip:
@@ -265,12 +299,14 @@ def allocate_floating_ip(external_net: str = EXTERNAL_NET) -> str:
     return fip
 
 
-def attach_floating_ip(server_name: str, fip: str) -> None:
-    print(f"Attaching floating IP {fip} to the instance ...\n")
-    _os("server", "add", "floating", "ip", server_name, fip)
+def attach_floating_ip(server_id: str, fip: str) -> None:
+    """Attach floating IP to server using server ID (not name)."""
+    print(f"Attaching floating IP {fip} to instance {server_id} ...")
+    _os("server", "add", "floating", "ip", server_id, fip)
+
 
 def wait_for_active(server_id: str, timeout: int = 120) -> None:
-
+    """Poll server status by ID until ACTIVE or ERROR."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         status = _os_value("server", "show", server_id, "-c", "status")
@@ -310,6 +346,7 @@ def print_summary(name: str, fip: str, key_path: str, is_password: bool,
             f"  password: {password}"
         )
 
+
 def launch(
     name: str           = "cirros-instance",
     image: str          = DEFAULT_IMAGE,
@@ -331,9 +368,9 @@ def launch(
 
     props = get_image_properties(image_id) or {}
 
-    os_type = (props.get("os_type") or "").lower()
-    os_distro = (props.get("os_distro") or "").lower()
-    image_name = (props.get("name") or "").lower()
+    os_type      = (props.get("os_type") or "").lower()
+    os_distro    = (props.get("os_distro") or "").lower()
+    image_name   = (props.get("name") or "").lower()
     os_admin_user = (props.get("os_admin_user") or "")
 
     password_enabled = True
@@ -349,37 +386,27 @@ def launch(
         password_enabled = False
         print(f"{colors.YELLOW}Warning: Missing image metadata. Skipping password configuration for safety.{colors.RESET}\n")
 
+    # Create server — always get back an ID
     if password_enabled and password:
         server_id = create_server_with_password(
-            name,
-            image_id,
-            flavor_id,
-            network_id,
-            keypair,
-            os_type,
-            os_admin_user,
-            password,
-            public_key
+            name, image_id, flavor_id, network_id,
+            keypair, os_type, os_admin_user, password, public_key
         )
     else:
         server_id = create_server(
-            name,
-            image_id,
-            flavor_id,
-            network_id,
-            keypair
+            name, image_id, flavor_id, network_id, keypair
         )
-    
+
+    # All subsequent operations use server_id, never name
     wait_for_active(server_id)
 
     fip = allocate_floating_ip(external_net)
 
-    attach_floating_ip(name, fip)
+    attach_floating_ip(server_id, fip)   # ← ID, not name
 
     if password_enabled and password:
         print_summary(name, fip, key_path, True, os_admin_user, password, os_type)
-    elif  "cirros" in image_name:
-         print_summary(name, fip, key_path, False, "cirros", None, "linux")
+    elif "cirros" in image_name:
+        print_summary(name, fip, key_path, False, "cirros", None, "linux")
     else:
-         print_summary(name, fip, key_path, False, os_admin_user, None, os_type)
-    
+        print_summary(name, fip, key_path, False, os_admin_user, None, os_type)

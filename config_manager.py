@@ -2,10 +2,8 @@ import os
 import shutil
 import uuid
 import yaml
-from dotenv import dotenv_values
 from .utils.network.net_utils import get_network_info
 from .utils.core.system_utils import has_hw_virtualization, get_free_loop, generate_password
-from .utils.config.parser import set
 
 import ipaddress
 
@@ -21,7 +19,13 @@ def generate_config_file() -> str:
 
     return config_file_path
 
-def config_openstack(install_cinder: str = "yes", config_file_path: str = "", lvm_image_size_in_gb=None):
+
+def config_openstack(
+    install_cinder: str = "yes",
+    config_file_path: str = "",
+    lvm_image_size_in_gb=None,
+    neutron_driver: str = "ovs"   # "ovs" | "ovn"
+):
 
     try:
         with open(config_file_path, "r") as f:
@@ -40,44 +44,121 @@ def config_openstack(install_cinder: str = "yes", config_file_path: str = "", lv
     if lvm_image_size_in_gb is None:
         lvm_image_size_in_gb = 5
 
-    config_dict.setdefault("passwords", {})
-    config_dict.setdefault("network", {})
-    config_dict.setdefault("public_network", {})
-    config_dict.setdefault("bridge", {})
-    config_dict.setdefault("cinder", {})
-    config_dict.setdefault("compute", {})
+    virt_type = "kvm" if has_hw_virtualization() else "qemu"
 
-    config_dict["passwords"]["ADMIN_PASSWORD"] = generate_password()
-    config_dict["passwords"]["SERVICE_PASSWORD"] = generate_password()
+    # -------------------------------------------------------------------------
+    # Passwords
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("passwords", {})
+    config_dict["passwords"]["ADMIN_PASSWORD"]    = generate_password()
+    config_dict["passwords"]["SERVICE_PASSWORD"]  = generate_password()
     config_dict["passwords"]["RABBITMQ_PASSWORD"] = generate_password()
     config_dict["passwords"]["DATABASE_PASSWORD"] = generate_password()
-    config_dict["passwords"]["DEMO_PASSWORD"] = generate_password()
+    config_dict["passwords"]["DEMO_PASSWORD"]     = generate_password()
 
-    config_dict["network"]["HOST_IP"] = ip
+    # -------------------------------------------------------------------------
+    # Network
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("network", {})
+    config_dict["network"]["HOST_IP"]         = ip
     config_dict["network"]["HOST_IP_NETMASK"] = netmask
-    config_dict["network"]["HOST_IP_CIDR"] = ip_cidr
+    config_dict["network"]["HOST_IP_CIDR"]    = ip_cidr
 
-    config_dict["public_network"]["PUBLIC_SUBNET_CIDR"] = network
+    # -------------------------------------------------------------------------
+    # Public network
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("public_network", {})
+    config_dict["public_network"]["PUBLIC_SUBNET_CIDR"]        = network
     config_dict["public_network"]["PUBLIC_SUBNET_RANGE_START"] = ip
-    config_dict["public_network"]["PUBLIC_SUBNET_RANGE_END"] = last_ip
-    config_dict["public_network"]["PUBLIC_SUBNET_GATEWAY"] = gateway
+    config_dict["public_network"]["PUBLIC_SUBNET_RANGE_END"]   = last_ip
+    config_dict["public_network"]["PUBLIC_SUBNET_GATEWAY"]     = gateway
     config_dict["public_network"]["PUBLIC_SUBNET_DNS_SERVERS"] = "8.8.8.8"
 
-    config_dict["bridge"]["CREATE_BRIDGES"] = "yes"
-    config_dict["bridge"]["PUBLIC_BRIDGE_INTERFACE"] = iface
+    # -------------------------------------------------------------------------
+    # Neutron - driver + driver-specific defaults
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("neutron", {})
+    config_dict["neutron"]["DRIVER"] = neutron_driver
 
-    if install_cinder == "yes":
-        config_dict["cinder"]["INSTALL_CINDER"] = "yes"
+    # OVS defaults
+    config_dict["neutron"].setdefault("ovs", {})
+    config_dict["neutron"]["ovs"]["CREATE_BRIDGES"]        = "yes" if neutron_driver == "ovs" else "no"
+    config_dict["neutron"]["ovs"]["PUBLIC_BRIDGE_INTERFACE"] = iface if neutron_driver == "ovs" else ""
+    config_dict["neutron"]["ovs"]["PUBLIC_BRIDGE"]         = "br-ex" if neutron_driver == "ovs" else ""
+    config_dict["neutron"]["ovs"]["INTERNAL_BRIDGE"]       = "br-internal" if neutron_driver == "ovs" else ""
+
+    # OVN defaults
+    config_dict["neutron"].setdefault("ovn", {})
+    config_dict["neutron"]["ovn"]["CREATE_BRIDGES"]            = "yes"
+    config_dict["neutron"]["ovn"]["OVN_NB_PORT"]               = 6641
+    config_dict["neutron"]["ovn"]["OVN_SB_PORT"]               = 6642
+    config_dict["neutron"]["ovn"]["OVN_PUBLIC_BRIDGE_INTERFACE"] = iface
+    config_dict["neutron"]["ovn"]["OVN_PUBLIC_BRIDGE"]         = "br-ex"
+    config_dict["neutron"]["ovn"]["OVN_ENCAP_TYPE"]            = "geneve"
+    config_dict["neutron"]["ovn"]["OVN_L3_SCHEDULER"]          = "leastloaded"
+    config_dict["neutron"]["ovn"]["ENABLE_DISTRIBUTED_FLOATING_IP"] = False
+
+    # Tenant network - type depends on driver
+    config_dict["neutron"].setdefault("tenant_network", {})
+    config_dict["neutron"]["tenant_network"]["TYPE"]      = "geneve" if neutron_driver == "ovn" else "flat"
+    config_dict["neutron"]["tenant_network"]["VNI_RANGE"] = "1:65536"
+
+    if neutron_driver == "ovs":
+
+        config_dict["neutron"]["provider_networks"] = [
+            {
+                "name":   "public",
+                "bridge": "br-ex",
+                "type":   "flat"
+            },
+            {
+                "name":   "internal",
+                "bridge": "br-internal",
+                "type":   "flat"
+            }
+        ]
+
     else:
-        config_dict["cinder"]["INSTALL_CINDER"] = "no"
 
+        config_dict["neutron"]["provider_networks"] = [
+            {
+                "name":   "public",
+                "bridge": "br-ex",
+                "type":   "flat"
+            }
+        ]
+
+
+    config_dict.setdefault("cinder", {})
+    config_dict["cinder"]["INSTALL_CINDER"] = "yes" if install_cinder == "yes" else "no"
     config_dict["cinder"]["CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME"] = get_free_loop()
-    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"] = "/var/lib/cinder/images/cinder-volumes.img"
+    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"]       = "/var/lib/cinder/images/cinder-volumes.img"
+    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"]      = lvm_image_size_in_gb
 
-    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"] = lvm_image_size_in_gb
+    # -------------------------------------------------------------------------
+    # Compute
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("compute", {})
+    config_dict["compute"]["NOVA_COMPUTE_VIRT_TYPE"]   = virt_type
+    config_dict["compute"]["CPU_ALLOCATION_RATIO"]     = 4.0
+    config_dict["compute"]["RAM_ALLOCATION_RATIO"]     = 1.5
+    config_dict["compute"]["DISK_ALLOCATION_RATIO"]    = 1.0
 
-    virt_type = "kvm" if has_hw_virtualization() else "qemu"
-    config_dict["compute"]["NOVA_COMPUTE_VIRT_TYPE"] = virt_type
+    # -------------------------------------------------------------------------
+    # Optional services
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("optional_services", {})
+    config_dict["optional_services"]["INSTALL_HORIZON"] = "yes"
 
+    # -------------------------------------------------------------------------
+    # OpenStack release
+    # -------------------------------------------------------------------------
+    config_dict.setdefault("openstack", {})
+    config_dict["openstack"].setdefault("OPENSTACK_RELEASE", "caracal")
+    config_dict["openstack"].setdefault("REGION_NAME", "RegionOne")
+
+    # -------------------------------------------------------------------------
+    # Write config
+    # -------------------------------------------------------------------------
     with open(config_file_path, "w") as f:
-        yaml.dump(config_dict, f, default_flow_style=False)
+        yaml.dump(config_dict, f, default_flow_style=False, allow_unicode=True)

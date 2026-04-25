@@ -12,6 +12,12 @@ from .config_manager import generate_config_file, config_openstack
 from .utils.tasks.check_deployment import check_deployment, check_env_variables, MARKER_FILE
 from .utils.tasks.launch_instance import launch
 
+class ColoredArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        print(f"{colors.RED}Error: {message}{colors.RESET}\n")
+        self.print_help()
+        sys.exit(2)
+
 def print_banner():
     print(f"{colors.BRIGHT_BLUE}Welcome to Debian OpenStack Installer Utility{colors.RESET}\n")
 
@@ -21,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     global launch_p
     global generate_config_p
 
-    parser = argparse.ArgumentParser(
+    parser = ColoredArgumentParser(
         description="Debian OpenStack Installer Utility"
     )
 
@@ -63,6 +69,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Size of the Cinder LVM image in GB"
     )
 
+    deploy_p.add_argument(
+        "--neutron-driver",
+        type=str,
+        default="ovs",
+        dest="neutron_driver",
+        help="The Neutron Driver that will be used to configure networks in OpenStack"
+    )
     # generate-config
     generate_config_p = sub.add_parser(
         "generate-config",
@@ -126,11 +139,20 @@ def cmd_deploy(args):
 
         config_file_path = generate_config_file()
 
-        if args.install_cinder == "yes":
+        if args.install_cinder == "yes" and (args.neutron_driver == "ovs" or args.neutron_driver == "ovn"):
             size = args.lvm_image_size_in_gb
-            config_openstack("yes", config_file_path, size if size is not None else 5)
+            config_openstack("yes", config_file_path, size if size is not None else 5, args.neutron_driver)
+
+        elif args.install_cinder == "yes":
+            size = args.lvm_image_size_in_gb
+            config_openstack("yes", config_file_path, size if size is not None else 5, 0)
+
+        elif args.neutron_driver == "ovs" or args.neutron_driver == "ovn":
+            config_openstack("no", config_file_path, 0, args.neutron_driver)
+
         else:
-            config_openstack("no", config_file_path, None)
+            config_openstack("no", config_file_path, None, "ovs")
+
 
         deploy(config_file_path)
 
@@ -186,11 +208,13 @@ def main():
         sys.exit(1)
 
     parser = build_parser()
-    args = parser.parse_args()
+    # Only parse known args to avoid automatic error exit
+    args, unknown = parser.parse_known_args()
 
     if args.command is None:
         print(f"{colors.YELLOW}No command provided. Available commands:{colors.RESET}\n")
         parser.print_help()
-        parser.exit()
+        print(f"\nTip: Run '{colors.BRIGHT_BLUE}openstack_installer <command> --help{colors.RESET}' for detailed usage of each command.")
+        sys.exit(1)
 
     COMMANDS[args.command](args)

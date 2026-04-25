@@ -1,18 +1,19 @@
-# Configure the Networking service (Neutron) with OVS bridges
-
-from ..utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
-from ..utils.apt.apt import apt_install, apt_update
-from ..utils.config.parser import parse_config, get, resolve_vars
-from ..utils.config.setter import set_conf_option
-from ..utils.core import colors
+from ...utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
+from ...utils.apt.apt import apt_install, apt_update
+from ...utils.config.parser import parse_config, get, resolve_vars
+from ...utils.config.setter import set_conf_option
+from ...utils.core import colors
 
 import os
 import shutil
-
 import json
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-openvswitch_bridges_interfaces_template_file = os.path.join(BASE_DIR, "templates/openvswitch_bridges_interfaces.tpl")
+current_dir = os.path.dirname(os.path.abspath(__file__)) 
+
+BASE_DIR = os.path.dirname(os.path.dirname(current_dir))  
+
+ovs_bridges_interfaces_template_file = os.path.join(BASE_DIR, "templates", "ovs_bridges_interfaces.tpl")
+
 
 neutron_conf="/etc/neutron/neutron.conf"
 conf_ml2="/etc/neutron/plugins/ml2/ml2_conf.ini"
@@ -24,11 +25,16 @@ conf_nova="/etc/nova/nova.conf"
 
 def install_pkgs():
 
-    apt_update()
+    print()
 
-    openvswitch_packages = ["neutron-server", "neutron-plugin-ml2", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "openvswitch-switch"]
+    ovs_packages = [
+        "neutron-openvswitch-agent", 
+        "neutron-dhcp-agent", 
+        "neutron-metadata-agent", 
+        "neutron-l3-agent", 
+        "openvswitch-switch"]
 
-    if not apt_install(openvswitch_packages, ux_text=f"Installing Neutron packages...") : return False
+    if not apt_install(ovs_packages, ux_text=f"Installing OVS packages...") : return False
 
     return True
 
@@ -38,9 +44,9 @@ def conf_openvswitch_bridges(config):
       
     INTERFACES_FILE = "/etc/network/interfaces.d/openvswitch"
 
-    public_iface = get(config, "bridge.PUBLIC_BRIDGE_INTERFACE")
-    public_bridge = get(config, "bridge.PUBLIC_BRIDGE")
-    internal_bridge = get(config, "bridge.INTERNAL_BRIDGE")
+    public_iface = get(config, "neutron.ovs.PUBLIC_BRIDGE_INTERFACE")
+    public_bridge = get(config, "neutron.ovs.PUBLIC_BRIDGE")
+    internal_bridge = get(config, "neutron.ovs.INTERNAL_BRIDGE")
 
     ip_address =  get(config, "network.HOST_IP")
     ip_address_netmask = get(config, "network.HOST_IP_NETMASK")
@@ -85,7 +91,7 @@ def conf_openvswitch_bridges(config):
 
     print()
 
-    with open(openvswitch_bridges_interfaces_template_file, "r") as f:
+    with open(ovs_bridges_interfaces_template_file, "r") as f:
         template = f.read()
 
     bridges_interfaces_content = template.format(
@@ -146,57 +152,41 @@ def conf_openvswitch_bridges(config):
 
     return True
 
-def conf_neutron(config):
-
-    database_password = get(config, "passwords.DATABASE_PASSWORD")
-    rabbitmq_password = get(config, "passwords.RABBITMQ_PASSWORD")
+def conf_neutron_ovs(config):
 
     service_password = get(config, "passwords.SERVICE_PASSWORD")
 
     ip_address = get(config, "network.HOST_IP")
 
-    public_bridge = get(config, "bridge.PUBLIC_BRIDGE")
-    internal_bridge = get(config, "bridge.INTERNAL_BRIDGE")
-     
-    set_conf_option(neutron_conf, "database", "connection", f"mysql+pymysql://neutron:{database_password}@{ip_address}/neutron")
+    public_bridge = get(config, "neutron.ovs.PUBLIC_BRIDGE")
+    internal_bridge = get(config, "neutron.ovs.INTERNAL_BRIDGE")
 
-    set_conf_option(neutron_conf, "DEFAULT", "core_plugin", "ml2")
-    set_conf_option(neutron_conf, "DEFAULT", "transport_url", f"rabbit://openstack:{rabbitmq_password}@{ip_address}")
-    set_conf_option(neutron_conf, "DEFAULT", "auth_strategy", "keystone")
-    set_conf_option(neutron_conf, "DEFAULT", "service_plugins", "router")
-    set_conf_option(neutron_conf, "DEFAULT", "notify_nova_on_port_status_changes", "true")
-    set_conf_option(neutron_conf, "DEFAULT", "notify_nova_on_port_data_changes", "true")
+    provider_networks = get(config, "neutron.provider_networks", [])
 
-    set_conf_option(neutron_conf, "keystone_authtoken", "www_authenticate_uri", f"http://{ip_address}:5000")
-    set_conf_option(neutron_conf, "keystone_authtoken", "auth_url", f"http://{ip_address}:5000")
-    set_conf_option(neutron_conf, "keystone_authtoken", "memcached_servers", "127.0.0.1:11211")
-    set_conf_option(neutron_conf, "keystone_authtoken", "auth_type", "password")
-    set_conf_option(neutron_conf, "keystone_authtoken", "project_domain_name", "default")
-    set_conf_option(neutron_conf, "keystone_authtoken", "user_domain_name", "default")
-    set_conf_option(neutron_conf, "keystone_authtoken", "project_name", "service")
-    set_conf_option(neutron_conf, "keystone_authtoken", "username", "neutron")
-    set_conf_option(neutron_conf, "keystone_authtoken", "password", service_password)
+    flat_networks  = [n["name"] for n in provider_networks if n["type"] == "flat"]
+    vlan_networks  = [n["name"] for n in provider_networks if n["type"] == "vlan"]
 
-    set_conf_option(neutron_conf, "nova", "auth_url", f"http://{ip_address}:5000")
-    set_conf_option(neutron_conf, "nova", "auth_type", "password")
-    set_conf_option(neutron_conf, "nova", "project_domain_name", "default")
-    set_conf_option(neutron_conf, "nova", "user_domain_name", "default")
-    set_conf_option(neutron_conf, "nova", "region_name", "RegionOne")
-    set_conf_option(neutron_conf, "nova", "project_name", "service")
-    set_conf_option(neutron_conf, "nova", "username", "nova")
-    set_conf_option(neutron_conf, "nova", "password", service_password)
+    bridge_mappings = ",".join(f'{n["name"]}:{n["bridge"]}' for n in provider_networks)
 
-    set_conf_option(neutron_conf, "oslo_concurrency", "lock_path", "/var/lib/neutron/tmp")
+    flat_networks_str = ",".join(flat_networks)
+
+    vlan_networks_str = ",".join(vlan_networks)
 
     set_conf_option(conf_ml2, "ml2", "type_drivers", "flat,vlan,local")
     set_conf_option(conf_ml2, "ml2", "tenant_network_types", "flat,vlan,local")
     set_conf_option(conf_ml2, "ml2", "extension_drivers", "port_security")
-    set_conf_option(conf_ml2, "ml2_type_flat", "flat_networks", "public,internal")
+
+    if flat_networks_str:
+        set_conf_option(conf_ml2, "ml2_type_flat", "flat_networks", flat_networks_str)
+
+    if vlan_networks_str:
+        set_conf_option(conf_ml2, "ml2_type_vlan", "network_vlan_ranges", vlan_networks_str)
+
     set_conf_option(conf_ml2, "securitygroup", "enable_ipset", "true")
     set_conf_option(conf_ml2, "ml2", "mechanism_drivers", "openvswitch")
 
     set_conf_option(conf_openvswitch, "ovs", "integration_bridge", "br-int")
-    set_conf_option(conf_openvswitch, "ovs", "bridge_mappings", f"public:{public_bridge},internal:{internal_bridge}")
+    set_conf_option(conf_openvswitch, "ovs", "bridge_mappings", bridge_mappings)
     set_conf_option(conf_openvswitch, "securitygroup", "enable_security_group", "true")
     set_conf_option(conf_openvswitch, "securitygroup", "firewall_driver", "openvswitch")
 
@@ -212,26 +202,6 @@ def conf_neutron(config):
     set_conf_option(conf_l3_agent, "DEFAULT", "use_namespaces", "true")
     set_conf_option(conf_l3_agent, "DEFAULT", "debug", "true")
 
-    set_conf_option(conf_nova, "neutron", "auth_url", f"http://{ip_address}:5000")
-    set_conf_option(conf_nova, "neutron", "auth_type", "password")
-    set_conf_option(conf_nova, "neutron", "project_domain_name", "default")
-    set_conf_option(conf_nova, "neutron", "user_domain_name", "default")
-    set_conf_option(conf_nova, "neutron", "region_name", "RegionOne")
-    set_conf_option(conf_nova, "neutron", "project_name", "service")
-    set_conf_option(conf_nova, "neutron", "username", "neutron")
-    set_conf_option(conf_nova, "neutron", "password", service_password)
-    set_conf_option(conf_nova, "neutron", "service_metadata_proxy", "true")
-    set_conf_option(conf_nova, "neutron", "metadata_proxy_shared_secret", service_password)
-
-    if not os.path.exists("/etc/neutron/plugin.ini"):
-        os.symlink(conf_ml2, "/etc/neutron/plugin.ini")
-
-    neutron_db_migration_cmd = [
-    "sudo", "-u", "neutron",
-    "neutron-db-manage", "--config-file", neutron_conf,  "--config-file", conf_ml2, "upgrade", "head"]
-    
-    if not run_command(neutron_db_migration_cmd, "Running Neutron DB Migrations...") : return False
-
     return True
 
 def finalize():
@@ -240,11 +210,11 @@ def finalize():
 
     if not run_command(["systemctl", "restart", "nova-api"], "Restarting Nova API service...", False, None, 3, 5): return False
     
-    if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron services...", False, None, 3, 5): return False
+    if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron OVS services...", False, None, 3, 5): return False
 
     return True
 
-def create_networks(config):
+def create_ovs_networks(config):
      
     print()
     
@@ -367,20 +337,18 @@ def create_networks(config):
 
     return True
 
-def run_setup_neutron(config):
+def run_setup_ovs_neutron(config):
      
-     config_openvswitch_bridges = get(config, "bridge.CREATE_BRIDGES", "no") == "yes"
+     config_openvswitch_bridges = get(config, "neutron.ovs.CREATE_BRIDGES", "no") == "yes"
 
      if not install_pkgs(): return False
      
      if config_openvswitch_bridges:
         if not conf_openvswitch_bridges(config) : return False
         
-     if not conf_neutron(config) : return False
+     if not conf_neutron_ovs(config) : return False
      
      if not finalize() : return False
      
-     if not create_networks(config): return False
-     
-     print(f"\n{colors.GREEN}Neutron configured successfully!{colors.RESET}\n")
+     if not create_ovs_networks(config): return False
      return True

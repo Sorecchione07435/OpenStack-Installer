@@ -1,6 +1,3 @@
-# This is a small configuration file for configuring OpenStack
-# Set passwords for all OpenStack services, databases
-
 passwords:
   ADMIN_PASSWORD: ""
   SERVICE_PASSWORD: ""
@@ -8,15 +5,11 @@ passwords:
   DATABASE_PASSWORD: ""
   DEMO_PASSWORD: ""
 
-# Network Configuration
-# Enter the IP address of your controller node where all OpenStack services will be installed
 network:
   HOST_IP: ""
   HOST_IP_NETMASK: ""
   HOST_IP_CIDR: ""
 
-# Public network configuration
-# It is recommended to enter a larger IP address as Range Start to HOST_IP
 public_network:
   PUBLIC_SUBNET_CIDR: ""
   PUBLIC_SUBNET_RANGE_START: ""
@@ -24,26 +17,73 @@ public_network:
   PUBLIC_SUBNET_GATEWAY: ""
   PUBLIC_SUBNET_DNS_SERVERS: ""
 
-# Specifies the physical interface that will be used for public network external bridge
-bridge:
-  CREATE_BRIDGES: yes
+neutron:
+  DRIVER: "ovs"           # ovs | ovn
 
-  PUBLIC_BRIDGE_INTERFACE: ""
-  PUBLIC_BRIDGE: "br-ex"
-  INTERNAL_BRIDGE: "br-internal"
+  # OVS-specific
+  ovs:
+    CREATE_BRIDGES: "yes"
+    PUBLIC_BRIDGE_INTERFACE: ""
+    PUBLIC_BRIDGE: "br-ex"
+    INTERNAL_BRIDGE: "br-internal"  # only OVS, OVN manages it alone
 
-# Choose whether to install the Block Storage service (Cinder) (Yes or No)
+  # OVN-specific
+  ovn:
+    CREATE_BRIDGES: "yes"
+
+    OVN_NB_PORT: "6641"
+    OVN_SB_PORT: "6642"
+
+    OVN_PUBLIC_BRIDGE_INTERFACE: "" 
+    OVN_PUBLIC_BRIDGE: "br-ex"
+
+    OVN_ENCAP_TYPE: "geneve"        # geneve | vxlan
+
+    OVN_L3_SCHEDULER: "leastloaded" # leastloaded | chance
+
+    ENABLE_DISTRIBUTED_FLOATING_IP: "no"
+
+  # Tenant network configuration (common to OVS and OVN)
+  tenant_network:
+    TYPE: "geneve"      # OVN: geneve | OVS: vxlan, gre, vlan
+    VNI_RANGE: "1:65536"
+
+  # Configure provider networks
+  provider_networks:
+    - name: "public"
+      bridge: "br-ex"
+      type: "flat"
+    # Add more if you have multiple physnets:
+    # - name: "internal"
+    # bridge: "br-internal"
+    # type: "flat"
+
 cinder:
-  INSTALL_CINDER: no
-  CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME: ""
-  CINDER_VOLUME_LVM_IMAGE_FILE_PATH: ""
-  # Size of the file-based LVM image for Cinder volumes (in GB)
-  CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: ""
+  INSTALL_CINDER: "no"
+  CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME: "loop0"
+  CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
+  CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
 
-# Compute configuration
 compute:
-  NOVA_COMPUTE_VIRT_TYPE: "kvm"
+  NOVA_COMPUTE_VIRT_TYPE: "kvm"   # kvm | qemu (qemu for VM nested)
+  CPU_ALLOCATION_RATIO: 4.0
+  RAM_ALLOCATION_RATIO: 1.5
+  DISK_ALLOCATION_RATIO: 1.0
 
-# OpenStack release
+# Servizi opzionali
+optional_services:
+  INSTALL_HORIZON: "yes"
+  #INSTALL_HEAT: no
+  #INSTALL_OCTAVIA: no   # Load Balancer
+  #INSTALL_BARBICAN: no  # Key Manager (utile con OVN TLS)
+
+# TLS for OVN (optional, recommended for production)
+# ovn_tls:
+# ENABLED: false
+# CA_CERT: "/etc/ovn/ca.crt"
+# SERVER_CERT: "/etc/ovn/server.crt"
+# SERVER_KEY: "/etc/ovn/server.key"
+
 openstack:
   OPENSTACK_RELEASE: "caracal"
+  REGION_NAME: "RegionOne"

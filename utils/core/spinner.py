@@ -38,7 +38,6 @@ class Spinner:
         color_code = color_codes.get(color, "")
         reset_code = color_codes["reset"]
 
-        # Crea il messaggio principale allineato a sinistra
         message_aligned = self.message.ljust(width)
         sys.stdout.write(f"\r{message_aligned}[ {color_code}{done_message}{reset_code} ]\n")
         sys.stdout.flush()
