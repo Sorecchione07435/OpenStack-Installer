@@ -22,7 +22,7 @@ def conf_nova(config):
       
     print()
 
-    install_cinder = get(config, "cinder.INSTALL_CINDER", "no") == "yes"
+    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no") == "yes"
 
     database_password = get(config, "passwords.DATABASE_PASSWORD")
     rabbitmq_password = get(config, "passwords.RABBITMQ_PASSWORD")

@@ -129,7 +129,7 @@ def create_services_users(config):
     print()
 
     service_password = get(config, "passwords.SERVICE_PASSWORD")
-    install_cinder = get(config, "cinder.INSTALL_CINDER", "no").lower() == "yes"
+    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
 
     services_user_create_cmds = [
         f"openstack user create --domain default --password {service_password} glance --or-show",
@@ -180,7 +180,7 @@ def create_services_endpoints(config):
     print()
 
     ip_address = get(config, "network.HOST_IP")
-    install_cinder = get(config, "cinder.INSTALL_CINDER", "no") == "yes"
+    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no") == "yes"
 
     def ep(service, interface, url):
         check = (

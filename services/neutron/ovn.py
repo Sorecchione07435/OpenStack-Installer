@@ -204,6 +204,8 @@ def conf_ovn_neutron(config):
     
     ovn_l3_scheduler = get(config, "neutron.ovn.OVN_L3_SCHEDULER")
 
+    ovn_public_bridge = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE")
+
     provider_networks = get(config, "neutron.provider_networks", [])
 
     flat_networks  = [n["name"] for n in provider_networks if n["type"] == "flat"]
@@ -211,17 +213,12 @@ def conf_ovn_neutron(config):
 
     bridge_mappings = ",".join(f'{n["name"]}:{n["bridge"]}' for n in provider_networks)
 
+    enable_distributed_floating_ip = get(config, "neutron.ovn.ENABLE_DISTRIBUTED_FLOATING_IP", "no") == "yes"
+
     flat_networks_str = ",".join(flat_networks)
 
     vlan_networks_str = ",".join(vlan_networks)
 
-    # OVN connection settings in neutron.conf [ovn] section
-    set_conf_option(neutron_conf, "ovn", "ovn_nb_connection", f"tcp:{ip_address}:{ovn_nb_port}")
-    set_conf_option(neutron_conf, "ovn", "ovn_sb_connection", f"tcp:{ip_address}:{ovn_sb_port}")
-    set_conf_option(neutron_conf, "ovn", "ovn_l3_scheduler", ovn_l3_scheduler)
-    set_conf_option(neutron_conf, "ovn", "ovn_metadata_enabled", "true")
-
-    # OVN mechanism driver replaces openvswitch
     set_conf_option(conf_ml2, "ml2", "mechanism_drivers", "ovn")
 
     # OVN supports flat, vlan, geneve (geneve is the overlay type for tenant nets)
@@ -248,7 +245,16 @@ def conf_ovn_neutron(config):
     # OVN connection settings in ml2_conf.ini [ovn] section
     set_conf_option(conf_ml2, "ovn", "ovn_nb_connection", f"tcp:{ip_address}:{ovn_nb_port}")
     set_conf_option(conf_ml2, "ovn", "ovn_sb_connection", f"tcp:{ip_address}:{ovn_sb_port}")
-    set_conf_option(conf_ml2, "ovn", "ovn_l3_mode", "True")
+    set_conf_option(conf_ml2, "ovn", "ovn_l3_mode", "true")
+    set_conf_option(conf_ml2, "ovn", "ovn_l3_scheduler", ovn_l3_scheduler)
+    set_conf_option(conf_ml2, "ovn", "ovn_metadata_enabled", "true")
+
+    if enable_distributed_floating_ip:
+        set_conf_option(neutron_conf, "ovn", "enable_distributed_floating_ip", "true")
+    else:
+        set_conf_option(neutron_conf, "ovn", "enable_distributed_floating_ip", "false")
+    
+    set_conf_option(conf_ml2, "ovn", "ovn_bridge_mappings", f"public:{ovn_public_bridge}")
 
     set_conf_option(conf_nova, "os_vif_ovs", "ovsdb_connection", "unix:/var/run/openvswitch/db.sock")
 
@@ -310,6 +316,8 @@ def create_ovn_networks(config):
     public_subnet_gateway = get(config, "public_network.PUBLIC_SUBNET_GATEWAY")
     public_subnet_dns_servers = get(config, "public_network.PUBLIC_SUBNET_DNS_SERVERS")
     public_subnet_cidr = get(config, "public_network.PUBLIC_SUBNET_CIDR")
+
+    ovn_public_bridge = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE")
 
     os.environ["OS_USERNAME"] = "admin"
     os.environ["OS_PASSWORD"] = admin_password
@@ -401,8 +409,8 @@ def create_ovn_networks(config):
         run_command(
             ["openstack", "security", "group", "rule", "create",
              "--proto", "tcp", "--dst-port", "22",
-             "--remote-ip", public_subnet_cidr, sg_id],
-            "Allowing SSH access...")
+             "--remote-ip", "0.0.0.0/0", sg_id],
+            "Allowing SSH access...", True)
     else:
         print(f"{colors.YELLOW}SSH rule already exists, skipping{colors.RESET}")
 
@@ -411,9 +419,41 @@ def create_ovn_networks(config):
         run_command(
             ["openstack", "security", "group", "rule", "create",
              "--proto", "icmp", sg_id],
-            "Allowing ICMP (ping)...")
+            "Allowing ICMP (ping)...", True)
     else:
         print(f"{colors.YELLOW}ICMP rule already exists, skipping{colors.RESET}")
+
+    router_gw_ip = run_command_output([
+    "openstack", "router", "show", "internal_router",
+    "-f", "json"
+    ])
+
+    gw_data = json.loads(router_gw_ip)
+    gw_ip = gw_data["external_gateway_info"]["external_fixed_ips"][0]["ip_address"]
+    run_command_sync(["ip", "route", "replace", "10.0.0.0/24", "via", gw_ip, "dev", ovn_public_bridge])
+
+    print()
+
+    if not run_command([
+    "neutron-ovn-db-sync-util",
+    "--config-file", "/etc/neutron/neutron.conf",
+    "--config-file", "/etc/neutron/plugins/ml2/ml2_conf.ini",
+    "--ovn-neutron_sync_mode", "repair"
+],
+    "Resynchronizing the OVN Northd database..."):
+     return False
+
+    if not run_command(
+        ["systemctl", "restart",
+         "ovn-ovsdb-server-nb",
+         "ovn-ovsdb-server-sb",
+         "ovn-northd",
+         "ovn-controller",
+         "neutron-server",
+         "nova-compute"],
+        "Restarting OVN services...", False, None, 3, 5
+    ):
+        return False
 
     return True
 

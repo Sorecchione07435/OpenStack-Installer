@@ -48,109 +48,140 @@ def install_pkgs():
 
 def conf_lvm(config):
 
-    print()
-
     cinder_conf_path = "/etc/tgt/conf.d/cinder.conf"
-    line = "include /var/lib/cinder/volumes/*\n"
-      
-    lvm_image_file_path = get(config, "cinder.CINDER_VOLUME_LVM_IMAGE_FILE_PATH")
-    lvm_loop_dev = get(config, "cinder.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME")
-
-    lvm_image_size_in_gb = get(config, "cinder.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
-
-    VG_NAME="cinder-volumes"
-
     os.makedirs("/var/lib/cinder/images", exist_ok=True)
+    line = "include /var/lib/cinder/volumes/*\n"
 
-    if not os.path.exists(lvm_image_file_path):
-         fallocate_cmd = ["fallocate", "-l", f"{lvm_image_size_in_gb}G", lvm_image_file_path]
+    lvm_physical_volume = get(config, "cinder.lvm.PHYSICAL_VOLUME")
+    lvm_image_file_path = get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH")
+    lvm_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME")
+    lvm_image_size_in_gb = get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
 
-         fallocate_cmd_result = run_command(fallocate_cmd, "Allocating LVM Disk Image...")
+    VG_NAME = "cinder-volumes"
 
-         if not fallocate_cmd_result: return False
-         
-         if not ensure_system_user_with_run_command("cinder"): return False
-         
-         uid = pwd.getpwnam("cinder").pw_uid
-         gid = grp.getgrnam("cinder").gr_gid
-         os.chown(lvm_image_file_path, uid, gid)
+    if lvm_physical_volume:
+        lvm_dev = lvm_physical_volume
+    else:
+        lvm_dev = lvm_loop_dev
 
-         os.chmod(lvm_image_file_path, 0o600)
-    
-    if not run_command(["losetup", lvm_loop_dev], message=f"Checking {lvm_loop_dev}", ignore_errors=True):
-       if not run_command(
-            ["losetup", lvm_loop_dev, lvm_image_file_path],
-            message=f"Associating {lvm_image_file_path} to {lvm_loop_dev}"
-        ): return False
-    
-    check_cmd = ["pvs"]
-    pvs_result = run_command_sync(
-        check_cmd,
-    )
+        if not os.path.exists(lvm_image_file_path):
+            fallocate_cmd = ["fallocate", "-l", f"{lvm_image_size_in_gb}G", lvm_image_file_path]
+            if not run_command(fallocate_cmd, "Allocating LVM Disk Image..."): return False
+
+            if not ensure_system_user_with_run_command("cinder"): return False
+            uid = pwd.getpwnam("cinder").pw_uid
+            gid = grp.getgrnam("cinder").gr_gid
+            os.chown(lvm_image_file_path, uid, gid)
+            os.chmod(lvm_image_file_path, 0o600)
+
+        try:
+            losetup_output = subprocess.check_output(["losetup", "-j", lvm_image_file_path], text=True)
+        except subprocess.CalledProcessError:
+            losetup_output = ""
+
+        if lvm_loop_dev not in losetup_output:
+            if not run_command(["losetup", lvm_loop_dev, lvm_image_file_path],
+                               f"Associating {lvm_image_file_path} to {lvm_loop_dev}"): return False
 
     try:
-        output = subprocess.check_output(["pvs"], text=True)
+        pvs_output = subprocess.check_output(["pvs", "--noheadings", "-o", "pv_name"], text=True)
     except subprocess.CalledProcessError:
-        output = ""
+        pvs_output = ""
 
-    if lvm_loop_dev not in output:
-       if not  run_command(
-            ["pvcreate", lvm_loop_dev],
-            message=f"Creating physical volume on {lvm_loop_dev}"
-        ): return False
-    
+    if lvm_dev not in pvs_output.split():
+        if not run_command(["pvcreate", lvm_dev], f"Creating physical volume on {lvm_dev}"): return False
+
     try:
-        output = subprocess.check_output(["vgs"], text=True)
+        vgs_output = subprocess.check_output(["vgs", "--noheadings", "-o", "vg_name"], text=True)
     except subprocess.CalledProcessError:
-        output = ""
+        vgs_output = ""
 
-    if VG_NAME not in output:
-        if not run_command(
-            ["vgcreate", VG_NAME, lvm_loop_dev],
-            message=f"Creating volume group {VG_NAME}"
-        ): return False
+    if VG_NAME not in vgs_output.split():
+        if not run_command(["vgcreate", VG_NAME, lvm_dev], f"Creating volume group {VG_NAME}"): return False
+
+    try:
+        with open(cinder_conf_path, "w") as fconf:
+            fconf.write(line)
+    except Exception as e:
+        print(f"{colors.RED}Failed to write {cinder_conf_path}: {e}{colors.RESET}")
+        return False
     
-    with open(cinder_conf_path, "w") as fconf:
-        fconf.write(line)
+    return True
+
+def write_cinder_lvm_env(config):
+    env_path = "/etc/default/cinder-lvm"
+
+    physical_volume = get(config, "cinder.lvm.PHYSICAL_VOLUME", default="")
+    lvm_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME")
+    lvm_image_file = get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH")
+    vg_name = "cinder-volumes"
+
+    content = f"""PHYSICAL_VOLUME={physical_volume}
+LVM_LOOP_DEV={lvm_loop_dev}
+LVM_IMAGE_FILE={lvm_image_file}
+VG_NAME={vg_name}
+"""
+
+    try:
+        with open(env_path, "w") as f:
+            f.write(content)
+    except Exception as e:
+        print(f"{colors.RED}Failed to write {env_path}: {e}{colors.RESET}")
+        return False
 
     return True
 
 def setup_loopback_service(config):
-
-    print()
-
     SERVICE_PATH = "/etc/systemd/system/cinder-loopback.service"
-       
-    lvm_image_file_path = get(config, "cinder.CINDER_VOLUME_LVM_IMAGE_FILE_PATH")
-    lvm_loop_dev = get(config, "cinder.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME")
 
-    lvm_image_size_in_gb = get(config, "cinder.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
+    lvm_image_file_path = get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH")
+    lvm_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME")
+    VG_NAME = "cinder-volumes"
 
-    VG_NAME="cinder-volumes"
-
-     
     service_content = f"""[Unit]
-Description=Cinder LVM loopback device
+Description=Cinder LVM device
 Before=cinder-volume.service tgt.service
 DefaultDependencies=no
 After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'if ! losetup {lvm_loop_dev} | grep -q cinder-volumes.img; then /sbin/losetup {lvm_loop_dev} {lvm_image_file_path}; fi'
-ExecStart=/sbin/vgchange -ay {VG_NAME}
-ExecStop=/sbin/vgchange -an {VG_NAME}
-ExecStop=/bin/bash -c 'if losetup {lvm_loop_dev} | grep -q cinder-volumes.img; then /sbin/losetup -d {lvm_loop_dev}; fi'
 RemainAfterExit=yes
+EnvironmentFile=/etc/default/cinder-lvm
+ExecStart=/bin/bash -c '
+if [ -z "$PHYSICAL_VOLUME" ]; then
+    # Usa loopback file solo se non c’è disco fisico
+    if ! losetup {lvm_loop_dev} | grep -q {lvm_image_file_path}; then
+        /sbin/losetup {lvm_loop_dev} {lvm_image_file_path}
+    fi
+fi
+/sbin/vgchange -ay {VG_NAME}
+'
+ExecStop=/bin/bash -c '
+/sbin/vgchange -an {VG_NAME}
+if [ -z "$PHYSICAL_VOLUME" ]; then
+    if losetup {lvm_loop_dev} | grep -q {lvm_image_file_path}; then
+        /sbin/losetup -d {lvm_loop_dev}
+    fi
+fi
+'
 
 [Install]
 WantedBy=multi-user.target
 """
 
-    with open(SERVICE_PATH, "w") as f:
-        f.write(service_content)
+    try:
+        with open(SERVICE_PATH, "w") as f:
+            f.write(service_content)
+    except Exception as e:
+        print(f"{colors.RED}Failed to write service file: {e}{colors.RESET}")
+        return False
 
-    if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): return False
+    if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): 
+        return False
+
+    if not run_command(["systemctl", "enable", "--now", "cinder-loopback.service"], 
+                       "Enabling and starting cinder-loopback service..."): return False
 
     return True
 
@@ -214,6 +245,8 @@ def run_setup_cinder(config):
     if not install_pkgs(): return False
     
     if not conf_lvm(config): return False
+
+    if not write_cinder_lvm_env(config): return False
     
     if not setup_loopback_service(config): return False
     

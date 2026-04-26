@@ -20,8 +20,16 @@ def install_pkgs():
     return True
 
 def conf_nova_compute(config):
+
+    cpu_allocation_ratio = get(config, "compute.CPU_ALLOCATION_RATIO")
+    ram_allocation_ratio = get(config, "compute.RAM_ALLOCATION_RATIO")
+    disk_allocation_ratio = get(config, "compute.DISK_ALLOCATION_RATIO")
       
     virt_type = get(config, "compute.NOVA_COMPUTE_VIRT_TYPE")
+
+    set_conf_option(nova_conf, "DEFAULT", "cpu_allocation_ratio", str(cpu_allocation_ratio))
+    set_conf_option(nova_conf, "DEFAULT", "ram_allocation_ratio", str(ram_allocation_ratio))
+    set_conf_option(nova_conf, "DEFAULT", "disk_allocation_ratio", str(disk_allocation_ratio))
 
     set_conf_option(nova_compute_conf, "libvirt", "virt_type", virt_type)
 

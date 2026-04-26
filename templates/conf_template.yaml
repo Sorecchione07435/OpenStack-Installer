@@ -59,10 +59,17 @@ neutron:
     # type: "flat"
 
 cinder:
-  INSTALL_CINDER: "no"
-  CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME: "loop0"
-  CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
-  CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
+    lvm:
+      # Use a real physical volume, or leave blank to use loopback
+      PHYSICAL_VOLUME: "" # Example: "/dev/sdb0"
+
+      # Loopback file (used only if physical_volume is not specified)
+
+      CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME: "/dev/loop0"
+
+      CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
+
+      CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
 
 compute:
   NOVA_COMPUTE_VIRT_TYPE: "kvm"   # kvm | qemu (qemu for VM nested)
@@ -70,12 +77,14 @@ compute:
   RAM_ALLOCATION_RATIO: 1.5
   DISK_ALLOCATION_RATIO: 1.0
 
-# Servizi opzionali
 optional_services:
+  INSTALL_CINDER: "no"
   INSTALL_HORIZON: "yes"
+
+  # ( Coming Soon to be Implemented )
   #INSTALL_HEAT: no
   #INSTALL_OCTAVIA: no   # Load Balancer
-  #INSTALL_BARBICAN: no  # Key Manager (utile con OVN TLS)
+  #INSTALL_BARBICAN: no  # Key Manager
 
 # TLS for OVN (optional, recommended for production)
 # ovn_tls:

@@ -111,6 +111,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="internal",
         help="Network to attach the instance to. Defaults to 'internal'."
     )
+
+    launch_p.add_argument(
+        "--keypair",
+        default="",
+        help="Existing key pair in OpenStack to associate with the instance"
+    )
+
     launch_p.add_argument(
         "--password",
         default="",
@@ -191,7 +198,7 @@ def cmd_launch(args):
         print(endpoint_check)
         return
 
-    launch(name=args.name, image=args.image, flavor=args.flavor, network=args.network, password=args.password)
+    launch(name=args.name, image=args.image, flavor=args.flavor, network=args.network, keypair=args.keypair, password=args.password)
 
 COMMANDS = {
     "generate-config": cmd_generate_config,

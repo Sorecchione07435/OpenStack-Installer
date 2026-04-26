@@ -301,7 +301,7 @@ def allocate_floating_ip(external_net: str = EXTERNAL_NET) -> str:
 
 def attach_floating_ip(server_id: str, fip: str) -> None:
     """Attach floating IP to server using server ID (not name)."""
-    print(f"Attaching floating IP {fip} to instance {server_id} ...")
+    print(f"Attaching floating IP {fip} to instance {server_id} ...\n")
     _os("server", "add", "floating", "ip", server_id, fip)
 
 
@@ -319,7 +319,7 @@ def wait_for_active(server_id: str, timeout: int = 120) -> None:
     logger.warning(f"Server {server_id} not ACTIVE after {timeout}s")
 
 
-def print_summary(name: str, fip: str, key_path: str, is_password: bool,
+def print_summary(name: str, fip: str, key_path: str | None, is_password: bool,
                   username: str, password: str, os_type: str) -> None:
 
     os_type = (os_type or "").lower()
@@ -328,8 +328,12 @@ def print_summary(name: str, fip: str, key_path: str, is_password: bool,
     print(f"Attached Floating IP : {fip}\n")
 
     if os_type == "linux":
-        ssh_cmd = f"ssh -i {key_path} {username}@{fip}"
-        print(f"You can connect to the instance with:\n  {ssh_cmd}\n")
+        if key_path:
+            ssh_cmd = f"ssh -i {key_path} {username}@{fip}"
+            print(f"You can connect to the instance with:\n  {ssh_cmd}\n")
+        else:
+            print(f"You can connect to the instance with:\n  ssh {username}@{fip}\n")
+            print(f"{colors.YELLOW}Note: specify your private key with -i if password auth is disabled.{colors.RESET}\n")
 
     elif os_type == "windows":
         print(f"You can connect via RDP to: {fip}\n")
@@ -352,6 +356,7 @@ def launch(
     image: str          = DEFAULT_IMAGE,
     flavor: str         = DEFAULT_FLAVOR,
     network: str        = DEFAULT_NETWORK,
+    keypair: str        = "",
     key_path: str       = SSH_KEY_PATH,
     external_net: str   = EXTERNAL_NET,
     password: str       = ""
@@ -360,7 +365,7 @@ def launch(
     os.makedirs(SSH_KEY_PATH, exist_ok=True)
     key_path = os.path.join(SSH_KEY_PATH, f"id_{name}")
 
-    keypair = ensure_keypair(key_path, name)
+    #keypair = ensure_keypair(key_path, name)
 
     image_id   = get_default_image(image)
     flavor_id  = get_default_flavor(flavor)
@@ -375,8 +380,14 @@ def launch(
 
     password_enabled = True
 
-    with open(f"{key_path}.pub", "r") as f:
-        public_key = f.read().strip()
+    if not keypair:
+        key_path = key_path or os.path.join(SSH_KEY_PATH, f"id_{name}")
+        keypair = ensure_keypair(key_path, name)
+        with open(f"{key_path}.pub", "r") as f:
+            public_key = f.read().strip()
+    else:
+        key_path = None
+        public_key = None
 
     if "cirros" in image_name:
         password_enabled = False

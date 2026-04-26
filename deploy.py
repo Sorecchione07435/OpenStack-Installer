@@ -35,7 +35,10 @@ def deploy(config_file):
   
     public_iface = get_active_interface()
 
-    if os.path.exists(f"/sys/class/net/{public_iface}/wireless"):
+    create_ovs_bridges = get(config, "ovs.CREATE_BRIDGES")
+    create_ovn_bridges = get(config, "ovn.CREATE_BRIDGES")
+
+    if (create_ovn_bridges or create_ovs_bridges) and os.path.exists(f"/sys/class/net/{public_iface}/wireless"):
         print(f"{colors.RED}Wi-Fi interfaces are not supported for OVS bridge networking, Switch to Ethernet to continue OpenStack deployment.{colors.RESET}")
         return False
   
@@ -47,7 +50,8 @@ def deploy(config_file):
     if not has_hw_virtualization():
         print(f"{colors.YELLOW}Warning: No hardware virtualization detected – QEMU hypervisor will be used and Nova instances will be emulated with lower performance{colors.RESET}")
 
-    install_cinder = get(config, "cinder.INSTALL_CINDER", "no") == "yes"
+    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no") == "yes"
+    install_horizon = get(config, "optional_services.INSTALL_HORIZON", "no") == "yes"
 
     ip_address = get(config, "network.HOST_IP")
 
@@ -81,8 +85,9 @@ def deploy(config_file):
     print("Setting up Neutron... \n")
     if not run_setup_neutron(config): return False
     
-    print("Setting up Horizon...\n")
-    if not run_setup_horizon(config): return False
+    if install_horizon:
+        print("Setting up Horizon...\n")
+        if not run_setup_horizon(config): return False
     
     print(f"\n*** {colors.GREEN}OpenStack Deployment Completed Successfully!{colors.RESET} ***")
 

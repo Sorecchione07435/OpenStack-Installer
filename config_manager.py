@@ -130,10 +130,10 @@ def config_openstack(
 
 
     config_dict.setdefault("cinder", {})
-    config_dict["cinder"]["INSTALL_CINDER"] = "yes" if install_cinder == "yes" else "no"
-    config_dict["cinder"]["CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME"] = get_free_loop()
-    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"]       = "/var/lib/cinder/images/cinder-volumes.img"
-    config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"]      = lvm_image_size_in_gb
+    config_dict["optional_services"]["INSTALL_CINDER"] = "yes" if install_cinder == "yes" else "no"
+    config_dict["cinder"]["lvm"]["CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME"] = get_free_loop()
+    config_dict["cinder"]["lvm"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"]       = "/var/lib/cinder/images/cinder-volumes.img"
+    config_dict["cinder"]["lvm"]["CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"]      = lvm_image_size_in_gb
 
     # -------------------------------------------------------------------------
     # Compute
