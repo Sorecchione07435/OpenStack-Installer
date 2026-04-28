@@ -120,7 +120,7 @@ def create_projects_and_demo_user(config):
 
     full_create_demo_user_cmds = " ; ".join(create_demo_user_cmds)
     
-    full_create_demo_user_cmds_result = run_command(["bash", "-c", full_create_demo_user_cmds], "Creating Demo user...")
+    full_create_demo_user_cmds_result = run_command(["bash", "-c", full_create_demo_user_cmds], "Creating demo user...")
 
     if not full_create_demo_user_cmds_result: return False
     

@@ -17,11 +17,9 @@ def install_pkgs():
 
     print()
     
-    apt_update()
+    if not apt_update() : return False
 
-    packages = ["wget", "rabbitmq-server", "python3-openstackclient", "memcached"]
-
-    if not apt_install(packages, ux_text=f"Installing prerequisite packages..."): return False
+    if not apt_install(["wget", "rabbitmq-server", "python3-openstackclient", "memcached"], ux_text=f"Installing prerequisite packages..."): return False
 
     return True
 

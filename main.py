@@ -88,6 +88,13 @@ def build_parser() -> argparse.ArgumentParser:
         dest="neutron_driver",
         help="The Neutron Driver that will be used to configure networks in OpenStack"
     )
+
+    deploy_p.add_argument(
+        "--generate-only",
+        action="store_true",
+        help="Generates a pre-compiled configuration file for the current system without starting the deployment"
+    )
+
     # generate-config
     generate_config_p = sub.add_parser(
         "generate-config",
@@ -167,7 +174,13 @@ def cmd_deploy(args):
             lvm_image_size_in_gb=lvm_size,
             neutron_driver=driver
         )
-        
+
+        if args.generate_only:
+            print(f"Configuration file generated in '{config_file_path}'\n")
+            print(f"You can start the deployment later with 'openstack_installer deploy --config-file {config_file_path}'")
+            sys.exit(0)
+
+
         deploy(config_file_path)
     else:
         deploy(args.config_file)

@@ -38,11 +38,10 @@ def conf_placement(config):
     set_conf_option(placement_conf, "keystone_authtoken", "username", "placement")
     set_conf_option(placement_conf, "keystone_authtoken", "password", service_password)
 
-    db_migration_cmd = [
+    if not run_command([
     "sudo", "-u", "placement",
     "placement-manage", "db", "sync"
-]
-    if not run_command(db_migration_cmd, "Running Placement DB Migrations...") : return False
+    ], "Running Placement DB Migrations...") : return False
     
     return True
 
