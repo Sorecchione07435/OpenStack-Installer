@@ -93,16 +93,14 @@ def upload_cirros_image(config):
     
     run_command_sync(["openstack", "image", "delete", "cirros"])
 
-    create_image_result = run_command([
+    if not run_command([
         "openstack", "image", "create",
         image_name,
         "--file", image_file_path,
         "--disk-format", "qcow2",
         "--container-format", "bare",
         "--public"
-        ] , f"Adding cirros image...")
-
-    if not create_image_result : return False
+        ] , f"Adding cirros image...") : return False
     
     os.remove(image_file_path)
 
@@ -111,13 +109,13 @@ def upload_cirros_image(config):
     
 def run_setup_glance(config):
      
-     if not install_pkgs(): return False
-     
-     if not conf_glance(config): return False
-     
-     if not finalize(config): return False
-     
-     if not upload_cirros_image(config): return False
+    if not install_pkgs(): return False
+    
+    if not conf_glance(config): return False
+    
+    if not finalize(config): return False
+    
+    if not upload_cirros_image(config): return False
 
-     print(f"\n{colors.GREEN}Glance configured successfully!{colors.RESET}\n")
-     return True
+    print(f"\n{colors.GREEN}Glance configured successfully!{colors.RESET}\n")
+    return True

@@ -1,3 +1,5 @@
+# Configure the Networking service (Neutron)
+
 from ...utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
 from ...utils.apt.apt import apt_install, apt_update
 from ...utils.config.parser import parse_config, get, resolve_vars
@@ -14,7 +16,8 @@ conf_metadata_agent = "/etc/neutron/metadata_agent.ini"
 conf_nova = "/etc/nova/nova.conf"
 
 def install_pkgs():
-    apt_update()
+    
+    if not apt_update() : return False
 
     neutron_packages = [
         "neutron-server",
@@ -27,6 +30,8 @@ def install_pkgs():
     return True
 
 def conf_neutron(config):
+
+    link = "/etc/neutron/plugin.ini"
 
     database_password = get(config, "passwords.DATABASE_PASSWORD")
     rabbitmq_password = get(config, "passwords.RABBITMQ_PASSWORD")
@@ -83,8 +88,10 @@ def conf_neutron(config):
     set_conf_option(conf_nova, "neutron", "service_metadata_proxy", "true")
     set_conf_option(conf_nova, "neutron", "metadata_proxy_shared_secret", service_password)
 
-    if not os.path.exists("/etc/neutron/plugin.ini"):
-        os.symlink(conf_ml2, "/etc/neutron/plugin.ini")
+    if os.path.islink(link):
+        os.remove(link)
+    if not os.path.exists(link):
+        os.symlink(conf_ml2, link)
 
     print()
 

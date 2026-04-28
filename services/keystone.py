@@ -35,11 +35,11 @@ def conf_keystone(config):
     set_conf_option(keystone_conf, "token", "provider", "fernet")
 
     db_migration_cmd = [
-    "sudo", "-u", "keystone",
-    "env",
-    "PATH=/usr/bin:/usr/local/bin",
-    "keystone-manage", "db_sync"
-]
+        "sudo", "-u", "keystone",
+        "env",
+        "PATH=/usr/bin:/usr/local/bin",
+        "keystone-manage", "db_sync"
+    ]
 
     migration_result = run_command(db_migration_cmd, "Running Keystone DB Migrations...")
 
@@ -61,23 +61,18 @@ def conf_keystone(config):
             return False
     
     bootstrap_cmd = [
-    "sudo", "-u", "keystone",
-    "keystone-manage", "bootstrap",
-    "--bootstrap-password", admin_password,
-    "--bootstrap-admin-url", identity_url,
-    "--bootstrap-internal-url", identity_url,
-    "--bootstrap-public-url", identity_url,
-    "--bootstrap-region-id", "RegionOne"
+        "sudo", "-u", "keystone",
+        "keystone-manage", "bootstrap",
+        "--bootstrap-password", admin_password,
+        "--bootstrap-admin-url", identity_url,
+        "--bootstrap-internal-url", identity_url,
+        "--bootstrap-public-url", identity_url,
+        "--bootstrap-region-id", "RegionOne"
 ]
     print()
 
-    bootstrap_result = run_command(bootstrap_cmd, "Bootstrapping Keystone...")
+    if not run_command(bootstrap_cmd, "Bootstrapping Keystone...") : return False
 
-    if not bootstrap_result:
-        return False
-    
-
-    
     return True
     
 def finalize(config):
@@ -123,9 +118,9 @@ def create_projects_and_demo_user(config):
         "openstack role add --project demo --user demo user"    
     ]
 
-    full_create_demo_user_cmds = " && ".join(create_demo_user_cmds)
+    full_create_demo_user_cmds = " ; ".join(create_demo_user_cmds)
     
-    full_create_demo_user_cmds_result = run_command(["bash", "-c", full_create_demo_user_cmds], "Creating User role and demo user...")
+    full_create_demo_user_cmds_result = run_command(["bash", "-c", full_create_demo_user_cmds], "Creating Demo user...")
 
     if not full_create_demo_user_cmds_result: return False
     
@@ -164,9 +159,9 @@ def create_services_users(config):
         services_create_cmds.append('openstack service show cinderv3 || openstack service create --name cinderv3 --description "OpenStack Block Storage" volumev3')
         services_role_add_cmds.append("openstack role add --project service --user cinder admin")
 
-    full_services_user_create_cmds = " && ".join(services_user_create_cmds)
-    full_services_create_cmds = " && ".join(services_create_cmds)
-    full_services_role_add_cmds = " && ".join(services_role_add_cmds)
+    full_services_user_create_cmds = " ; ".join(services_user_create_cmds)
+    full_services_create_cmds = " ; ".join(services_create_cmds)
+    full_services_role_add_cmds = " ; ".join(services_role_add_cmds)
 
     full_services_user_create_cmds_result = run_command(["bash", "-c", full_services_user_create_cmds], "Creating Services Users...")
 
@@ -269,13 +264,12 @@ export OS_IMAGE_API_VERSION=2
             fadmin.write(admin_openrc_content.strip())
         with open("/root/demo-openrc.sh", "w") as fdemo:
             fdemo.write(demo_openrc_content.strip())
-        #print(f"{colors.GREEN}Environment credentials script generated successfully.{colors.RESET}")
+        os.chmod("/root/admin-openrc.sh", 0o600)
+        os.chmod("/root/demo-openrc.sh", 0o600)
     except Exception as e:
-        print(f"{colors.RED}Failed to generate credentials scripts file : {e}{colors.RESET}")
-    
-    os.chmod("/root/admin-openrc.sh", 0o600)
-    os.chmod("/root/demo-openrc.sh", 0o600)
-    
+        print(f"{colors.RED}Failed to generate credentials scripts: {e}{colors.RESET}")
+        return False
+
     return True
 
 def run_setup_keystone(config):

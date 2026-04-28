@@ -13,9 +13,7 @@ nova_compute_conf= "/etc/nova/nova-compute.conf"
 
 def install_pkgs():
 
-    packages = ["nova-compute"]
-
-    if not apt_install(packages, ux_text=f"Installing Nova Compute package...") : return False
+    if not apt_install(["nova-compute"], ux_text=f"Installing Nova Compute package...") : return False
 
     return True
 
@@ -46,9 +44,7 @@ def finalize():
     "nova-manage", "cell_v2", "discover_hosts", "--verbose"
 ]
     
-    cell_discover_hosts_migration_cmd_result = run_command(cell_discover_hosts_migration_cmd, "Discovering the Compute Node on Cell0...")
-
-    if not cell_discover_hosts_migration_cmd_result: return False
+    if not run_command(cell_discover_hosts_migration_cmd, "Discovering the Compute Node on Cell0...") : return False
 
     return True
 
@@ -59,8 +55,7 @@ def create_default_flavors(config):
     ip_address = get(config, "network.HOST_IP")
 
     admin_password = get(config, "passwords.ADMIN_PASSWORD")
-    demo_password = get(config, "passwords.DEMO_PASSWORD")
-     
+
     os.environ["OS_USERNAME"] = "admin"
     os.environ["OS_PASSWORD"] = admin_password
     os.environ["OS_PROJECT_NAME"] = "admin"
@@ -77,9 +72,9 @@ def create_default_flavors(config):
        "openstack flavor create m1.xlarge --id 5 --ram 16384 --disk 160 --vcpus 8", 
     ]
 
-    full_default_flavors_create_cmds = " ; ".join(default_flavors_create_cmds)
+    full_default_flavors_create_cmds = "set -e;" + " ; ".join(default_flavors_create_cmds)
 
-    full_default_flavors_create_cmds_result = run_command(["bash", "-c", full_default_flavors_create_cmds], "Creating default flavors...", True)
+    if not run_command(["bash", "-c", full_default_flavors_create_cmds], "Creating default flavors...") : return False
 
     return True
     

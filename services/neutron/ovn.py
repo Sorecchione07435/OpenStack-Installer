@@ -1,3 +1,5 @@
+# Configure the Open Virtual Network (OVN) Driver for Neutron
+
 from ...utils.core.commands import run_command, run_sync_command_with_retry, run_command_sync, run_command_output
 from ...utils.apt.apt import apt_install, apt_update
 from ...utils.config.parser import parse_config, get, resolve_vars
@@ -212,7 +214,7 @@ def conf_ovn_neutron(config):
     flat_networks  = [n["name"] for n in provider_networks if n["type"] == "flat"]
     vlan_networks  = [n["name"] for n in provider_networks if n["type"] == "vlan"]
 
-    bridge_mappings = ",".join(f'{n["name"]}:{n["bridge"]}' for n in provider_networks)
+    #bridge_mappings = ",".join(f'{n["name"]}:{n["bridge"]}' for n in provider_networks)
 
     enable_distributed_floating_ip = get(config, "neutron.ovn.ENABLE_DISTRIBUTED_FLOATING_IP", "no") == "yes"
 
@@ -433,6 +435,7 @@ def create_ovn_networks(config):
 
     gw_data = json.loads(router_gw_ip)
     gw_ip = gw_data["external_gateway_info"]["external_fixed_ips"][0]["ip_address"]
+    
     run_command_sync(["ip", "route", "replace", "10.0.0.0/24", "via", gw_ip, "dev", ovn_public_bridge])
 
     print()
@@ -443,8 +446,7 @@ def create_ovn_networks(config):
     "--config-file", "/etc/neutron/plugins/ml2/ml2_conf.ini",
     "--ovn-neutron_sync_mode", "repair"
 ],
-    "Resynchronizing the OVN Northd database..."):
-     return False
+    "Resynchronizing the OVN Northd database..."): return False
 
     if not run_command(
         ["systemctl", "restart",
@@ -455,8 +457,7 @@ def create_ovn_networks(config):
          "neutron-server",
          "nova-compute"],
         "Restarting OVN services...", False, None, 3, 5
-    ):
-        return False
+    ):  return False
 
     return True
 

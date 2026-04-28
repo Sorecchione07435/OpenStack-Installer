@@ -14,11 +14,10 @@ settings_file = "/etc/openstack-dashboard/local_settings.py"
 apache_conf = "/etc/apache2/conf-enabled/openstack-dashboard.conf"
 
 def install_pkgs():
-    apt_update()
 
-    packages = ["openstack-dashboard"]
+    if not apt_update() : return False
     
-    if not apt_install(packages, ux_text=f"Installing Horizon package...") : return False
+    if not apt_install(["openstack-dashboard"], ux_text=f"Installing Horizon package...") : return False
 
     return True
 
