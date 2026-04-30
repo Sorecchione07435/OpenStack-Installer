@@ -8,6 +8,8 @@ venv/
 .env/
 
 .vscode/
+OpenStack-Deployer.wiki/
+
 *.code-workspace
 
 *.log
