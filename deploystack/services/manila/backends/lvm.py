@@ -157,9 +157,9 @@ def conf_lvm_manila(config):
         if not run_setup_samba(config): return False
 
     for helper in share_helpers:
-        for helper_type, helper_config in helper.items():
-            helper_name = helper_config.get("name")
-            helpers.append(f"{helper_type}={helper_name}")
+            for helper_type, config in helper.items():
+                helper_name = config.get("name")
+                helpers.append(f"{helper_type}={helper_name}")
 
     set_conf_option(manila_conf, "DEFAULT", "share_helpers", f"{helper_type}={helper_name}")
 
