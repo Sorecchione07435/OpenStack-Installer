@@ -1,11 +1,16 @@
 import os
+import re
 import glob
+
+from pprint import pformat
 
 from ....utils.apt.apt import apt_install
 from ....utils.config.parser import get
 from ....utils.core import colors
 
 from ....utils.config.helpers import parse_bool
+
+from ...horizon import settings_file
 
 manila_ui_enabled_dir = "/usr/lib/python3/dist-packages/manila_ui/local/enabled/"
 openstack_dashboard_local_enabled_dir = "/usr/share/openstack-dashboard/openstack_dashboard/local/enabled/"
@@ -16,6 +21,40 @@ def install_pkgs():
         return False
     
     return True
+
+def disable_unsupported_protocols_options(config):
+
+    protocols = get(config, "manila.SHARE_PROTOCOLS") or []
+
+    try:
+        OPENSTACK_MANILA_FEATURES = {
+            "enabled_share_protocols": protocols
+        }
+
+        with open(settings_file, "r") as f:
+            content = f.read()
+
+        content = re.sub(
+            r"OPENSTACK_MANILA_FEATURES\s*=\s*\{.*?\}\s*",
+            "",
+            content,
+            flags=re.DOTALL
+        )
+
+        content += (
+            "\nOPENSTACK_MANILA_FEATURES = "
+            + pformat(OPENSTACK_MANILA_FEATURES)
+            + "\n"
+        )
+
+        with open(settings_file, "w") as f:
+            f.write(content)
+
+        return True
+
+    except Exception as e:
+        print(f"\n{colors.ERROR}Unable to update Horizon Manila settings: {e}{colors.RESET}\n")
+        return False
 
 def disable_dhss_dashboard_panels():
 
@@ -97,9 +136,7 @@ def setup_manila_horizon(config):
     is_dhss_enabled = is_generic and is_generic_dhss_enabled or is_lvm_dhss_enabled
 
     if not os.path.exists("/usr/share/openstack-dashboard"):
-        print(
-            f"{colors.RED}Error: Horizon is not yet installed{colors.RESET}"
-        )
+        print(f"{colors.RED}Error: Horizon is not yet installed{colors.RESET}") 
         return False
 
     if not install_pkgs() : return False
@@ -107,7 +144,8 @@ def setup_manila_horizon(config):
     if not add_dashboard_ui_symlink() : return False
     
     if not is_dhss_enabled:
-        if not disable_dhss_dashboard_panels():
-            return False
+        if not disable_dhss_dashboard_panels(): return False
+
+    if not disable_unsupported_protocols_options(config): return False
 
     return True
