@@ -70,49 +70,49 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
     deadline = time.time() + timeout
     spinner = "|/-\\"
     spinner_index = 0
-
+    last_check = 0
     status = ""
 
     while time.time() < deadline:
-        try:
-            share_info = json.loads(
-                os_run_output(
-                    ["openstack", "share", "show", share_name, "-f", "json"],
-                    env=env
-                ) or "{}"
-            )
+        now = time.time()
 
-            status = share_info.get("status", "").lower()
+        # Poll OpenStack ogni 'interval' secondi
+        if now - last_check >= interval:
+            last_check = now
 
-            if status == "available":
-                print(f"\rWaiting for share '{share_name}' to become available [ {colors.YELLOW}DONE{colors.RESET} ]")
-                return share_info
-
-            if status in ("error", "error_deleting"):
-                print(
-                    f"\n\n{colors.RED}"
-                    f"ERROR: {share_name} entered error state: {status}"
-                    f"{colors.RESET}\n"
+            try:
+                share_info = json.loads(
+                    os_run_output(
+                        ["openstack", "share", "show", share_name, "-f", "json"],
+                        env=env
+                    ) or "{}"
                 )
 
-                print(
-                    f"{colors.YELLOW}"
-                    "Check Manila logs for more details:\n"
-                    "  journalctl -u manila-share -n 100 --no-pager\n"
-                    "or:\n"
-                    "  /var/log/manila/manila-share.log"
-                    f"{colors.RESET}\n"
-                )
+                status = share_info.get("status", "").lower()
 
-                return None
+                if status == "available":
+                    print(
+                        f"\rWaiting for share '{share_name}' to become available "
+                        f"[ {colors.YELLOW}DONE{colors.RESET} ]"
+                    )
+                    return share_info
 
-        except Exception:
-            pass
+                if status in ("error", "error_deleting"):
+                    print(
+                        f"\n\n{colors.RED}"
+                        f"ERROR: {share_name} entered error state: {status}"
+                        f"{colors.RESET}\n"
+                    )
+                    return None
 
+            except Exception:
+                pass
+
+        # Spinner veloce
         print(f"\b{spinner[spinner_index]}", end="", flush=True)
         spinner_index = (spinner_index + 1) % len(spinner)
 
-        time.sleep(interval)
+        time.sleep(0.1)
 
     print(
         f"\n{colors.RED}ERROR: {share_name} did not become available "
@@ -127,33 +127,62 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
     deadline = time.time() + timeout
     spinner = "|/-\\"
     spinner_index = 0
+    last_check = 0
+    status = ""
 
     while time.time() < deadline:
-        try:
-            share_info = json.loads(
-                os_run_output(
-                    ["openstack", "share", "show", share_name, "-f", "json"],
-                    env=env
-                ) or "{}"
-            )
+        now = time.time()
 
-            status = share_info.get("status", "").lower()
+        # Controllo OpenStack ogni 'interval' secondi
+        if now - last_check >= interval:
+            last_check = now
 
-            if status == "available":
-                print(f"\b [{colors.YELLOW}DONE{colors.RESET}]")
-                return share_info
+            try:
+                share_info = json.loads(
+                    os_run_output(
+                        ["openstack", "share", "show", share_name, "-f", "json"],
+                        env=env
+                    ) or "{}"
+                )
 
-            if status == "error":
-                print(f"\n{colors.RED}Error: share '{share_name}' is in error state{colors.RESET}\n")
-                return None
+                status = share_info.get("status", "").lower()
 
-        except Exception:
-            pass
+                if status == "available":
+                    print(f"\rWaiting for share '{share_name}' to become available [ {colors.YELLOW}DONE{colors.RESET} ]")
+                    return share_info
 
+                if status in ("error", "error_deleting"):
+                    print(
+                        f"\n\n{colors.RED}"
+                        f"ERROR: {share_name} entered error state: {status}"
+                        f"{colors.RESET}\n"
+                    )
+
+                    print(
+                        f"{colors.YELLOW}"
+                        "Check Manila logs for more details:\n"
+                        "  journalctl -u manila-share -n 100 --no-pager\n"
+                        "or:\n"
+                        "  /var/log/manila/manila-share.log"
+                        f"{colors.RESET}\n"
+                    )
+
+                    return None
+
+            except Exception:
+                pass
+
+        # Spinner aggiornato rapidamente
         print(f"\b{spinner[spinner_index]}", end="", flush=True)
         spinner_index = (spinner_index + 1) % len(spinner)
 
-        time.sleep(interval)
+        time.sleep(0.1)
 
-    print(f"\n{colors.RED}Error: timeout waiting for share '{share_name}'{colors.RESET}")
+    print(
+        f"\n{colors.RED}"
+        f"ERROR: timeout waiting for share '{share_name}' "
+        f"(last status: {status})"
+        f"{colors.RESET}"
+    )
+
     return None
