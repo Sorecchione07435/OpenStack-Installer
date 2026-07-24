@@ -46,6 +46,8 @@ def create_share_types(default_type_shares, env):
         )
 
         if not share_type_exists:
+            print()
+            
             if driver_handles_share_servers is None:
                 driver_handles_share_servers = "False"
 
