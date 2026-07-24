@@ -10,7 +10,7 @@ from ....utils.core import colors
 
 from ....utils.config.helpers import parse_bool
 
-from ...horizon import settings_file
+settings_file = "/etc/openstack-dashboard/local_settings.py"
 
 manila_ui_enabled_dir = "/usr/lib/python3/dist-packages/manila_ui/local/enabled/"
 openstack_dashboard_local_enabled_dir = "/usr/share/openstack-dashboard/openstack_dashboard/local/enabled/"
