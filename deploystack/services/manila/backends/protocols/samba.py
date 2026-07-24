@@ -1,6 +1,9 @@
 import pexpect
 import os
 
+import pwd
+import grp
+
 from .....utils.apt.apt import apt_install, apt_update
 from .....utils.core.commands import run_command
 from .....utils.config.setter import set_conf_option
@@ -75,11 +78,19 @@ def set_filesystems_permissions():
     ]
 
     try:
+        manila_user = pwd.getpwnam("manila")
+        manila_group = grp.getgrnam("manila")
+
+        uid = manila_user.pw_uid
+        gid = manila_group.gr_gid
+
         for directory in manila_directories:
             os.makedirs(directory, exist_ok=True)
+
+            os.chown(directory, uid, gid)
             os.chmod(directory, 0o750)
 
-    except OSError as e:
+    except (OSError, KeyError) as e:
         print(
             f"\n{colors.RED}Unable to prepare Manila directory "
             f"{directory}: {e}{colors.RESET}\n"
