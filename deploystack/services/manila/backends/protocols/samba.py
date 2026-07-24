@@ -6,7 +6,7 @@ import grp
 
 from .....utils.apt.apt import apt_install, apt_update
 from .....utils.core.commands import run_command
-from .....utils.config.setter import add_samba_option
+from .....utils.config.setter import set_samba_option
 
 from .....utils.config.parser import get
 from .....utils.core.system_utils import service_exists, is_package_installed
@@ -60,7 +60,7 @@ def install_pkgs():
 
 def conf_samba():
 
-    add_samba_option(smb_conf, "include", "registry")
+    set_samba_option(smb_conf, "include", "registry")
 
 def add_samba_user(config):
 
