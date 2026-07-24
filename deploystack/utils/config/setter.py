@@ -1,27 +1,33 @@
 import configparser
 
-def add_samba_option(conf_file, option, value):
+def set_samba_option(conf_file, section, option, value):
     with open(conf_file) as f:
         lines = f.readlines()
 
     out = []
-    in_global = False
-    inserted = False
+    in_section = False
+    option_found = False
 
     for line in lines:
-        if line.strip().lower() == "[global]":
-            in_global = True
+        stripped = line.strip()
 
-        elif line.startswith("[") and line.strip() != "[global]":
-            if in_global and not inserted:
-                out.append(f"{option} = {value}\n")
-                inserted = True
-            in_global = False
+        if stripped.lower() == f"[{section.lower()}]":
+            in_section = True
 
-        out.append(line)
+        elif stripped.startswith("[") and stripped.endswith("]"):
+            if in_section and not option_found:
+                out.append(f"\t{option} = {value}\n")
+                option_found = True
+            in_section = False
 
-    if in_global and not inserted:
-        out.append(f"{option} = {value}\n")
+        if in_section and stripped.lower().startswith(option.lower() + " ="):
+            out.append(f"\t{option} = {value}\n")
+            option_found = True
+        else:
+            out.append(line)
+
+    if in_section and not option_found:
+        out.append(f"\t{option} = {value}\n")
 
     with open(conf_file, "w") as f:
         f.writelines(out)
