@@ -19,7 +19,8 @@ smb_conf = "/etc/samba/smb.conf"
 def smbpasswd_add(username, password):
     child = pexpect.spawn(
         f"smbpasswd -a {username}",
-        encoding="utf-8"
+        encoding="utf-8",
+        timeout=15
     )
 
     try:
@@ -30,11 +31,21 @@ def smbpasswd_add(username, password):
         child.sendline(password)
 
         child.expect(pexpect.EOF)
+        child.wait()
 
-        return child.exitstatus == 0
+        if child.exitstatus != 0:
+            print(f"{colors.RED}Error: smbpasswd exited with code {child.exitstatus}{colors.RESET}")
+            return False
+
+        return True
+
+    except pexpect.TIMEOUT:
+        print(f"{colors.RED}Error: smbpasswd timed out waiting for prompt{colors.RESET}")
+        child.terminate()
+        return False
 
     except pexpect.ExceptionPexpect as e:
-        print(f"smbpasswd error: {e}")
+        print(f"{colors.RED}Error: smbpasswd error: {e}{colors.RESET}")
         return False
 
 def install_pkgs():
