@@ -1,5 +1,31 @@
 import configparser
 
+def add_samba_option(conf_file, option, value):
+    with open(conf_file) as f:
+        lines = f.readlines()
+
+    out = []
+    in_global = False
+    inserted = False
+
+    for line in lines:
+        if line.strip().lower() == "[global]":
+            in_global = True
+
+        elif line.startswith("[") and line.strip() != "[global]":
+            if in_global and not inserted:
+                out.append(f"{option} = {value}\n")
+                inserted = True
+            in_global = False
+
+        out.append(line)
+
+    if in_global and not inserted:
+        out.append(f"{option} = {value}\n")
+
+    with open(conf_file, "w") as f:
+        f.writelines(out)
+
 def set_conf_option(conf_file, section, option, value, interpolation = True):
 
     config = configparser.ConfigParser(

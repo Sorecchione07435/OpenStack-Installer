@@ -6,7 +6,7 @@ import grp
 
 from .....utils.apt.apt import apt_install, apt_update
 from .....utils.core.commands import run_command
-from .....utils.config.setter import set_conf_option
+from .....utils.config.setter import add_samba_option
 
 from .....utils.config.parser import get
 from .....utils.core.system_utils import service_exists, is_package_installed
@@ -14,7 +14,7 @@ from .....utils.core.system_utils import service_exists, is_package_installed
 from ..utils import user_exists, samba_user_exists, user_in_group
 from .....utils.core import colors
 
-smbd_conf = "/etc/samba/smbd.conf"
+smb_conf = "/etc/samba/smb.conf"
 
 def smbpasswd_add(username, password):
     child = pexpect.spawn(
@@ -49,7 +49,7 @@ def install_pkgs():
 
 def conf_samba():
 
-    set_conf_option(smbd_conf, "global", "include", "registry")
+    add_samba_option(smb_conf, "include", "registry")
 
 def add_samba_user(config):
 
