@@ -60,7 +60,7 @@ def install_pkgs():
 
 def conf_samba():
 
-    set_samba_option(smb_conf, "include", "registry")
+    set_samba_option(smb_conf, "global", "include", "registry")
 
 def add_samba_user(config):
 
