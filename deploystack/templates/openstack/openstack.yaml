@@ -133,6 +133,11 @@ manila:
         DISK: 10
 
     lvm:
+
+      samba:
+        SAMBA_SERVER_USER: "samba-user"
+        SAMBA_SERVER_USER_PASSWORD: "secret"
+        
       # Backend name identifier.
       BACKEND_NAME: "lvm"
 
@@ -160,10 +165,7 @@ manila:
       MANILA_LVM_IMAGE_SIZE_IN_GB: "10"
 
       MANILA_LVM_LOOP_PATH: "/dev/loop0"
-  
-  samba:
-    SAMBA_SERVER_USER: "samba-user"
-    SAMBA_SERVER_USER_PASSWORD: "secret"
+
 
     #CIFS:
     #  FORCE_USER: no

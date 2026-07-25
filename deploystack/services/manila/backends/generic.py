@@ -65,9 +65,6 @@ def conf_generic_backend(config):
 
     if "NFS" in protocols:
         if not run_setup_nfs(): return False
-    
-    if "CIFS" in protocols:
-        if not run_setup_samba(config): return False
 
     for helper in share_helpers:
             for helper_type, config in helper.items():
