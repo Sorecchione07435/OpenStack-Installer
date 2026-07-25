@@ -103,7 +103,7 @@ def finalize(env):
 
     print()
 
-    if not run_command(["systemctl", "restart", "manila-api", "manila-scheduler", "manila-share"], "Restarting Manila Share services..."):
+    if not run_command(["systemctl", "restart", "manila-api", "manila-scheduler", "manila-share"], "Restarting Manila Share services...", False, None, 3, 5):
         return False
 
     if not wait_manila_backend(env=env):
