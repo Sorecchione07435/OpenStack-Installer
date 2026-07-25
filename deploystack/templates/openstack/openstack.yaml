@@ -166,11 +166,6 @@ manila:
 
       MANILA_LVM_LOOP_PATH: "/dev/loop0"
 
-
-    #CIFS:
-    #  FORCE_USER: no
-    #  FORCE_USER_NAME: "samba-user"
-
   # Shares to create automatically after deployment.
   share_types:
     - name: "default_share_type"

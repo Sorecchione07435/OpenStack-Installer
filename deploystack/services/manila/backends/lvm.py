@@ -144,8 +144,6 @@ def conf_lvm_manila(config):
 
     share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
 
-    samba_username = get(config, "manila.samba.SAMBA_SERVER_USER")
-
     share_helpers = get(config, "manila.SHARE_HELPERS") or []
 
     helpers = []

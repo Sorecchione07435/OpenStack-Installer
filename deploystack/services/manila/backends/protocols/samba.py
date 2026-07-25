@@ -66,8 +66,8 @@ def add_samba_user(config):
 
     print()
 
-    samba_username = get(config, "manila.samba.SAMBA_SERVER_USER")
-    samba_password = get(config, "manila.samba.SAMBA_SERVER_USER_PASSWORD")
+    samba_username = get(config, "manila.backends.lvm.samba.SAMBA_SERVER_USER")
+    samba_password = get(config, "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD")
 
     if not user_exists(samba_username):
         if not run_command(["useradd", "-m", "-s", "/usr/sbin/nologin", samba_username], "Adding Samba User...") : return False

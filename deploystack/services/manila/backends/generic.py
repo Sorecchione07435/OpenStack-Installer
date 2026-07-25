@@ -13,9 +13,6 @@ from .utils import wait_manila_backend
 from .utils.shares import create_shares, create_share_types
 
 from .protocols.nfs import run_setup_nfs
-from .protocols.samba import run_setup_samba
-
-from ....utils.core.system_utils import is_package_installed
 
 from ....utils.core import colors
 
