@@ -76,7 +76,6 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
     while time.time() < deadline:
         now = time.time()
 
-        # Poll OpenStack ogni 'interval' secondi
         if now - last_check >= interval:
             last_check = now
 
@@ -108,7 +107,6 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
             except Exception:
                 pass
 
-        # Spinner veloce
         print(f"\b{spinner[spinner_index]}", end="", flush=True)
         spinner_index = (spinner_index + 1) % len(spinner)
 
@@ -133,7 +131,6 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
     while time.time() < deadline:
         now = time.time()
 
-        # Controllo OpenStack ogni 'interval' secondi
         if now - last_check >= interval:
             last_check = now
 
