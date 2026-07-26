@@ -36,7 +36,7 @@ def set_lvm_filter(devices):
 
     system_devices = get_root_and_active_lvm_devices()
 
-    all_allowed_devices = list(str(devices + system_devices))
+    all_allowed_devices = devices + system_devices
 
     filters = [f"a|{dev}|" for dev in all_allowed_devices] + ["r|.*|"]
     filter_value = '[ ' + ', '.join(f'"{f}"' for f in filters) + ' ]'
