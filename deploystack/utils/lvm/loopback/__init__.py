@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 
 from ....utils.core.commands import run_command
 from ....utils.core import colors
@@ -7,9 +8,37 @@ from ....templates import LOOPBACK_SERVICE, LOOPBACK_START_SCRIPT, LOOPBACK_STOP
 
 lvm_conf_path = "/etc/lvm/lvm.conf"
 
+def get_root_and_active_lvm_devices():
+    system_devices = set()
+ 
+    try:
+        root_dev = subprocess.check_output(["findmnt", "-n", "-o", "SOURCE", "/"], text=True).strip()
+        
+        if "mapper" in root_dev or "loop" in root_dev:
+
+            pkname = subprocess.check_output(["lsblk", "-no", "PKNAME", root_dev], text=True).strip()
+
+            for dev in pkname.splitlines():
+                if dev:
+                    system_devices.add(f"/dev/{dev}.*")
+        else:
+            system_devices.add(f"{root_dev}.*")
+            
+    except Exception as e:
+        print(f"{colors.YELLOW}Warning: Unable to detect root device:{e}{colors.RESET}")
+
+    if os.path.exists("/dev/sda"):
+        system_devices.add("/dev/sda.*")
+        
+    return list(system_devices)
+
 def set_lvm_filter(devices):
-    
-    filters = [f"a|{dev}|" for dev in devices] + ["r|.*|"]
+
+    system_devices = get_root_and_active_lvm_devices()
+
+    all_allowed_devices = list(str(devices + system_devices))
+
+    filters = [f"a|{dev}|" for dev in all_allowed_devices] + ["r|.*|"]
     filter_value = '[ ' + ', '.join(f'"{f}"' for f in filters) + ' ]'
 
     try:
