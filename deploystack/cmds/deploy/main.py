@@ -14,7 +14,8 @@ def init_parser(subparsers):
     help="Start the OpenStack Deployment on the current node"
 )
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    general_options = parser.add_argument_group("General Options")
+    group = general_options.add_mutually_exclusive_group(required=True)
 
     manila = parser.add_argument_group("Manila Options")
     cinder = parser.add_argument_group("Cinder Options")
@@ -38,7 +39,7 @@ def init_parser(subparsers):
         help="Choosing whether to install Cinder (Block Storage) service (yes/no)"
     )
 
-    parser.add_argument(
+    general_options.add_argument(
         "--install-horizon",
         type=str,
         choices=["yes", "no"],
@@ -81,7 +82,7 @@ def init_parser(subparsers):
         help="Size of the Manila LVM image in GB (default: 5)"
     )
 
-    parser.add_argument(
+    general_options.add_argument(
         "--neutron-driver",
         type=str,
         choices=["ovs", "ovn"],
@@ -116,7 +117,7 @@ def init_parser(subparsers):
         help="Enable Manila Driver Handles Share Servers (DHSS) mode (yes/no). Required for Generic backend to create and manage share servers."
     )
 
-    parser.add_argument(
+    general_options.add_argument(
         "--os-release",
         type=str,
         default="caracal",
@@ -124,13 +125,13 @@ def init_parser(subparsers):
         help="The OpenStack release to install for deployment (default: caracal)"
     )
 
-    parser.add_argument(
+    general_options.add_argument(
         "--os-management-interface",
         type=str,
         help="Override the OpenStack management network interface used by services (example: eth0, ens18)"
     )
 
-    parser.add_argument(
+    general_options.add_argument(
         "--generate-only",
         action="store_true",
         help="Generates a pre-compiled configuration file for the current system without starting the deployment"
