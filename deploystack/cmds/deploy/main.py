@@ -17,6 +17,7 @@ def init_parser(subparsers):
     group = parser.add_mutually_exclusive_group(required=True)
 
     manila = parser.add_argument_group("Manila Options")
+    cinder = parser.add_argument_group("Cinder Options")
 
     group.add_argument(
         "--allinone",
@@ -29,7 +30,7 @@ def init_parser(subparsers):
         help="Path to the configuration file"
     )
 
-    parser.add_argument(
+    cinder.add_argument(
         "--install-cinder",
         type=str,
         choices=["yes", "no"],
@@ -53,14 +54,14 @@ def init_parser(subparsers):
             help="Choosing whether to install Manila (Shared Filesystems) service (yes/no)"
         )
 
-    parser.add_argument(
+    cinder.add_argument(
         "--cinder-lvm-image-size-in-gb",
         type=int,
         default=5,
         help="Size of the Cinder LVM image in GB (default: 5)"
     )
 
-    parser.add_argument(
+    cinder.add_argument(
         "--cinder-physical-volume",
         type=str,
         help="The physical volume to use for Cinder (example: /dev/sdb)"
