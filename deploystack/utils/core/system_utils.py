@@ -2,6 +2,7 @@
 import random
 import string
 import socket
+import json
 
 import subprocess
 import sys
@@ -119,9 +120,28 @@ def has_hw_virtualization():
     except:
         return False
 
-def get_free_loop():
-    loop = subprocess.check_output(["losetup", "-f"]).decode().strip()
-    return loop
+def get_free_loops(count=1):
+    result = subprocess.run(
+        ["losetup", "-J"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    
+    used = set()
+    for dev in json.loads(result.stdout).get("loopdevices", []):
+        used.add(dev["name"])
+
+    # Trova i primi N loop liberi
+    loops = []
+    i = 0
+    while len(loops) < count:
+        candidate = f"/dev/loop{i}"
+        if candidate not in used:
+            loops.append(candidate)
+        i += 1
+
+    return loops
 
 def generate_password(length=12):
     chars = string.ascii_letters + string.digits

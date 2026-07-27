@@ -5,7 +5,7 @@ import yaml
 import ipaddress
 
 from ...utils.network.net_utils import get_network_info
-from ...utils.core.system_utils import has_hw_virtualization, get_free_loop, generate_password
+from ...utils.core.system_utils import has_hw_virtualization, get_free_loops, generate_password
 
 from ...templates import OPENSTACK_CONFIG_TEMPLATE
 
@@ -19,19 +19,6 @@ def _remove_empty(d):
     if isinstance(d, list):
         return [_remove_empty(i) for i in d if i != "" and i is not None]
     return d
-
-used_loops = set()
-
-def get_next_loop():
-    global used_loops
-
-    loop = get_free_loop()
-
-    if loop in used_loops:
-        raise RuntimeError(f"Loop device {loop} already allocated")
-
-    used_loops.add(loop)
-    return loop
 
 def generate_config_file() -> str:
 
@@ -76,6 +63,9 @@ def config_openstack(
     last_ip = str(ipaddress.IPv4Address(ipaddress.IPv4Network(ip_cidr, strict=False).broadcast_address - 1))
 
     dns_list = []
+
+    cinder_loop = None
+    manila_lvm_loop = None
 
     if cinder_lvm_image_size_in_gb is None:
         cinder_lvm_image_size_in_gb = 5
@@ -176,6 +166,9 @@ def config_openstack(
     config_dict["optional_services"]["INSTALL_CINDER"] = install_horizon.lower()
     config_dict["optional_services"]["INSTALL_HORIZON"] = install_cinder.lower()
 
+    if install_manila.lower() == "yes" and install_cinder.lower() == "yes":
+        get_free_loops
+
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
     config_dict["cinder"]["TARGET_IP_ADDRESS"] = ip
@@ -183,7 +176,7 @@ def config_openstack(
     config_dict["cinder"].setdefault("lvm", {})
 
     if not cinder_physical_volume or cinder_physical_volume.strip() == "":
-        cinder_loop = get_next_loop()
+        cinder_loop = get_free_loops(count=1)
 
         config_dict["cinder"]["lvm"] = {
             "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": cinder_loop,
@@ -231,7 +224,7 @@ def config_openstack(
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
             if not manila_lvm_physical_volume:
-                manila_loop = get_next_loop()
+                manila_loop =  get_free_loops(count=1)
 
                 config_dict["manila"]["backends"]["lvm"].update({
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/manila-volumes.img",
