@@ -23,10 +23,6 @@ from .utils.shares import create_shares, create_share_types
 from .protocols.nfs import run_setup_nfs
 from .protocols.samba import run_setup_samba
 
-from ....utils.core.system_utils import is_package_installed
-
-from ....utils.config.helpers import parse_bool
-
 from ....utils.core import colors
 
 manila_conf = "/etc/manila/manila.conf"
@@ -135,8 +131,6 @@ def conf_lvm_manila(config):
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
 
-    driver_handles_share_servers = parse_bool(get(config, "manila.backends.lvm.DRIVER_HANDLES_SHARE_SERVERS"), False)
-
     vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
     
     public_bridge = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE")
@@ -165,7 +159,6 @@ def conf_lvm_manila(config):
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols", enabled_share_protocols)
 
     set_conf_option(manila_conf, "lvm", "share_backend_name", backend_name)
-    set_conf_option(manila_conf, "lvm", "driver_handles_share_servers", str(driver_handles_share_servers))
     set_conf_option(manila_conf, "lvm", "share_driver", "manila.share.drivers.lvm.LVMShareDriver")
     set_conf_option(manila_conf, "lvm", "lvm_share_volume_group", vg_name)
     set_conf_option(manila_conf, "lvm", "lvm_share_export_ips", share_export_ip)
@@ -216,9 +209,7 @@ def finalize(env):
     return True
 
 def finalize_lvm_backend(config, env):
-
-    print()
-
+    
     shares = get(config, "manila.shares") or []
     default_type_shares = get(config, "manila.share_types") or []
 
