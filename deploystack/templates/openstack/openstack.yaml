@@ -232,7 +232,7 @@ compute:
   DISK_ALLOCATION_RATIO: 1.5
 
 optional_services:
-  INSTALL_CINDER: "no"
+  INSTALL_CINDER: "yes"
   INSTALL_MANILA: "no"
   INSTALL_HORIZON: "yes"
 
