@@ -52,10 +52,29 @@ def init_parser(subparsers):
         )
 
     parser.add_argument(
-        "--lvm-image-size-in-gb",
+        "--cinder-lvm-image-size-in-gb",
         type=int,
         default=5,
         help="Size of the Cinder LVM image in GB (default: 5)"
+    )
+
+    parser.add_argument(
+        "--manila-lvm-image-size-in-gb",
+        type=int,
+        default=5,
+        help="Size of the Manila LVM image in GB (default: 5)"
+    )
+
+    parser.add_argument(
+        "--cinder-physical-volume",
+        type=str,
+        help="The physical volume to use for Cinder (example: /dev/sdb)"
+    )
+
+    parser.add_argument(
+        "--manila-lvm-physical-volume",
+        type=str,
+        help="The physical volume to use for Manila LVM (example: /dev/sdc)"
     )
 
     parser.add_argument(
@@ -83,6 +102,14 @@ def init_parser(subparsers):
         default=["nfs"],
         dest="manila_share_protocols",
         help="One or more Manila share protocols (choices: nfs, cifs)."
+    )
+
+    parser.add_argument(
+        "--manila-enable-dhss",
+        type=str,
+        choices=["yes", "no"],
+        default="no",
+        help="Enable Manila Driver Handles Share Servers (DHSS) mode (yes/no). Required for Generic backend to create and manage share servers."
     )
 
     parser.add_argument(
@@ -114,8 +141,14 @@ def deploy(parser, args) -> None:
         manila_backend = args.manila_backend if args.manila_backend in ("generic", "lvm") else "lvm"
 
         manila_share_protocols = args.manila_share_protocols
+
+        cinder_physical_volume = args.cinder_physical_volume if cinder_flag == "yes" else ""
+        manila_lvm_physical_volume = args.manila_lvm_physical_volume if manila_flag == "yes" else ""
         
-        lvm_size = args.lvm_image_size_in_gb if cinder_flag == "yes" else 0
+        cinder_lvm_size = args.cinder_lvm_image_size_in_gb if cinder_flag == "yes" else 0
+        manila_lvm_size = args.manila_lvm_image_size_in_gb if manila_flag == "yes" else 0
+
+        manila_enable_dhss = args.manila_enable_dhss if manila_flag == "yes" and manila_backend == "generic" else "no" 
 
         openstack_release = args.os_release
         
@@ -124,10 +157,14 @@ def deploy(parser, args) -> None:
             install_cinder=cinder_flag,
             install_manila=manila_flag,
             config_file_path=config_file_path,
-            lvm_image_size_in_gb=lvm_size,
+            cinder_physical_volume=cinder_physical_volume,
+            manila_lvm_physical_volume=manila_lvm_physical_volume,
+            cinder_lvm_image_size_in_gb=cinder_lvm_size,
+            manila_lvm_image_size_in_gb=manila_lvm_size,
             neutron_driver=neutron_driver,
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
+            manila_enable_dhss=manila_enable_dhss,
             os_release=openstack_release
         )
 

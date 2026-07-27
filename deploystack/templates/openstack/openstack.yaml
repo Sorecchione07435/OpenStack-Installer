@@ -144,8 +144,6 @@ manila:
       # Manila share driver used by this backend.
       SHARE_DRIVER: "manila.share.drivers.lvm.LVMShareDriver"
 
-      DRIVER_HANDLES_SHARE_SERVERS: "no"
-
       SHARE_VOLUME_GROUP: "manila-volumes"
 
       SHARE_EXPORT_IP: ""

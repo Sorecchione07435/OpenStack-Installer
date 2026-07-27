@@ -35,10 +35,14 @@ def config_openstack(
     install_cinder: str = "yes",
     install_manila: str = "no",
     config_file_path: str = "",
-    lvm_image_size_in_gb=None,
+    cinder_physical_volume = "",
+    manila_lvm_physical_volume = "",
+    cinder_lvm_image_size_in_gb=None,
+    manila_lvm_image_size_in_gb=None,
     neutron_driver: str = "ovs",   # "ovs" | "ovn"
     manila_backend: str = "",
     manila_share_protocols: str = "",
+    manila_enable_dhss = "no",
     os_release: str = "caracal"
 ):
 
@@ -60,8 +64,8 @@ def config_openstack(
 
     dns_list = []
 
-    if lvm_image_size_in_gb is None:
-        lvm_image_size_in_gb = 5
+    if cinder_lvm_image_size_in_gb is None:
+        cinder_lvm_image_size_in_gb = 5
 
     virt_type = "kvm" if has_hw_virtualization() else "qemu"
 
@@ -165,23 +169,59 @@ def config_openstack(
 
     config_dict["cinder"].setdefault("lvm", {})
 
-    config_dict["cinder"]["lvm"] = {
-        "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": get_free_loop(),
-        "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
-        "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": lvm_image_size_in_gb,
-        "VOLUME_GROUP": "cinder-volumes",
-    }
+    if cinder_physical_volume == "":
+        config_dict["cinder"]["lvm"] = {
+            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": get_free_loop(),
+            "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
+            "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": cinder_lvm_image_size_in_gb,
+            "VOLUME_GROUP": "cinder-volumes",
+        }
+    else:
+        config_dict["cinder"]["lvm"] = {
+            "PHYSICAL_VOLUME": cinder_physical_volume,
+            "VOLUME_GROUP": "cinder-volumes",
+        }
 
     if install_manila.lower() == "yes":
+        share_helpers = []
+
         config_dict["manila"]["BACKEND"] = manila_backend
         config_dict["manila"]["SHARE_PROTOCOLS"] = [
             protocol.upper() for protocol in manila_share_protocols
         ]
 
+        for protocol in manila_share_protocols:
+            if protocol.lower() == "nfs":
+                share_helpers.append({
+                    "NFS": {
+                        "name": "manila.share.drivers.helpers.NFSHelper"
+                    }
+                })
+
+            elif protocol.lower() == "cifs":
+                share_helpers.append({
+                    "CIFS": {
+                        "name": "manila.share.drivers.helpers.NASHelper"
+                    }
+                })
+
+        config_dict["manila"]["SHARE_HELPERS"] = share_helpers
+
         if manila_backend.lower() == "generic":
-            config_dict["manila"]["backends"]["lvm"] = {}
+
+            config_dict["manila"]["backends"]["generic"]["DRIVER_HANDLES_SHARE_SERVERS"] = (
+                    "yes" if manila_enable_dhss.lower() == "yes" else "no"
+                )
+
+            config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
-            config_dict["manila"]["backends"]["generic"] = {}
+
+            if manila_lvm_physical_volume == "":
+                config_dict["manila"]["backends"]["lvm"]["MANILA_LVM_IMAGE_SIZE_IN_GB"] = manila_lvm_image_size_in_gb
+            else:
+                config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
+
+            config_dict["manila"]["backends"].pop("generic", None)
     else:
         config_dict["manila"] = {}
 
