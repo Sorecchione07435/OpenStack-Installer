@@ -43,7 +43,8 @@ def config_openstack(
     manila_backend: str = "",
     manila_share_protocols: str = "",
     manila_enable_dhss = "no",
-    os_release: str = "caracal"
+    os_release: str = "caracal",
+    os_mgmt_iface: str = ""
 ):
 
     try:
@@ -60,6 +61,12 @@ def config_openstack(
     gateway = info["gateway"]
     ip_cidr = info["network_cidr"]
     network = info["network"]
+
+    mgmt_ip = None
+    mgmt_ip_cidr = None
+    mgmt_netmask = None
+    mgmt_gateway = None
+
     last_ip = str(ipaddress.IPv4Address(ipaddress.IPv4Network(ip_cidr, strict=False).broadcast_address - 1))
 
     dns_list = []
@@ -78,11 +85,26 @@ def config_openstack(
 
     # Rete
     config_dict.setdefault("network", {})
-    config_dict["network"]["HOST_IP"] = ip
-    config_dict["network"]["HOST_IP_NETMASK"] = netmask
-    config_dict["network"]["HOST_IP_CIDR"] = ip_cidr
-    config_dict["network"]["HOST_IP_GATEWAY"] = gateway
-    config_dict["network"]["HOST_MGMT_INTERFACE"] = iface
+    if not os_mgmt_iface == "":
+        mgmt_iface_info = get_network_info(interface_name=os_mgmt_iface)
+
+        mgmt_ip = mgmt_iface_info["ip"]
+        mgmt_ip_cidr = mgmt_iface_info["network_cidr"]
+        mgmt_netmask = mgmt_iface_info["netmask"]
+        mgmt_gateway = mgmt_iface_info["gateway"]
+    else:
+        os_mgmt_iface = iface
+
+        mgmt_ip = ip
+        mgmt_ip_cidr = ip_cidr
+        mgmt_netmask = netmask
+        mgmt_gateway = gateway
+
+    config_dict["network"]["HOST_IP"] = mgmt_ip
+    config_dict["network"]["HOST_IP_NETMASK"] = mgmt_netmask
+    config_dict["network"]["HOST_IP_CIDR"] = mgmt_ip_cidr
+    config_dict["network"]["HOST_IP_GATEWAY"] = mgmt_gateway
+    config_dict["network"]["HOST_MGMT_INTERFACE"] = os_mgmt_iface
     config_dict["network"]["HOST_DNS_SERVERS"] = "8.8.8.8,8.8.4.4"
 
     dns = config_dict["network"]["HOST_DNS_SERVERS"]
@@ -160,8 +182,8 @@ def config_openstack(
         config_dict["cinder"] = {}
 
     config_dict["optional_services"]["INSTALL_MANILA"] = install_manila.lower()
-    config_dict["optional_services"]["INSTALL_CINDER"] = install_horizon.lower()
-    config_dict["optional_services"]["INSTALL_HORIZON"] = install_cinder.lower()
+    config_dict["optional_services"]["INSTALL_CINDER"] = install_cinder.lower()
+    config_dict["optional_services"]["INSTALL_HORIZON"] = install_horizon.lower()
 
     if install_manila.lower() == "yes" and install_cinder.lower() == "yes":
         cinder_loop, manila_loop = get_free_loops(count=2)

@@ -124,6 +124,12 @@ def init_parser(subparsers):
     )
 
     parser.add_argument(
+        "--os-management-interface",
+        type=str,
+        help="Override the OpenStack management network interface used by services (example: eth0, ens18)"
+    )
+
+    parser.add_argument(
         "--generate-only",
         action="store_true",
         help="Generates a pre-compiled configuration file for the current system without starting the deployment"
@@ -179,6 +185,7 @@ def deploy(parser, args) -> None:
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
             manila_enable_dhss=manila_enable_dhss,
+            os_mgmt_iface=args.os_management_interface
             os_release=openstack_release
         )
 

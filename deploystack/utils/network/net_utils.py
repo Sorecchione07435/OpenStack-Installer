@@ -42,30 +42,56 @@ def get_active_interface() -> tuple[str, str]:
                 return iface, ip
     return None, None
 
-def get_network_info():
-    iface, ip = get_active_interface()
-    if not iface:
-        return None
+def get_network_info(interface_name: str = ""):
+    interfaces = psutil.net_if_addrs()
 
-    netmask, broadcast = None, None
-    for addr in psutil.net_if_addrs()[iface]:
+    if interface_name:
+        iface = interface_name
+    else:
+        iface, _ = get_active_interface()
+
+    if iface not in interfaces:
+        raise ValueError(f"Interface '{iface}' not found")
+
+    ip = None
+    netmask = None
+    broadcast = None
+
+    for addr in interfaces[iface]:
         if addr.family == socket.AF_INET:
+            ip = addr.address
             netmask = addr.netmask
             broadcast = addr.broadcast
             break
 
-    cidr = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False).prefixlen if netmask else None
-    network_cidr = f"{ip}/{cidr}" if cidr else None
-    network = str(ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)) if netmask else None
+    if ip is None:
+        raise ValueError(f"No IPv4 address found on interface '{iface}'")
 
-    # Trova gateway
+    cidr = (
+        ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False).prefixlen
+        if netmask else None
+    )
+
+    network_cidr = f"{ip}/{cidr}" if cidr else None
+
+    network = (
+        str(ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False))
+        if netmask else None
+    )
+
     gateway = None
     try:
-        route = subprocess.run("ip route", shell=True, capture_output=True, text=True)
+        route = subprocess.run(
+            ["ip", "route"],
+            capture_output=True,
+            text=True
+        )
+
         for line in route.stdout.splitlines():
-            if line.startswith("default"):
+            if line.startswith("default") and f"dev {iface}" in line:
                 gateway = line.split()[2]
                 break
+
     except Exception:
         pass
 
