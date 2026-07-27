@@ -120,11 +120,11 @@ def deploy(parser, args) -> None:
         config_openstack(
             install_horizon=horizon_flag,
             install_cinder=cinder_flag,
-            install_manila=manila_flag
+            install_manila=manila_flag,
             config_file_path=config_file_path,
             lvm_image_size_in_gb=lvm_size,
             neutron_driver=neutron_driver,
-            manila_backend=manila_backend
+            manila_backend=manila_backend,
             os_release=openstack_release
         )
 
