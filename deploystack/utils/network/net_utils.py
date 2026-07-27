@@ -80,6 +80,7 @@ def get_network_info(interface_name: str = ""):
     )
 
     gateway = None
+
     try:
         route = subprocess.run(
             ["ip", "route"],
@@ -87,14 +88,22 @@ def get_network_info(interface_name: str = ""):
             text=True
         )
 
+        # Prima cerca il gateway dell'interfaccia specifica
         for line in route.stdout.splitlines():
             if line.startswith("default") and f"dev {iface}" in line:
                 gateway = line.split()[2]
                 break
 
+        # Se non trovato, usa il gateway di default globale
+        if gateway is None:
+            for line in route.stdout.splitlines():
+                if line.startswith("default"):
+                    gateway = line.split()[2]
+                    break
+
     except Exception:
         pass
-
+    
     return {
         "interface": iface,
         "ip": ip,
