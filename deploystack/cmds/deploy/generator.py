@@ -25,11 +25,13 @@ used_loops = set()
 def get_next_loop():
     global used_loops
 
-    while True:
-        loop = get_free_loop()
-        if loop not in used_loops:
-            used_loops.add(loop)
-            return loop
+    loop = get_free_loop()
+
+    if loop in used_loops:
+        raise RuntimeError(f"Loop device {loop} already allocated")
+
+    used_loops.add(loop)
+    return loop
 
 def generate_config_file() -> str:
 
