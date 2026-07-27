@@ -179,9 +179,11 @@ def config_openstack(
         ]
 
         if manila_backend.lower() == "generic":
-            config_dict["manila"]["backends"].setdefault("lvm", {})
+            config_dict["manila"]["backends"]["lvm"] = {}
         elif manila_backend.lower() == "lvm":
-            config_dict["manila"]["backends"].setdefault("generic", {})
+            config_dict["manila"]["backends"]["generic"] = {}
+    else:
+        config_dict["manila"] = {}
 
     # Compute
     config_dict.setdefault("compute", {})
