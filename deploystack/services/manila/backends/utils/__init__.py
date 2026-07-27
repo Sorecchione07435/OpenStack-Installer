@@ -98,8 +98,18 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
 
                 if status in ("error", "error_deleting"):
                     print(
+                        f"\rWaiting for share '{share_name}' to become available "
+                        f"[ {colors.RED}ERROR{colors.RED} ]"
                         f"\n\n{colors.RED}"
                         f"ERROR: {share_name} entered error state: {status}"
+                        f"{colors.RESET}\n"
+                    )
+
+                    print(f"{colors.YELLOW}"
+                        "Check Manila logs for more details:\n"
+                        "  journalctl -u manila-share -n 100 --no-pager\n"
+                        "or:\n"
+                        "  /var/log/manila/manila-share.log"
                         f"{colors.RESET}\n"
                     )
                     return None
@@ -150,9 +160,8 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
                 if status in ("error", "error_deleting"):
                     print(
-                        f"\n\n{colors.RED}"
-                        f"ERROR: {share_name} entered error state: {status}"
-                        f"{colors.RESET}\n"
+                        f"\rWaiting for share '{share_name}' to become available "
+                        f"[ {colors.RED}ERROR{colors.RED} ]"
                     )
 
                     print(
