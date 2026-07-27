@@ -14,8 +14,8 @@ SUPPORTED_EXTRA_SPECS = {
     "revert_to_snapshot_support",
     "mount_snapshot_support",
 }
-def create_share_types(default_type_shares, env):
 
+def create_share_types(default_type_shares, env):
     share_type_list = json.loads(
         os_run_output(
             ["openstack", "share", "type", "list", "-f", "json"],
@@ -23,7 +23,6 @@ def create_share_types(default_type_shares, env):
         ) or "[]"
     )
 
-    # Extra specs ufficialmente gestiti da Manila
     allowed_extra_specs = {
         "driver_handles_share_servers",
         "snapshot_support",
@@ -33,7 +32,6 @@ def create_share_types(default_type_shares, env):
     }
 
     for share_type in default_type_shares:
-
         share_type_name = share_type["name"]
         is_share_public = parse_bool(
             share_type.get("is_public"),
@@ -43,38 +41,24 @@ def create_share_types(default_type_shares, env):
         extra_specs = {}
 
         for extra_spec in share_type.get("extra_specs", []):
-
             for key, value in extra_spec.items():
-
                 if key not in allowed_extra_specs:
-                    print(
-                        f"WARNING: ignoring unsupported Manila extra spec '{key}'"
-                    )
+                    #print(
+                    #    f"WARNING: ignoring unsupported Manila extra spec '{key}'"
+                    #)
                     continue
 
                 extra_specs[key] = (
-                    "True"
-                    if parse_bool(value, False)
-                    else "False"
+                    "True" if parse_bool(value, False) else "False"
                 )
 
-
-        share_type_exists = any(
-            st.get("Name") == share_type_name
-            for st in share_type_list
-        )
-
-
-        if share_type_exists:
+        if any(st.get("Name") == share_type_name for st in share_type_list):
             continue
 
-
-        # driver_handles_share_servers è obbligatorio in creazione
         dhss = extra_specs.pop(
             "driver_handles_share_servers",
             "False"
         )
-
 
         cmd = [
             "openstack",
@@ -82,26 +66,20 @@ def create_share_types(default_type_shares, env):
             "type",
             "create",
             share_type_name,
-            dhss
+            dhss,
         ]
 
-
         if is_share_public:
-            cmd += [
-                "--public",
-                "True"
-            ]
-
+            cmd += ["--public", "True"]
 
         if extra_specs:
-
             cmd.append("--extra-specs")
+            cmd.extend(
+                f"{key}={value}"
+                for key, value in extra_specs.items()
+            )
 
-            for key, value in extra_specs.items():
-                cmd.append(
-                    f"{key}={value}"
-                )
-
+        print()
 
         if not os_run(
             cmd,
@@ -110,12 +88,7 @@ def create_share_types(default_type_shares, env):
         ):
             return False
 
-
-        share_type_list.append(
-            {
-                "Name": share_type_name
-            }
-        )
+        share_type_list.append({"Name": share_type_name})
 
     return True
 

@@ -126,14 +126,14 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
                 if status == "available":
                     print(
                         f"\rWaiting for share '{share_name}' to become available "
-                        f"[ {colors.YELLOW}DONE{colors.RESET} ]"
+                        f"            [ {colors.YELLOW}DONE{colors.RESET} ]"
                     )
                     return share_info
 
                 if status in ("error", "error_deleting"):
                     print(
                         f"\rWaiting for share '{share_name}' to become available "
-                        f"[ {colors.RED}ERROR{colors.RED} ]"
+                        f"[ {colors.RED}ERROR{colors.RESET} ]"
                         f"\n\n{colors.RED}"
                         f"ERROR: {share_name} entered error state: {status}"
                         f"{colors.RESET}\n"
@@ -189,13 +189,13 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
                 status = share_info.get("status", "").lower()
 
                 if status == "available":
-                    print(f"\rWaiting for share '{share_name}' to become available [ {colors.YELLOW}DONE{colors.RESET} ]")
+                    print(f"\rWaiting for share '{share_name}' to become available            [ {colors.YELLOW}DONE{colors.RESET} ]")
                     return share_info
 
                 if status in ("error", "error_deleting"):
                     print(
                         f"\rWaiting for share '{share_name}' to become available "
-                        f"[ {colors.RED}ERROR{colors.RED} ]"
+                        f"[ {colors.RED}ERROR{colors.RESET} ]"
                     )
 
                     print(
@@ -212,7 +212,6 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
             except Exception:
                 pass
 
-        # Spinner aggiornato rapidamente
         print(f"\b{spinner[spinner_index]}", end="", flush=True)
         spinner_index = (spinner_index + 1) % len(spinner)
 
