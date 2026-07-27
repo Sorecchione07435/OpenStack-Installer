@@ -259,7 +259,7 @@ def config_openstack(
 
             config_dict["manila"]["backends"].pop("generic", None)
     else:
-        config_dict.setdefault("manila", {})
+        config_dict.pop("manila", None)
 
     # Compute
     config_dict.setdefault("compute", {})

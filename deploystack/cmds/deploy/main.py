@@ -51,7 +51,7 @@ def init_parser(subparsers):
             "--install-manila",
             type=str,
             choices=["yes", "no"],
-            default="yes",
+            default="no",
             help="Choosing whether to install Manila (Shared Filesystems) service (yes/no)"
         )
 
