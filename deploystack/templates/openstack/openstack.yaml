@@ -106,7 +106,7 @@ manila:
   
   SHARE_HELPERS:
       - NFS:
-        name: "manila.share.drivers.helpers.NFSHelper"
+          name: "manila.share.drivers.helpers.NFSHelper"
   #   - CIFS:
   #     name: "manila.share.drivers.helpers.NASHelper"
 

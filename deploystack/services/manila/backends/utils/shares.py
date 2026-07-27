@@ -34,11 +34,11 @@ def create_share_types(default_type_shares, env):
             for key in [
                 "snapshot_support",
                 "create_share_from_snapshot_support",
-                "revert_to_share_snapshot_support",
+                "revert_to_snapshot_support",
                 "mount_snapshot_support",
             ]:
-                if parse_bool(extra_spec.get(key), False):
-                    extra_specs[key] = "True"
+                if key in extra_spec:
+                    extra_specs[key] = "True" if parse_bool(extra_spec.get(key), False) else "False"
 
         share_type_exists = any(
             st.get("Name") == share_type_name
