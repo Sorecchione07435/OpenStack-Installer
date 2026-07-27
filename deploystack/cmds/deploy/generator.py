@@ -93,7 +93,7 @@ def config_openstack(
         mgmt_netmask = mgmt_iface_info["netmask"]
         mgmt_gateway = mgmt_iface_info["gateway"]
     else:
-        os_mgmt_iface = iface
+        mgmt_iface_info = iface
 
         mgmt_ip = ip
         mgmt_ip_cidr = ip_cidr
@@ -104,7 +104,7 @@ def config_openstack(
     config_dict["network"]["HOST_IP_NETMASK"] = mgmt_netmask
     config_dict["network"]["HOST_IP_CIDR"] = mgmt_ip_cidr
     config_dict["network"]["HOST_IP_GATEWAY"] = mgmt_gateway
-    config_dict["network"]["HOST_MGMT_INTERFACE"] = os_mgmt_iface
+    config_dict["network"]["HOST_MGMT_INTERFACE"] = mgmt_iface_info
     config_dict["network"]["HOST_DNS_SERVERS"] = "8.8.8.8,8.8.4.4"
 
     dns = config_dict["network"]["HOST_DNS_SERVERS"]
