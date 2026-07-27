@@ -192,9 +192,9 @@ def config_openstack(
     if install_manila.lower() == "yes" and install_cinder.lower() == "yes":
         cinder_loop, manila_loop = get_free_loops(count=2)
     elif install_manila.lower() == "yes" and install_cinder.lower() == "no":
-        manila_loop = get_free_loops(count=1)
+        manila_loop = get_free_loops(count=1)[0]
     elif install_manila.lower() == "no" and install_cinder.lower() == "yes":
-        cinder_loop = get_free_loops(count=1)
+        cinder_loop = get_free_loops(count=1)[0]
 
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
