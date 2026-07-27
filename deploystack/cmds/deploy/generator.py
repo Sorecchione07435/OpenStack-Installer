@@ -20,6 +20,8 @@ def _remove_empty(d):
         return [_remove_empty(i) for i in d if i != "" and i is not None]
     return d
 
+used_loops = set()
+
 def get_next_loop():
     global used_loops
 
