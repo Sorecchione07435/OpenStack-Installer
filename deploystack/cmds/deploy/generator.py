@@ -167,7 +167,11 @@ def config_openstack(
     config_dict["optional_services"]["INSTALL_HORIZON"] = install_cinder.lower()
 
     if install_manila.lower() == "yes" and install_cinder.lower() == "yes":
-        get_free_loops
+        cinder_loop, manila_loop = get_free_loops(count=2)
+    elif install_manila.lower() == "yes" and install_cinder.lower() == "no":
+        manila_loop = get_free_loops(count=1)
+    elif install_manila.lower() == "no" and install_cinder.lower() == "yes":
+        cinder_loop = get_free_loops(count=1)
 
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
@@ -176,10 +180,8 @@ def config_openstack(
     config_dict["cinder"].setdefault("lvm", {})
 
     if not cinder_physical_volume or cinder_physical_volume.strip() == "":
-        cinder_loop = get_free_loops(count=1)
-
         config_dict["cinder"]["lvm"] = {
-            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": cinder_loop,
+            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": str(cinder_loop),
             "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
             "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": cinder_lvm_image_size_in_gb,
             "VOLUME_GROUP": "cinder-volumes",
@@ -224,12 +226,10 @@ def config_openstack(
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
             if not manila_lvm_physical_volume:
-                manila_loop =  get_free_loops(count=1)
-
                 config_dict["manila"]["backends"]["lvm"].update({
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/manila-volumes.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
-                    "MANILA_LVM_LOOP_PATH": manila_loop,
+                    "MANILA_LVM_LOOP_PATH": str(manila_loop),
                 })
             else:
                 config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
