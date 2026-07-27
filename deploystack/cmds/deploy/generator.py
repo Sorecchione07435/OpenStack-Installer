@@ -33,9 +33,12 @@ def generate_config_file() -> str:
 def config_openstack(
     install_horizon: str = "yes",
     install_cinder: str = "yes",
+    install_manila: str = "no",
     config_file_path: str = "",
     lvm_image_size_in_gb=None,
     neutron_driver: str = "ovs",   # "ovs" | "ovn"
+    manila_backend: str = "",
+    manila_share_protocols: str = "",
     os_release: str = "caracal"
 ):
 
@@ -152,6 +155,7 @@ def config_openstack(
     if "cinder" not in config_dict:
         config_dict["cinder"] = {}
 
+    config_dict["optional_services"]["INSTALL_MANILA"] = install_manila.lower()
     config_dict["optional_services"]["INSTALL_CINDER"] = install_horizon.lower()
     config_dict["optional_services"]["INSTALL_HORIZON"] = install_cinder.lower()
 
@@ -167,6 +171,15 @@ def config_openstack(
         "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": lvm_image_size_in_gb,
         "VOLUME_GROUP": "cinder-volumes",
     }
+
+    if install_manila.lower() == "yes":
+        config_dict["manila"]["BACKEND"] = manila_backend
+        config_dict["manila"]["SHARE_PROTOCOLS"] = [protocol.upper() for protocol in manila_share_protocols]
+
+        if manila_backend.lower() == "generic":
+            config_dict["manila"].setdefault("lvm", {})
+        elif manila_backend.lower() == "lvm":
+            config_dict["manila"].setdefault("generic", {})
 
     # Compute
     config_dict.setdefault("compute", {})

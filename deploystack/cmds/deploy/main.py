@@ -44,6 +44,14 @@ def init_parser(subparsers):
     )
 
     parser.add_argument(
+            "--install-manila",
+            type=str,
+            choices=["yes", "no"],
+            default="yes",
+            help="Choosing whether to install Manila (Shared Filesystems) service (yes/no)"
+        )
+
+    parser.add_argument(
         "--lvm-image-size-in-gb",
         type=int,
         default=5,
@@ -57,6 +65,24 @@ def init_parser(subparsers):
         default="ovs",
         dest="neutron_driver",
         help="The Neutron Driver that will be used to configure networks in OpenStack"
+    )
+
+    parser.add_argument(
+        "--manila-backend",
+        type=str,
+        choices=["generic", "lvm"],
+        default="lvm",
+        dest="manila_backend",
+        help="The Manila Backend that will be used to configure shares in OpenStack"
+    )
+
+    parser.add_argument(
+        "--manila-share-protocols",
+        nargs="+",
+        choices=["nfs", "cifs"],
+        default=["nfs"],
+        dest="manila_share_protocols",
+        help="One or more Manila share protocols (choices: nfs, cifs)."
     )
 
     parser.add_argument(
@@ -82,7 +108,10 @@ def deploy(parser, args) -> None:
         
         cinder_flag = args.install_cinder
         horizon_flag = args.install_horizon
-        driver = args.neutron_driver if args.neutron_driver in ("ovs","ovn") else "ovs"
+        manila_flag = args.install_manila
+
+        neutron_driver = args.neutron_driver if args.neutron_driver in ("ovs","ovn") else "ovs"
+        manila_backend = args.manila_backend if args.manila_backend in ("generic", "lvm") else "lvm"
         
         lvm_size = args.lvm_image_size_in_gb if cinder_flag == "yes" else 0
 
@@ -91,9 +120,11 @@ def deploy(parser, args) -> None:
         config_openstack(
             install_horizon=horizon_flag,
             install_cinder=cinder_flag,
+            install_manila=manila_flag
             config_file_path=config_file_path,
             lvm_image_size_in_gb=lvm_size,
-            neutron_driver=driver,
+            neutron_driver=neutron_driver,
+            manila_backend=manila_backend
             os_release=openstack_release
         )
 
