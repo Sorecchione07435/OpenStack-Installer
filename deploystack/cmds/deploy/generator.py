@@ -100,6 +100,7 @@ def config_openstack(
         mgmt_ip_cidr = mgmt_iface_info["network_cidr"]
         mgmt_netmask = mgmt_iface_info["netmask"]
         mgmt_gateway = mgmt_iface_info["gateway"]
+        print("OK!")
     else:
         mgmt_iface = iface
 
