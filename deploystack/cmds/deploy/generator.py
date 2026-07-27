@@ -111,6 +111,7 @@ def config_openstack(
     config_dict["network"]["HOST_IP_NETMASK"] = mgmt_netmask
     config_dict["network"]["HOST_IP_CIDR"] = mgmt_ip_cidr
     config_dict["network"]["HOST_IP_GATEWAY"] = mgmt_gateway
+    print(mgmt_iface)
     config_dict["network"]["HOST_MGMT_INTERFACE"] = mgmt_iface
     config_dict["network"]["HOST_DNS_SERVERS"] = "8.8.8.8,8.8.4.4"
 
