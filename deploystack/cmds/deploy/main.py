@@ -185,7 +185,7 @@ def deploy(parser, args) -> None:
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
             manila_enable_dhss=manila_enable_dhss,
-            os_mgmt_iface=args.os_management_interface
+            os_mgmt_iface=args.os_management_interface,
             os_release=openstack_release
         )
 
