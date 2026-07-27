@@ -159,6 +159,7 @@ def conf_lvm_manila(config):
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols", enabled_share_protocols)
 
     set_conf_option(manila_conf, "lvm", "share_backend_name", backend_name)
+    set_conf_option(manila_conf, "lvm", "driver_handles_share_servers", "False")
     set_conf_option(manila_conf, "lvm", "share_driver", "manila.share.drivers.lvm.LVMShareDriver")
     set_conf_option(manila_conf, "lvm", "lvm_share_volume_group", vg_name)
     set_conf_option(manila_conf, "lvm", "lvm_share_export_ips", share_export_ip)
@@ -209,7 +210,7 @@ def finalize(env):
     return True
 
 def finalize_lvm_backend(config, env):
-    
+
     shares = get(config, "manila.shares") or []
     default_type_shares = get(config, "manila.share_types") or []
 

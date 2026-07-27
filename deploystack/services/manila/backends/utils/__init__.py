@@ -41,7 +41,7 @@ def samba_user_exists(username):
 
 
 def wait_manila_backend(env, timeout=120, interval=5):
-    print("\nWaiting for Share Service to become UP ...", end="", flush=True)
+    print("\nWaiting for Share Service to become UP ... ", end="", flush=True)
 
     deadline = time.time() + timeout
     spinner = "|/-\\"
