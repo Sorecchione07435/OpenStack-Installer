@@ -68,7 +68,9 @@ def conf_generic_backend(config):
                 helper_name = config.get("name")
                 helpers.append(f"{helper_type}={helper_name}")
 
-    set_conf_option(manila_conf, "DEFAULT", "share_helpers", f"{helper_type}={helper_name}")
+    helpers = [f"{helper_type}={config.get('name')}" for helper in share_helpers for helper_type, config in helper.items()]
+
+    set_conf_option(manila_conf, "DEFAULT", "share_helpers", helpers)
 
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_backends", "generic")
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols", enabled_share_protocols)

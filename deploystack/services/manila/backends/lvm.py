@@ -149,20 +149,22 @@ def conf_lvm_manila(config):
         if not run_setup_samba(config): return False
 
     for helper in share_helpers:
-            for helper_type, config in helper.items():
-                helper_name = config.get("name")
-                helpers.append(f"{helper_type}={helper_name}")
+        for helper_type, config in helper.items():
+            helper_name = config.get("name")
+            helpers.append(f"{helper_type}={helper_name}")
 
-    set_conf_option(manila_conf, "DEFAULT", "share_helpers", f"{helper_type}={helper_name}")
+    helpers = [f"{helper_type}={config.get('name')}" for helper in share_helpers for helper_type, config in helper.items()]
+
+    set_conf_option(manila_conf, "DEFAULT", "share_helpers", helpers)
 
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_backends", "lvm")
     set_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols", enabled_share_protocols)
 
     set_conf_option(manila_conf, "lvm", "share_backend_name", backend_name)
-    set_conf_option(manila_conf, "lvm", "driver_handles_share_servers", "False")
     set_conf_option(manila_conf, "lvm", "share_driver", "manila.share.drivers.lvm.LVMShareDriver")
     set_conf_option(manila_conf, "lvm", "lvm_share_volume_group", vg_name)
     set_conf_option(manila_conf, "lvm", "lvm_share_export_ips", share_export_ip)
+    set_conf_option(manila_conf, "lvm", "driver_handles_share_servers", "False")
 
     try:
         shutil.copy2(MANILA_LVM_NETWORK_SERVICE, SERVICE_PATH)
