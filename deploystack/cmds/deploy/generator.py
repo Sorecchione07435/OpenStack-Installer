@@ -183,9 +183,6 @@ def config_openstack(
         }
 
     if install_manila.lower() == "yes":
-        if manila_lvm_image_size_in_gb is None and manila_backend.lower() == "lvm":
-            manila_lvm_image_size_in_gb = 5
-
         share_helpers = []
 
         config_dict["manila"]["BACKEND"] = manila_backend
@@ -218,8 +215,10 @@ def config_openstack(
 
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
-
             if manila_lvm_physical_volume == "":
+                if manila_lvm_image_size_in_gb is None:
+                    manila_lvm_image_size_in_gb = 5
+
                 config_dict["manila"]["backends"]["lvm"]["MANILA_LVM_IMAGE_SIZE_IN_GB"] = manila_lvm_image_size_in_gb
             else:
                 config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume

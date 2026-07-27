@@ -16,6 +16,8 @@ def init_parser(subparsers):
 
     group = parser.add_mutually_exclusive_group(required=True)
 
+    manila = parser.add_argument_group("Manila Options")
+
     group.add_argument(
         "--allinone",
         action="store_true",
@@ -43,7 +45,7 @@ def init_parser(subparsers):
         help="Choosing whether to install Horizon (Dashboard) service (yes/no)"
     )
 
-    parser.add_argument(
+    manila.add_argument(
             "--install-manila",
             type=str,
             choices=["yes", "no"],
@@ -59,22 +61,23 @@ def init_parser(subparsers):
     )
 
     parser.add_argument(
-        "--manila-lvm-image-size-in-gb",
-        type=int,
-        default=5,
-        help="Size of the Manila LVM image in GB (default: 5)"
-    )
-
-    parser.add_argument(
         "--cinder-physical-volume",
         type=str,
         help="The physical volume to use for Cinder (example: /dev/sdb)"
     )
 
-    parser.add_argument(
+    manila_lvm_storage = manila.add_mutually_exclusive_group()
+
+    manila_lvm_storage.add_argument(
         "--manila-lvm-physical-volume",
         type=str,
         help="The physical volume to use for Manila LVM (example: /dev/sdc)"
+    )
+    
+    manila_lvm_storage.add_argument(
+        "--manila-lvm-image-size-in-gb",
+        type=int,
+        help="Size of the Manila LVM image in GB (default: 5)"
     )
 
     parser.add_argument(
@@ -86,7 +89,7 @@ def init_parser(subparsers):
         help="The Neutron Driver that will be used to configure networks in OpenStack"
     )
 
-    parser.add_argument(
+    manila.add_argument(
         "--manila-backend",
         type=str,
         choices=["generic", "lvm"],
@@ -95,7 +98,7 @@ def init_parser(subparsers):
         help="The Manila Backend that will be used to configure shares in OpenStack"
     )
 
-    parser.add_argument(
+    manila.add_argument(
         "--manila-share-protocols",
         nargs="+",
         choices=["nfs", "cifs"],
@@ -104,7 +107,7 @@ def init_parser(subparsers):
         help="One or more Manila share protocols (choices: nfs, cifs)."
     )
 
-    parser.add_argument(
+    manila.add_argument(
         "--manila-enable-dhss",
         type=str,
         choices=["yes", "no"],
@@ -146,11 +149,22 @@ def deploy(parser, args) -> None:
         manila_lvm_physical_volume = args.manila_lvm_physical_volume if manila_flag == "yes" else ""
         
         cinder_lvm_size = args.cinder_lvm_image_size_in_gb if cinder_flag == "yes" else 0
-        manila_lvm_size = args.manila_lvm_image_size_in_gb if manila_flag == "yes" else 0
+        manila_lvm_size = (
+            args.manila_lvm_image_size_in_gb
+            if args.manila_lvm_image_size_in_gb is not None
+            else 5
+        ) if manila_flag == "yes" else 0
 
         manila_enable_dhss = args.manila_enable_dhss if manila_flag == "yes" and manila_backend == "generic" else "no" 
 
         openstack_release = args.os_release
+
+        if args.install_manila == "no" and (
+            args.manila_lvm_physical_volume or
+            args.manila_lvm_image_size_in_gb or
+            args.manila_enable_dhss == "yes"
+        ):
+            parser.error("Manila options require --install-manila yes")
         
         config_openstack(
             install_horizon=horizon_flag,
