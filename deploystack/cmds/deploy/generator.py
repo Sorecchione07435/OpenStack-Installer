@@ -64,6 +64,8 @@ def config_openstack(
     ip_cidr = info["network_cidr"]
     network = info["network"]
 
+    mgmt_iface = None
+
     mgmt_ip = None
     mgmt_ip_cidr = None
     mgmt_netmask = None
