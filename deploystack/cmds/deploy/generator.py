@@ -169,7 +169,7 @@ def config_openstack(
 
     config_dict["cinder"].setdefault("lvm", {})
 
-    if cinder_physical_volume == "":
+    if not cinder_physical_volume or cinder_physical_volume.strip() == "":
         config_dict["cinder"]["lvm"] = {
             "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": get_free_loop(),
             "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
@@ -183,6 +183,9 @@ def config_openstack(
         }
 
     if install_manila.lower() == "yes":
+        if manila_lvm_image_size_in_gb is None and manila_backend.lower() == "lvm":
+            manila_lvm_image_size_in_gb = 5
+
         share_helpers = []
 
         config_dict["manila"]["BACKEND"] = manila_backend
