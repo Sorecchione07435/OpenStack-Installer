@@ -20,6 +20,15 @@ def _remove_empty(d):
         return [_remove_empty(i) for i in d if i != "" and i is not None]
     return d
 
+def get_next_loop():
+    global used_loops
+
+    while True:
+        loop = get_free_loop()
+        if loop not in used_loops:
+            used_loops.add(loop)
+            return loop
+
 def generate_config_file() -> str:
 
     global config_file_path
@@ -170,8 +179,10 @@ def config_openstack(
     config_dict["cinder"].setdefault("lvm", {})
 
     if not cinder_physical_volume or cinder_physical_volume.strip() == "":
+        cinder_loop = get_next_loop()
+
         config_dict["cinder"]["lvm"] = {
-            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": get_free_loop(),
+            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": cinder_loop,
             "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
             "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": cinder_lvm_image_size_in_gb,
             "VOLUME_GROUP": "cinder-volumes",
@@ -215,11 +226,14 @@ def config_openstack(
 
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
-            if manila_lvm_physical_volume == "":
-                if manila_lvm_image_size_in_gb is None:
-                    manila_lvm_image_size_in_gb = 5
+            if not manila_lvm_physical_volume:
+                manila_loop = get_next_loop()
 
-                config_dict["manila"]["backends"]["lvm"]["MANILA_LVM_IMAGE_SIZE_IN_GB"] = manila_lvm_image_size_in_gb
+                config_dict["manila"]["backends"]["lvm"].update({
+                    "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/manila-volumes.img",
+                    "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
+                    "MANILA_LVM_LOOP_PATH": manila_loop,
+                })
             else:
                 config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
 

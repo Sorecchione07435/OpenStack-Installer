@@ -146,7 +146,11 @@ def deploy(parser, args) -> None:
         manila_share_protocols = args.manila_share_protocols
 
         cinder_physical_volume = args.cinder_physical_volume if cinder_flag == "yes" else ""
-        manila_lvm_physical_volume = args.manila_lvm_physical_volume if manila_flag == "yes" else ""
+        manila_lvm_physical_volume = (
+            args.manila_lvm_physical_volume
+            if manila_flag == "yes" and args.manila_lvm_physical_volume
+            else ""
+        )
         
         cinder_lvm_size = args.cinder_lvm_image_size_in_gb if cinder_flag == "yes" else 0
         manila_lvm_size = (
