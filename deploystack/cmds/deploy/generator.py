@@ -56,6 +56,8 @@ def config_openstack(
     # Informazioni di rete
     info = get_network_info()
     iface = info["interface"]
+    print(f"Detected interface: {iface}")
+
     ip = info["ip"]
     netmask = info["netmask"]
     gateway = info["gateway"]
@@ -66,6 +68,8 @@ def config_openstack(
     mgmt_ip_cidr = None
     mgmt_netmask = None
     mgmt_gateway = None
+
+    print(f"2 Detected interface: {iface}")
 
     last_ip = str(ipaddress.IPv4Address(ipaddress.IPv4Network(ip_cidr, strict=False).broadcast_address - 1))
 
