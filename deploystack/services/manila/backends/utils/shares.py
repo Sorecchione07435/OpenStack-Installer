@@ -7,6 +7,13 @@ from ..utils import wait_share_available, wait_dhss_share_available
 from .....utils.config.helpers import parse_bool
 from .....utils.core import colors
 
+SUPPORTED_EXTRA_SPECS = {
+    "driver_handles_share_servers",
+    "snapshot_support",
+    "create_share_from_snapshot_support",
+    "revert_to_snapshot_support",
+    "mount_snapshot_support",
+}
 def create_share_types(default_type_shares, env):
 
     share_type_list = json.loads(
@@ -16,60 +23,99 @@ def create_share_types(default_type_shares, env):
         ) or "[]"
     )
 
+    # Extra specs ufficialmente gestiti da Manila
+    allowed_extra_specs = {
+        "driver_handles_share_servers",
+        "snapshot_support",
+        "create_share_from_snapshot_support",
+        "revert_to_snapshot_support",
+        "mount_snapshot_support",
+    }
+
     for share_type in default_type_shares:
+
         share_type_name = share_type["name"]
-        is_share_public = parse_bool(share_type["is_public"], False)
+        is_share_public = parse_bool(
+            share_type.get("is_public"),
+            False
+        )
 
         extra_specs = {}
-        driver_handles_share_servers = None
 
         for extra_spec in share_type.get("extra_specs", []):
-            if "driver_handles_share_servers" in extra_spec:
-                driver_handles_share_servers = (
+
+            for key, value in extra_spec.items():
+
+                if key not in allowed_extra_specs:
+                    print(
+                        f"WARNING: ignoring unsupported Manila extra spec '{key}'"
+                    )
+                    continue
+
+                extra_specs[key] = (
                     "True"
-                    if parse_bool(extra_spec.get("driver_handles_share_servers"), False)
+                    if parse_bool(value, False)
                     else "False"
                 )
 
-            for key in [
-                "snapshot_support",
-                "create_share_from_snapshot_support",
-                "revert_to_snapshot_support",
-                "mount_snapshot_support",
-            ]:
-                if key in extra_spec:
-                    extra_specs[key] = "True" if parse_bool(extra_spec.get(key), False) else "False"
 
         share_type_exists = any(
             st.get("Name") == share_type_name
             for st in share_type_list
         )
 
-        if not share_type_exists:
-            print()
-            
-            if driver_handles_share_servers is None:
-                driver_handles_share_servers = "False"
 
-            share_create_cmd = ["openstack", "share", "type", "create", share_type_name, driver_handles_share_servers]
+        if share_type_exists:
+            continue
 
-            if is_share_public:
-                share_create_cmd += ["--public", "True"]
 
-            if extra_specs:
-                share_create_cmd.append("--extra-specs")
+        # driver_handles_share_servers è obbligatorio in creazione
+        dhss = extra_specs.pop(
+            "driver_handles_share_servers",
+            "False"
+        )
 
-                for key, value in extra_specs.items():
-                    share_create_cmd.append(f"{key}={value}")
 
-            if not os_run(
-                share_create_cmd,
-                f"Creating '{share_type_name}' share type... ",
-                env=env
-            ):
-                return False
+        cmd = [
+            "openstack",
+            "share",
+            "type",
+            "create",
+            share_type_name,
+            dhss
+        ]
 
-            share_type_list.append({"Name": share_type_name})
+
+        if is_share_public:
+            cmd += [
+                "--public",
+                "True"
+            ]
+
+
+        if extra_specs:
+
+            cmd.append("--extra-specs")
+
+            for key, value in extra_specs.items():
+                cmd.append(
+                    f"{key}={value}"
+                )
+
+
+        if not os_run(
+            cmd,
+            f"Creating '{share_type_name}' share type... ",
+            env=env
+        ):
+            return False
+
+
+        share_type_list.append(
+            {
+                "Name": share_type_name
+            }
+        )
 
     return True
 
