@@ -127,7 +127,7 @@ def deploy(parser, args) -> None:
             lvm_image_size_in_gb=lvm_size,
             neutron_driver=neutron_driver,
             manila_backend=manila_backend,
-            manila_share_protocols=manila_share_protocols
+            manila_share_protocols=manila_share_protocols,
             os_release=openstack_release
         )
 
