@@ -40,29 +40,63 @@ def samba_user_exists(username):
     return any(line.partition(":")[0] == username for line in result.stdout.splitlines())
 
 
-def wait_manila_backend(env, timeout=120):
-    elapsed = 0
+def wait_manila_backend(env, timeout=120, interval=5):
+    print("\nWaiting for Share Service to become UP ...", end="", flush=True)
 
-    while elapsed < timeout:
-        services = json.loads(
-            os_run_output(
-                ["openstack", "share", "service", "list", "-f", "json"],
-                env=env
-            )
-        )
+    deadline = time.time() + timeout
+    spinner = "|/-\\"
+    spinner_index = 0
+    last_check = 0
 
-        for service in services:
-            if (
-                service["Binary"] == "manila-share"
-                and service["State"] == "up"
-                and service["Status"] == "enabled"
-            ):
-                return True
+    while time.time() < deadline:
+        now = time.time()
 
-        time.sleep(5)
-        elapsed += 5
+        if now - last_check >= interval:
+            last_check = now
 
-    return False
+            try:
+                services = json.loads(
+                    os_run_output(
+                        ["openstack", "share", "service", "list", "-f", "json"],
+                        env=env
+                    ) or "[]"
+                )
+
+                for service in services:
+                    if (
+                        service.get("Binary", "").lower() == "manila-share"
+                        and service.get("Status", "").lower() == "enabled"
+                        and service.get("State", "").lower() == "up"
+                    ):
+                        print(
+                            f"\rWaiting for Share Service to become UP "
+                            f"[ {colors.YELLOW}DONE{colors.RESET} ]"
+                        )
+                        return service
+
+            except Exception:
+                pass
+
+        print(f"\b{spinner[spinner_index]}", end="", flush=True)
+        spinner_index = (spinner_index + 1) % len(spinner)
+
+        time.sleep(0.1)
+
+    print(
+        f"\rWaiting for Share Service to become UP "
+        f"[ {colors.RED}TIMEOUT{colors.RESET} ]"
+    )
+
+    print(
+        f"\n{colors.YELLOW}"
+        "Check Manila logs for more details:\n"
+        "  journalctl -u manila-share -n 100 --no-pager\n"
+        "or:\n"
+        "  /var/log/manila/manila-share.log"
+        f"{colors.RESET}\n"
+    )
+
+    return None
 
 def wait_share_available(share_name, env, timeout=120, interval=5):
     print(f"\nWaiting for share '{share_name}' to become available... ", end="", flush=True)
