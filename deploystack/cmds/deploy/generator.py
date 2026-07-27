@@ -92,7 +92,7 @@ def config_openstack(
     # Rete
     config_dict.setdefault("network", {})
 
-    if os_mgmt_iface or os_mgmt_iface.strip():
+    if os_mgmt_iface:
         mgmt_iface_info = get_network_info(interface_name=os_mgmt_iface)
 
         mgmt_iface = os_mgmt_iface
