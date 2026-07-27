@@ -152,12 +152,8 @@ def deploy(parser, args) -> None:
             else ""
         )
         
-        cinder_lvm_size = args.cinder_lvm_image_size_in_gb if cinder_flag == "yes" else 0
-        manila_lvm_size = (
-            args.manila_lvm_image_size_in_gb
-            if args.manila_lvm_image_size_in_gb is not None
-            else 5
-        ) if manila_flag == "yes" else 0
+        cinder_lvm_size = (args.cinder_lvm_image_size_in_gb if args.cinder_lvm_image_size_in_gb is not None else 5) if cinder_flag == "yes" else 0
+        manila_lvm_size = (args.manila_lvm_image_size_in_gb if args.manila_lvm_image_size_in_gb is not None else 5) if manila_flag == "yes" else 0
 
         manila_enable_dhss = args.manila_enable_dhss if manila_flag == "yes" and manila_backend == "generic" else "no" 
 

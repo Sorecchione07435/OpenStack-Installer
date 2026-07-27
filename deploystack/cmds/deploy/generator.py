@@ -64,9 +64,6 @@ def config_openstack(
 
     dns_list = []
 
-    cinder_loop = None
-    manila_lvm_loop = None
-
     if cinder_lvm_image_size_in_gb is None:
         cinder_lvm_image_size_in_gb = 5
 
