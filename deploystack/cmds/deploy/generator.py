@@ -92,7 +92,7 @@ def config_openstack(
     # Rete
     config_dict.setdefault("network", {})
 
-    if not os_mgmt_iface or os_mgmt_iface.strip() == "":
+    if os_mgmt_iface or os_mgmt_iface.strip():
         mgmt_iface_info = get_network_info(interface_name=os_mgmt_iface)
 
         mgmt_iface = os_mgmt_iface
@@ -100,7 +100,6 @@ def config_openstack(
         mgmt_ip_cidr = mgmt_iface_info["network_cidr"]
         mgmt_netmask = mgmt_iface_info["netmask"]
         mgmt_gateway = mgmt_iface_info["gateway"]
-        print("OK!")
     else:
         mgmt_iface = iface
 
