@@ -174,7 +174,9 @@ def config_openstack(
 
     if install_manila.lower() == "yes":
         config_dict["manila"]["BACKEND"] = manila_backend
-        config_dict["manila"]["SHARE_PROTOCOLS"] = list(manila_share_protocols.upper())
+        config_dict["manila"]["SHARE_PROTOCOLS"] = [
+            protocol.upper() for protocol in manila_share_protocols
+        ]
 
         if manila_backend.lower() == "generic":
             config_dict["manila"]["backends"].setdefault("lvm", {})
