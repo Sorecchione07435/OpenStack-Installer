@@ -113,7 +113,7 @@ def deploy(parser, args) -> None:
         neutron_driver = args.neutron_driver if args.neutron_driver in ("ovs","ovn") else "ovs"
         manila_backend = args.manila_backend if args.manila_backend in ("generic", "lvm") else "lvm"
 
-        manila_share_protocols = args.manila_share_protocols if args.manila_share_protocols in ("cifs", "nfs") else "nfs"
+        manila_share_protocols = args.manila_share_protocols
         
         lvm_size = args.lvm_image_size_in_gb if cinder_flag == "yes" else 0
 
