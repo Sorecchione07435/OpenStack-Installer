@@ -44,7 +44,7 @@ def samba_user_exists(username):
 
 def wait_manila_backend(env, timeout=120, interval=5):
 
-    spinner = Spinner(message="Waiting for Share Service to become UP ... ")
+    spinner = Spinner(message="Waiting for Share Service to become UP ...")
     spinner.start()
 
     deadline = time.time() + timeout
@@ -105,7 +105,7 @@ def wait_manila_backend(env, timeout=120, interval=5):
 
 def wait_share_available(share_name, env, timeout=120, interval=5):
 
-    spinner = Spinner(message=f"Waiting for share '{share_name}' to become available... ")
+    spinner = Spinner(message=f"Waiting for share '{share_name}' to become available...")
     spinner.start()
 
     deadline = time.time() + timeout
@@ -130,11 +130,11 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
                     status = share_info.get("status", "").lower()
 
                     if status == "available":
-                        spinner.stop(done_message="DONE", color="yellow", width=50)
+                        spinner.stop(done_message="DONE", color="yellow", width=80)
                         return share_info
 
                     if status in ("error", "error_deleting"):
-                        spinner.stop(done_message="ERROR", color="red", width=50)
+                        spinner.stop(done_message="ERROR", color="red", width=80)
 
                         print(f"\n{colors.RED}ERROR: {share_name} entered error state: {status}{colors.RESET}\n")
 
@@ -152,7 +152,7 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
 
             time.sleep(0.1)
 
-        spinner.stop(done_message="TIMEOUT", color="red", width=50)
+        spinner.stop(done_message="TIMEOUT", color="red", width=80)
 
         print(
             f"\n{colors.RED}ERROR: {share_name} did not become available "
@@ -163,11 +163,11 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
 
     finally:
         if spinner.running:
-            spinner.stop(done_message="FAILED", color="red", width=50)
+            spinner.stop(done_message="FAILED", color="red", width=80)
 
 def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
-    spinner = Spinner(message=f"Waiting for share '{share_name}' to become available... ")
+    spinner = Spinner(message=f"Waiting for share '{share_name}' to become available...")
     spinner.start()
 
     deadline = time.time() + timeout
@@ -186,11 +186,11 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
                     status = share_info.get("status", "").lower()
 
                     if status == "available":
-                        spinner.stop(done_message="DONE", color="yellow", width=50)
+                        spinner.stop(done_message="DONE", color="yellow", width=80)
                         return share_info
 
                     if status in ("error", "error_deleting"):
-                        spinner.stop(done_message="ERROR", color="red", width=50)
+                        spinner.stop(done_message="ERROR", color="red", width=80)
 
                         print(f"\n{colors.RED}ERROR: {share_name} entered error state: {status}{colors.RESET}\n")
 
@@ -210,7 +210,7 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
             time.sleep(0.1)
 
-        spinner.stop(done_message="TIMEOUT", color="red", width=50)
+        spinner.stop(done_message="TIMEOUT", color="red", width=80)
 
         print(
             f"\n{colors.RED}ERROR: {share_name} did not become available "
@@ -221,4 +221,4 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
     finally:
         if spinner.running:
-            spinner.stop(done_message="FAILED", color="red", width=50)
+            spinner.stop(done_message="FAILED", color="red", width=80)

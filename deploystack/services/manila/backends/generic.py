@@ -181,6 +181,8 @@ def finalize_generic_backend(config, env):
     # --- Share network ---
     share_networks_list = json.loads(os_run_output(["openstack", "share", "network", "list", "-f", "json"], env=env) or "[]")
 
+    print()
+
     for service_net in service_networks:
 
         network_name = service_net["name"]
@@ -205,7 +207,6 @@ def finalize_generic_backend(config, env):
         )
 
         if not tenant_share_network_exists:
-            print()
             if not os_run([
                 "openstack", "share", "network", "create",
                 "--name", network_name,

@@ -128,24 +128,24 @@ def add_dashboard_ui_symlink():
 
 def setup_manila_horizon(config):
 
-    is_generic = get(config, "manila.BACKEND") == "generic"
-
-    is_generic_dhss_enabled = parse_bool(get(config, "manila.backends.generic.DRIVER_HANDLES_SHARE_SERVERS"), False)
-    is_lvm_dhss_enabled = parse_bool(get(config, "manila.backends.lvm.DRIVER_HANDLES_SHARE_SERVERS"), False)
-
-    is_dhss_enabled = is_generic and is_generic_dhss_enabled or is_lvm_dhss_enabled
+    backend = get(config, "manila.BACKEND")
+    is_generic = backend == "generic"
 
     if not os.path.exists("/usr/share/openstack-dashboard"):
-        print(f"{colors.RED}Error: Horizon is not yet installed{colors.RESET}") 
+        print(f"{colors.RED}Error: Horizon is not yet installed{colors.RESET}")
         return False
 
-    if not install_pkgs() : return False
+    if not install_pkgs():
+        return False
 
-    if not add_dashboard_ui_symlink() : return False
-    
-    if not is_dhss_enabled:
-        if not disable_dhss_dashboard_panels(): return False
+    if not add_dashboard_ui_symlink():
+        return False
 
-    if not disable_unsupported_protocols_options(config): return False
+    if not is_generic:
+        if not disable_dhss_dashboard_panels():
+            return False
+
+    if not disable_unsupported_protocols_options(config):
+        return False
 
     return True

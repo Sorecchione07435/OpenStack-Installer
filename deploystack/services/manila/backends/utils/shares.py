@@ -124,6 +124,8 @@ def create_shares(shares, env, dhss: bool = False):
                 if not os_run(share_create_cmd, f"Creating share '{share_name}'... ", env=env):
                     return False
 
+                print()
+
                 if dhss:
                     share_info = wait_dhss_share_available(share_name, env)
                 else:
