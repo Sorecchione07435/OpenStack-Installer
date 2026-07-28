@@ -307,15 +307,15 @@ def config_openstack(
         config_dict["manila"]["SHARE_HELPERS"] = share_helpers
         config_dict["manila"]["shares"] = shares
 
-        config_dict["manila"]["share_types"] = [{
-            "name": "default_share_type",
-            "is_public": "yes",
-            "extra_specs": [{
-                "driver_handles_share_servers": "no"
-            }]
-        }]
-
         if manila_backend.lower() == "generic":
+
+            config_dict["manila"]["share_types"] = [{
+                        "name": "default_share_type",
+                        "is_public": "yes",
+                        "extra_specs": [{
+                                "driver_handles_share_servers": "yes"
+                        }]
+                }]
 
             config_dict["manila"]["backends"]["generic"]["DRIVER_HANDLES_SHARE_SERVERS"] = (
                     "yes" if manila_enable_dhss.lower() == "yes" else "no"
@@ -323,6 +323,14 @@ def config_openstack(
 
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":
+            config_dict["manila"]["share_types"] = [{
+                                    "name": "default_share_type",
+                                    "is_public": "yes",
+                                    "extra_specs": [{
+                                            "driver_handles_share_servers": "no"
+                                    }]
+                            }]
+            
             if not manila_lvm_physical_volume:
                 config_dict["manila"]["backends"]["lvm"].update({
                     "SHARE_EXPORT_IP": ip,
