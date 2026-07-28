@@ -216,8 +216,11 @@ def config_openstack(
         }
 
     if install_manila.lower() == "yes":
+
         share_helpers = []
         shares = []
+
+        service_networks = []
 
         config_dict["manila"]["BACKEND"] = manila_backend
         config_dict["manila"]["SHARE_PROTOCOLS"] = [
@@ -232,29 +235,76 @@ def config_openstack(
                     }
                 })
 
-                shares.append({
-                    "name": "default_share",
-                    "share_protocol": "NFS",
-                    "share_size": 1,
-                    "share_type": "default_share_type",
-                    "access_rules": [
-                        {
-                            "access": "10.0.0.0/24",
-                            "level": "rw",
-                            "type": "ip",
-                        },
-                        {
-                            "access": network,
-                            "level": "rw",
-                            "type": "ip",
-                        },
-                        {
-                            "access": "10.254.0.0/28",
-                            "level": "rw",
-                            "type": "ip",
-                        },
-                    ],
-                })
+                if manila_backend.lower() == "generic":
+                    shares.append({
+                        "name": "default_nfs_internal_share",
+                        "share_protocol": "NFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "share_network": "manila_internal_service_network",
+                        "access_rules": [
+                            {
+                                "access": "10.0.0.0/24",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": network,
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": "10.254.0.0/28",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                        ],
+                        "name": "default_nfs_public_share",
+                        "share_protocol": "NFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "share_network": "manila_public_service_network",
+                        "access_rules": [
+                            {
+                                "access": "10.0.0.0/24",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": network,
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": "10.254.0.0/28",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                        ],
+                    })
+                elif manila_backend.lower() == "lvm":
+                     shares.append({
+                        "name": "default_nfs_share",
+                        "share_protocol": "NFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "access_rules": [
+                            {
+                                "access": "10.0.0.0/24",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": network,
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": "10.254.0.0/28",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                        ]})
 
             elif protocol.lower() == "cifs":
                 share_helpers.append({
@@ -264,11 +314,46 @@ def config_openstack(
                 })
 
                 if manila_backend.lower() == "generic":
+
+                    service_networks.append([
+                        {
+                            "name": "manila_internal_service_network",
+                            "neutron_network": "internal",
+                        },
+                        {
+                            "name": "manila_public_service_network",
+                            "neutron_network": "public",
+                        }
+                    ])
+                     
                     shares.append({
-                        "name": "default_share",
+                        "name": "default_cifs_internal_share",
                         "share_protocol": "CIFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "share_network": "manila_internal_service_network",
+                        "access_rules": [
+                            {
+                                "access": "10.0.0.0/24",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": network,
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": "10.254.0.0/28",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                        ],
+                        "name": "default_cifs_public_share",
+                        "share_protocol": "CIFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "share_network": "manila_public_service_network",
                         "access_rules": [
                             {
                                 "access": "10.0.0.0/24",
@@ -289,7 +374,7 @@ def config_openstack(
                     })
                 elif manila_backend.lower() == "lvm":
                     shares.append({
-                        "name": "default_share",
+                        "name": "default_cifs_share",
                         "share_protocol": "CIFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
@@ -301,8 +386,6 @@ def config_openstack(
                             },
                         ],
                     })
-
-
 
         config_dict["manila"]["SHARE_HELPERS"] = share_helpers
         config_dict["manila"]["shares"] = shares
@@ -316,10 +399,6 @@ def config_openstack(
                                 "driver_handles_share_servers": "yes"
                         }]
                 }]
-
-            config_dict["manila"]["backends"]["generic"]["DRIVER_HANDLES_SHARE_SERVERS"] = (
-                    "yes" if manila_enable_dhss.lower() == "yes" else "no"
-                )
 
             config_dict["manila"]["backends"].pop("lvm", None)
         elif manila_backend.lower() == "lvm":

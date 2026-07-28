@@ -51,7 +51,6 @@ def conf_generic_backend(config):
     generic_interface_driver = get(config, "manila.backends.generic.INTERFACE_DRIVER")
     generic_service_image_name = get(config, "manila.backends.generic.SERVICE_IMAGE_NAME")
 
-    generic_driver_handles_share_servers = parse_bool(get(config, "manila.backends.generic.DRIVER_HANDLES_SHARE_SERVERS", True))
     generic_share_server_to_tenant_network = parse_bool(get(config, "manila.backends.generic.CONNECT_SHARE_SERVER_TO_TENANT_NETWORK", False))
 
     enabled_share_protocols = ",".join(protocols)
@@ -82,7 +81,7 @@ def conf_generic_backend(config):
 
     set_conf_option(manila_conf, "generic", "share_backend_name", backend_name)
     set_conf_option(manila_conf, "generic", "share_driver", "manila.share.drivers.generic.GenericShareDriver")
-    set_conf_option(manila_conf, "generic", "driver_handles_share_servers", str(generic_driver_handles_share_servers))
+    set_conf_option(manila_conf, "generic", "driver_handles_share_servers", "True")
     set_conf_option(manila_conf, "generic", "connect_share_server_to_tenant_network", str(generic_share_server_to_tenant_network))
     set_conf_option(manila_conf, "generic", "service_instance_flavor_id", str(generic_service_instance_flavor_id))
     set_conf_option(manila_conf, "generic", "service_image_name", generic_service_image_name)
@@ -113,14 +112,15 @@ def finalize_generic_backend(config, env):
     manila_temp_image_path = "/tmp/manila-service-image.qcow2"
     manila_image_url = "https://tarballs.opendev.org/openstack/manila-image-elements/images/manila-service-image-master.qcow2"
 
-    service_network_name = get(config, "manila.backends.generic.SERVICE_NETWORK_NAME")
     generic_service_image_name = get(config, "manila.backends.generic.SERVICE_IMAGE_NAME")
-    generic_service_instance_flavor_name = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR_NAME")
 
+    generic_service_instance_flavor_name = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.NAME")
     generic_service_instance_flavor_id = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID")
     generic_service_instance_flavor_ram = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM")
     generic_service_instance_flavor_vcpus = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS")
     generic_service_instance_flavor_disk = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.DISK")
+
+    service_networks = get(config, "manila.backends.generic.service_networks") or []
 
     shares = get(config, "manila.shares") or []
     default_type_shares = get(config, "manila.share_types") or []
@@ -129,26 +129,6 @@ def finalize_generic_backend(config, env):
     subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env) or "[]")
     images_list = json.loads(os_run_output(["openstack", "image", "list", "-f", "json"], env=env) or "[]")
     flavors_list = json.loads(os_run_output(["openstack", "flavor", "list", "-f", "json"], env=env) or "[]")
-
-    # --- Risolvi network e subnet ---
-    internal_network_id = ""
-    internal_subnet_id = ""
-
-    for network in networks_list:
-        if network["Name"] == "internal":
-            internal_network_id = network["ID"]
-
-    for subnet in subnets_list:
-        if subnet["Name"] == "internal_subnet":
-            internal_subnet_id = subnet["ID"]
-
-    if not internal_network_id:
-        print(f"{colors.RED}Error: internal network not found{colors.RESET}")
-        return False
-
-    if not internal_subnet_id:
-        print(f"{colors.RED}Error: internal subnet not found{colors.RESET}")
-        return False
 
     if not create_share_types(default_type_shares=default_type_shares, env=env):
         return False
@@ -200,22 +180,40 @@ def finalize_generic_backend(config, env):
     # --- Share network ---
     share_networks_list = json.loads(os_run_output(["openstack", "share", "network", "list", "-f", "json"], env=env) or "[]")
 
-    tenant_share_network_exists = any(
-        network.get("Name") == service_network_name
-        for network in share_networks_list
-    )
+    for service_net in service_networks:
 
-    if not tenant_share_network_exists:
-        print()
-        if not os_run([
-            "openstack", "share", "network", "create",
-            "--name", service_network_name,
-            "--neutron-net-id", str(internal_network_id),
-            "--neutron-subnet-id", str(internal_subnet_id),
-        ], "Creating tenant share network...", env=env):
-            return False
+        network_name = service_net["name"]
+        neutron_network = service_net["neutron_network"]
 
-    if not create_shares(shares=shares, env=env, dhss=True, service_network_name=service_network_name):
+        neutron_network_id = ""
+        neutron_subnet_id = ""
+    
+        for network in networks_list:
+            if network["Name"] == neutron_network:
+                neutron_network_id = network.get["ID"] or network.get["id"]
+
+        neutron_network_subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "--network", neutron_network_id, "-f", "json"]) or "[]")
+
+        for subnet in neutron_network_subnets_list:
+            neutron_subnet_id = subnet.get["ID"] or subnet.get["id"]
+            break
+
+        tenant_share_network_exists = any(
+            sn.get("Name") == network_name or sn.get("name") == network_name
+            for sn in share_networks_list
+        )
+
+        if not tenant_share_network_exists:
+            print()
+            if not os_run([
+                "openstack", "share", "network", "create",
+                "--name", network_name,
+                "--neutron-net-id", str(neutron_network_id),
+                "--neutron-subnet-id", str(neutron_subnet_id),
+            ], f"Creating tenant share '{network_name}' network...", env=env):
+                return False
+
+    if not create_shares(shares=shares, env=env, dhss=True):
         return False
 
     return True

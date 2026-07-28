@@ -92,7 +92,7 @@ def create_share_types(default_type_shares, env):
 
     return True
 
-def create_shares(shares, env, service_network_name: str, dhss: bool = False):
+def create_shares(shares, env, dhss: bool = False):
 
     share_list = json.loads(os_run_output(["openstack", "share", "list", "-f", "json"], env=env) or "[]")
 
@@ -101,6 +101,10 @@ def create_shares(shares, env, service_network_name: str, dhss: bool = False):
             share_type = share.get("share_type")
             share_protocol = share["share_protocol"]
             share_size = share["share_size"]
+            share_network = None
+
+            if dhss:
+                share_network = share["share_network"]
     
             existing_share = next((item for item in share_list if item.get("Name", item.get("name")) == share_name), None)
     
@@ -113,7 +117,7 @@ def create_shares(shares, env, service_network_name: str, dhss: bool = False):
                 share_create_cmd = ["openstack", "share", "create", "--name", share_name, "--share-type", share_type]
 
                 if dhss:
-                    share_create_cmd += ["--share-network", service_network_name]
+                    share_create_cmd += ["--share-network", share_network]
                 
                 share_create_cmd += [share_protocol, str(share_size)]
 

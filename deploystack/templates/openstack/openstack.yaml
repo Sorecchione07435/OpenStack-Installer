@@ -115,18 +115,21 @@ manila:
     generic:
       BACKEND_NAME: "generic"
 
-      SERVICE_NETWORK_NAME: "manila-service-network"
-      SERVICE_INSTANCE_FLAVOR_NAME: "manila-service-flavor"
       SERVICE_IMAGE_NAME: "manila-service-image"
-
-      DRIVER_HANDLES_SHARE_SERVERS: "yes"
 
       INTERFACE_DRIVER: "manila.network.linux.interface.OVSInterfaceDriver"
 
       CONNECT_SHARE_SERVER_TO_TENANT_NETWORK: "yes"
 
+      service_networks:
+        - name: manila_internal_service_network
+          neutron_network: internal
+        - name: manila_public_service_network
+          neutron_network: public
+
       # Nova flavor configuration for Manila service instances.
       SERVICE_INSTANCE_FLAVOR:
+        NAME: "manila-service-flavor"
         ID: 10
         RAM: 1024
         VCPUS: 1
@@ -182,6 +185,7 @@ manila:
       share_protocol: NFS
       share_size: 1
       is_public: no
+      share_network: manila_internal_service_network
       access_rules:
       - type: "ip"
         access: "10.0.0.0/24"

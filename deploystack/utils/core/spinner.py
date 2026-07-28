@@ -18,7 +18,7 @@ class Spinner:
     def start(self):
         self.running = True
         self.idx = 0
-        # disabilita echo e input
+
         self._old_term = termios.tcgetattr(self._stdin_fd)
         tty.setcbreak(self._stdin_fd)
         self.thread = threading.Thread(target=self._spin, daemon=True)
