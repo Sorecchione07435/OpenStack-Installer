@@ -42,7 +42,6 @@ def config_openstack(
     neutron_driver: str = "ovs",   # "ovs" | "ovn"
     manila_backend: str = "",
     manila_share_protocols: str = "",
-    manila_enable_dhss = "no",
     os_release: str = "caracal",
     os_mgmt_iface: str = ""
 ):
@@ -284,7 +283,7 @@ def config_openstack(
                             },
                         ],
                     })
-                    
+
                 elif manila_backend.lower() == "lvm":
                      shares.append({
                         "name": "default_nfs_share",

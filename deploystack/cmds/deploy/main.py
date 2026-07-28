@@ -109,14 +109,6 @@ def init_parser(subparsers):
         help="One or more Manila share protocols (choices: nfs, cifs)."
     )
 
-    manila.add_argument(
-        "--manila-enable-dhss",
-        type=str,
-        choices=["yes", "no"],
-        default="no",
-        help="Enable Manila Driver Handles Share Servers (DHSS) mode (yes/no). Required for Generic backend to create and manage share servers."
-    )
-
     general_options.add_argument(
         "--os-release",
         type=str,
@@ -163,14 +155,11 @@ def deploy(parser, args) -> None:
         cinder_lvm_size = (args.cinder_lvm_image_size_in_gb if args.cinder_lvm_image_size_in_gb is not None else 5) if cinder_flag == "yes" else 0
         manila_lvm_size = (args.manila_lvm_image_size_in_gb if args.manila_lvm_image_size_in_gb is not None else 5) if manila_flag == "yes" else 0
 
-        manila_enable_dhss = args.manila_enable_dhss if manila_flag == "yes" and manila_backend == "generic" else "no" 
-
         openstack_release = args.os_release
 
         if args.install_manila == "no" and (
             args.manila_lvm_physical_volume or
-            args.manila_lvm_image_size_in_gb or
-            args.manila_enable_dhss == "yes"
+            args.manila_lvm_image_size_in_gb
         ):
             parser.error("Manila options require --install-manila yes")
         
@@ -186,7 +175,6 @@ def deploy(parser, args) -> None:
             neutron_driver=neutron_driver,
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
-            manila_enable_dhss=manila_enable_dhss,
             os_mgmt_iface=args.os_management_interface,
             os_release=openstack_release
         )
