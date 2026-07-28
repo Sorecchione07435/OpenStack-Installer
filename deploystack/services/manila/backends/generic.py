@@ -193,7 +193,7 @@ def finalize_generic_backend(config, env):
             if network["Name"] == neutron_network:
                 neutron_network_id = network.get("ID") or network.get("id")
 
-        neutron_network_subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "--network", neutron_network_id, "-f", "json"]) or "[]")
+        neutron_network_subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "--network", neutron_network_id, "-f", "json"], env=env) or "[]")
 
         for subnet in neutron_network_subnets_list:
             neutron_subnet_id = subnet.get("ID") or subnet.get("id")
