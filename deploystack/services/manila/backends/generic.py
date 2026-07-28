@@ -128,7 +128,6 @@ def finalize_generic_backend(config, env):
     default_type_shares = get(config, "manila.share_types") or []
 
     networks_list = json.loads(os_run_output(["openstack", "network", "list", "-f", "json"], env=env) or "[]")
-    subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env) or "[]")
     images_list = json.loads(os_run_output(["openstack", "image", "list", "-f", "json"], env=env) or "[]")
     flavors_list = json.loads(os_run_output(["openstack", "flavor", "list", "-f", "json"], env=env) or "[]")
 
@@ -192,12 +191,12 @@ def finalize_generic_backend(config, env):
     
         for network in networks_list:
             if network["Name"] == neutron_network:
-                neutron_network_id = network.get["ID"] or network.get["id"]
+                neutron_network_id = network.get("ID") or network.get("id")
 
         neutron_network_subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "--network", neutron_network_id, "-f", "json"]) or "[]")
 
         for subnet in neutron_network_subnets_list:
-            neutron_subnet_id = subnet.get["ID"] or subnet.get["id"]
+            neutron_subnet_id = subnet.get("ID") or subnet.get("id")
             break
 
         tenant_share_network_exists = any(
