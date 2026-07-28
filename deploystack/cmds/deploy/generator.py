@@ -236,7 +236,7 @@ def config_openstack(
                 })
 
                 if manila_backend.lower() == "generic":
-                    shares.append({
+                    shares.extend({
                         "name": "default_nfs_internal_share",
                         "share_protocol": "NFS",
                         "share_size": 1,
@@ -283,7 +283,7 @@ def config_openstack(
                         ],
                     })
                 elif manila_backend.lower() == "lvm":
-                     shares.append({
+                     shares.extend({
                         "name": "default_nfs_share",
                         "share_protocol": "NFS",
                         "share_size": 1,
@@ -326,7 +326,7 @@ def config_openstack(
                         }
                     ])
                      
-                    shares.append({
+                    shares.extend({
                         "name": "default_cifs_internal_share",
                         "share_protocol": "CIFS",
                         "share_size": 1,
@@ -373,7 +373,7 @@ def config_openstack(
                         ],
                     })
                 elif manila_backend.lower() == "lvm":
-                    shares.append({
+                    shares.extend({
                         "name": "default_cifs_share",
                         "share_protocol": "CIFS",
                         "share_size": 1,
