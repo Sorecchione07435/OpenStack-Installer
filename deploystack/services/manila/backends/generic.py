@@ -111,7 +111,7 @@ def finalize(env):
 
 def finalize_generic_backend(config, env):
 
-    manila_temp_image_path = "/tmp/manila-service-image.qcow2"
+    manila_temp_image_file = "/tmp/manila-service-image.qcow2"
     manila_image_url = "https://tarballs.opendev.org/openstack/manila-image-elements/images/manila-service-image-master.qcow2"
 
     generic_service_image_name = get(config, "manila.backends.generic.SERVICE_IMAGE_NAME")
@@ -142,30 +142,37 @@ def finalize_generic_backend(config, env):
 
     if not manila_service_image_exists:
         print()
-        if not os.path.exists(manila_temp_image_path):
-            if not run_command([
+            
+        if not run_command([
                 "wget",
                 "--continue",
-                "--progress=bar:force",
+                "--progress=dot:giga",
                 "--tries=3",
                 "--timeout=30",
                 "--read-timeout=60",
                 "-O",
-                manila_temp_image_path,
+                manila_temp_image_file,
                 manila_image_url
-                ], "Downloading Manila service image... (this may take a while) ", timeout=3600):
+            ], "Downloading Manila service image... (this may take a while) ", timeout=3600):
                 return False
+        
+        if not os.path.exists(manila_temp_image_file):
+            print(f"{colors.RED}Error: Manila image was not downloaded{colors.RESET}")
+            return False
 
         if not os_run([
             "openstack", "image", "create", generic_service_image_name,
-            "--file", manila_temp_image_path,
+            "--file", manila_temp_image_file,
             "--disk-format", "qcow2",
             "--container-format", "bare",
             "--public"
         ], "Uploading Manila image to Glance...", env=env):
             return False
         
-        os.remove(manila_temp_image_path)
+        try:
+            os.remove(manila_temp_image_file)
+        except FileNotFoundError:
+            pass
 
     # --- Flavor ---
     manila_service_flavor_exists = any(
