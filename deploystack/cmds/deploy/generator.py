@@ -310,9 +310,9 @@ def config_openstack(
         config_dict["manila"]["share_types"] = [{
             "name": "default_share_type",
             "is_public": "yes",
-            "extra_specs": {
+            "extra_specs": [{
                 "driver_handles_share_servers": "no"
-            }
+            }]
         }]
 
         if manila_backend.lower() == "generic":
