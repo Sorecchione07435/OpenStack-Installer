@@ -221,6 +221,7 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
         time.sleep(0.1)
 
     print(
+        f"\rWaiting for share '{share_name}' to become available ",
         f"\n{colors.RED}"
         f"ERROR: timeout waiting for share '{share_name}' "
         f"(last status: {status})"
