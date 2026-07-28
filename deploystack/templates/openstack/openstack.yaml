@@ -170,10 +170,10 @@ manila:
       is_public: yes
       extra_specs:
         - driver_handles_share_servers: no
-        - snapshot_support: no
-        - create_share_from_snapshot_support: no
-        - revert_to_snapshot_support: no
-        - mount_snapshot_support: no
+        # - snapshot_support: no
+        # - create_share_from_snapshot_support: no
+        # - revert_to_snapshot_support: no
+        # - mount_snapshot_support: no
 
   shares:
     # Share name.

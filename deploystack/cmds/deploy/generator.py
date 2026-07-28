@@ -217,6 +217,7 @@ def config_openstack(
 
     if install_manila.lower() == "yes":
         share_helpers = []
+        shares = []
 
         config_dict["manila"]["BACKEND"] = manila_backend
         config_dict["manila"]["SHARE_PROTOCOLS"] = [
@@ -231,6 +232,30 @@ def config_openstack(
                     }
                 })
 
+                shares.append({
+                    "name": "default_share",
+                    "share_protocol": "NFS",
+                    "share_size": 1,
+                    "share_type": "default_share_type",
+                    "access_rules": [
+                        {
+                            "access": "10.0.0.0/24",
+                            "level": "rw",
+                            "type": "ip",
+                        },
+                        {
+                            "access": iface,
+                            "level": "rw",
+                            "type": "ip",
+                        },
+                        {
+                            "access": "10.254.0.0/28",
+                            "level": "rw",
+                            "type": "ip",
+                        },
+                    ],
+                })
+
             elif protocol.lower() == "cifs":
                 share_helpers.append({
                     "CIFS": {
@@ -238,7 +263,57 @@ def config_openstack(
                     }
                 })
 
+                if manila_backend.lower() == "generic":
+                    shares.append({
+                        "name": "default_share",
+                        "share_protocol": "CIFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "access_rules": [
+                            {
+                                "access": "10.0.0.0/24",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": iface,
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                            {
+                                "access": "10.254.0.0/28",
+                                "level": "rw",
+                                "type": "ip",
+                            },
+                        ],
+                    })
+                elif manila_backend.lower() == "lvm":
+                    shares.append({
+                        "name": "default_share",
+                        "share_protocol": "CIFS",
+                        "share_size": 1,
+                        "share_type": "default_share_type",
+                        "access_rules": [
+                            {
+                                "access": "samba-user",
+                                "level": "rw",
+                                "type": "user",
+                            },
+                        ],
+                    })
+
+
+
         config_dict["manila"]["SHARE_HELPERS"] = share_helpers
+        config_dict["manila"]["shares"] = shares
+
+        config_dict["manila"]["share_types"] = [{
+            "name": "default_share_type",
+            "is_public": "yes",
+            "extra_specs": {
+                "driver_handles_share_servers": "no"
+            }
+        }]
 
         if manila_backend.lower() == "generic":
 
