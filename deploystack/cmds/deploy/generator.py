@@ -244,7 +244,7 @@ def config_openstack(
                             "type": "ip",
                         },
                         {
-                            "access": iface,
+                            "access": network,
                             "level": "rw",
                             "type": "ip",
                         },
@@ -276,7 +276,7 @@ def config_openstack(
                                 "type": "ip",
                             },
                             {
-                                "access": iface,
+                                "access": network,
                                 "level": "rw",
                                 "type": "ip",
                             },
