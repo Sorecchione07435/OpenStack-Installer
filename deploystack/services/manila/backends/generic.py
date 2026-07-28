@@ -144,9 +144,16 @@ def finalize_generic_backend(config, env):
         print()
         if not os.path.exists(manila_temp_image_path):
             if not run_command([
-                "wget", "--tries=3", "--timeout=30", "--read-timeout=60",
-                "-O", manila_temp_image_path, manila_image_url
-            ], "Downloading Manila service image... (this may take a while) ", timeout=3600):
+                "wget",
+                "--continue",
+                "--progress=bar:force",
+                "--tries=3",
+                "--timeout=30",
+                "--read-timeout=60",
+                "-O",
+                manila_temp_image_path,
+                manila_image_url
+                ], "Downloading Manila service image... (this may take a while) ", timeout=3600):
                 return False
 
         if not os_run([
