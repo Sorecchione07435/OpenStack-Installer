@@ -58,10 +58,6 @@ def conf_shares_bridge(config):
 
     if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares Bridge...") : return False
 
-    print()
-
-    #if not run_command(["ip", "link", "set", "br-shares", "up"], "Bringing Shares Bridge UP..."): return False
-
     shares_config = f"""
 auto br-shares
 iface br-shares inet static
