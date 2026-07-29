@@ -1,6 +1,6 @@
 import json
 
-from ....utils.core.commands import run_command, run_command_output
+from ....utils.core.commands import run_command, run_command_output, run_command_sync
 from ....utils.config.helpers import parse_bool
 
 from ....utils.core.system_utils import iface_exists
@@ -106,13 +106,11 @@ def clean_custom_bridges(bridges: list, public_bridge: str, internal_flat_bridge
 
             run_command(["ip", "link", "set", port, "down"],
                         f"Bringing {port} down", ignore_errors=True)
-            
-            #print()
 
-            run_command(["ovs-vsctl", "--if-exists", "del-br", bridge],
+            run_command_sync(["ovs-vsctl", "--if-exists", "del-br", bridge],
                     f"Deleting bridge {bridge}", ignore_errors=True)
 
-            run_command(["ovs-vsctl", "--if-exists", "del-port", bridge, port],
+            run_command_sync(["ovs-vsctl", "--if-exists", "del-port", bridge, port],
                         f"Deleting port {port} from {bridge}", ignore_errors=True)
 
     return True, line1

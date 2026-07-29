@@ -1,6 +1,7 @@
 import yaml
 import re
 import os
+import configparser
 
 pattern = re.compile(r"\$(\w+)")
 
@@ -21,6 +22,19 @@ def resolve_vars(obj, config=None):
         return obj
 
     return obj
+
+def get_conf_option(conf_file, section, option, interpolation=True):
+    config = configparser.ConfigParser(
+        interpolation=None if not interpolation else configparser.BasicInterpolation()
+    )
+
+    config.optionxform = str  # mantiene maiuscole/minuscole
+    config.read(conf_file)
+
+    if section in config and option in config[section]:
+        return config[section][option]
+
+    return None
 
 def parse_config(file_path):
     if not os.path.isfile(file_path):

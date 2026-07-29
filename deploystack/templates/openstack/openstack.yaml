@@ -149,7 +149,7 @@ manila:
 
       SHARE_VOLUME_GROUP: "manila-volumes"
 
-      SHARE_EXPORT_IP: ""
+      SHARE_EXPORT_IP: "172.20.10.10"
 
       # -------------------------
       # Physical volume configuration

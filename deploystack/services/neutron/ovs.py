@@ -5,7 +5,7 @@ import shutil
 import json
 import time
 
-from ...utils.core.commands import run_command, os_run_output, os_run
+from ...utils.core.commands import run_command, os_run_output, os_run, run_command_sync
 from ...utils.apt.apt import apt_install
 from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
@@ -93,8 +93,8 @@ def conf_ovs_bridges(config):
 
         if iface_exists(bridge):
             if port:
-                run_command(["ovs-vsctl", "--if-exists", "del-port", bridge, port], f"Deleting port {port} from {bridge}", ignore_errors=True)
-            run_command(["ovs-vsctl", "--if-exists", "del-br", bridge], f"Deleting bridge {bridge}", ignore_errors=True)
+                run_command_sync(["ovs-vsctl", "--if-exists", "del-port", bridge, port], f"Deleting port {port} from {bridge}")
+            run_command_sync(["ovs-vsctl", "--if-exists", "del-br", bridge], f"Deleting bridge {bridge}")
 
     print()
 

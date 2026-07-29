@@ -72,17 +72,12 @@ def conf_ovn_bridges(config):
     if not clean_custom_bridges(bridges=bridges, public_bridge=public_bridge, internal_flat_bridge=None, tunnel_bridge=None) :
         return False
 
-    line2 = False
-
     for bridge, port in [(public_bridge, public_iface)]:
         if iface_exists(bridge):
-            if not line2 : 
-                print()
-                line2 = True
 
             if port:
-                run_command(["ovs-vsctl", "--if-exists", "del-port", bridge, port], f"Deleting port {port} from {bridge}", ignore_errors=True)
-            run_command(["ovs-vsctl", "--if-exists", "del-br", bridge], f"Deleting bridge {bridge}", ignore_errors=True)
+                run_command_sync(["ovs-vsctl", "--if-exists", "del-port", bridge, port])
+            run_command_sync(["ovs-vsctl", "--if-exists", "del-br", bridge])
 
     print()
 

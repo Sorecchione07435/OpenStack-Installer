@@ -5,10 +5,14 @@ import pwd
 import grp
 import subprocess
 import shutil
+import ipaddress
+import json
 
-from ....utils.core.commands import run_command
+from ....utils.core.commands import run_command, os_run, os_run_output
 from ....utils.apt.apt import apt_install
-from ....utils.config.parser import get
+
+
+from ....utils.config.parser import get, get_conf_option
 from ....utils.config.setter import set_conf_option
 
 from ....utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
@@ -20,12 +24,16 @@ from .utils import wait_manila_backend
 
 from .utils.shares import create_shares, create_share_types
 
+from ....utils.core.system_utils import service_exists, is_debian
+
 from .protocols.nfs import run_setup_nfs
 from .protocols.samba import run_setup_samba
 
 from ....utils.core import colors
 
 manila_conf = "/etc/manila/manila.conf"
+
+conf_ml2 = "/etc/neutron/plugins/ml2/ml2_conf.ini"
 
 def install_pkgs():
 
@@ -34,6 +42,157 @@ def install_pkgs():
     if not apt_install(["manila-share", "lvm2", "nfs-kernel-server"], "Installing Manila Share LVM Packages..."):
         return False
     
+    return True
+
+def conf_shares_bridge(config):
+
+    INTERFACES_FILE = "/etc/network/interfaces.d/br-shares"
+
+    share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
+    neutron_driver = config.get("neutron", {}).get("DRIVER", "ovs").lower()
+
+    share_export_ip = ipaddress.ip_interface(f"{share_export_ip}/24")
+    share_export_gateway_ip = str(share_export_ip.network.network_address + 1)
+
+    if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares Bridge...") : return False
+
+    print()
+
+    if not run_command(["ip", "addr", "replace", str(share_export_ip), "dev", "br-shares"], "Adding IP Address to Shares Bridge...") : return False
+    if not run_command(["ip", "link", "set", "br-shares", "up"], "Bringing Shares Bridge UP..."): return False
+
+    shares_config = f"""
+auto br-shares
+iface br-shares inet static
+    address {share_export_ip.ip}
+    netmask 255.255.255.0
+    post-up ip route add 10.0.0.0/24 via {share_export_gateway_ip} dev br-shares
+    pre-down ip route del 10.0.0.0/24 via {share_export_gateway_ip} dev br-shares
+    post-up sysctl -w net.ipv4.conf.br-shares.rp_filter=2
+"""
+
+    with open(INTERFACES_FILE, "w") as f:
+        f.write(shares_config)
+
+    print()
+
+    with open("/etc/sysctl.d/99-br-shares.conf", "w") as f:
+        f.write("net.ipv4.conf.br-shares.rp_filter = 2\n")
+    run_command(["sysctl", "--system"], "Applying sysctl...")
+
+    print()
+
+    if not run_command(["systemctl", "restart", "networking"], "Restarting Networking service..."): return False
+
+    flat_networks_mappings = get_conf_option(conf_ml2, "ml2_type_flat", "flat_networks")
+
+    networks = [n for n in flat_networks_mappings.split(",") if n]
+
+    if "shares" not in networks:
+        networks.append("shares")
+
+    set_conf_option(conf_ml2, "ml2_type_flat", "flat_networks", ",".join(networks))
+
+    if neutron_driver == "ovn":
+
+        print()
+
+        ovn_bridge_mappings = get_conf_option(conf_ml2, "ovn", "ovn_bridge_mappings")
+
+        bridge_mappings = [n for n in ovn_bridge_mappings.split(",") if n]
+
+        if "shares:br-shares" not in bridge_mappings:
+            bridge_mappings.append("shares:br-shares")
+
+        ovn_bridge_mappings_str = ",".join(bridge_mappings)
+
+        set_conf_option(conf_ml2, "ovn", "ovn_bridge_mappings", ovn_bridge_mappings_str)
+
+        if not run_command(["ovs-vsctl", "set", "open", ".", f"external-ids:ovn-bridge-mappings={ovn_bridge_mappings_str}"], "Updating OVN bridge mappings...") : return False
+
+        print()
+
+        ovs_services = ["systemctl", "restart",
+                    "ovn-ovsdb-server-nb",
+                    "ovn-ovsdb-server-sb",
+                    "ovn-northd",
+                    "ovn-controller",
+                    "nova-compute"]
+        
+        if service_exists("neutron-api.service") and not service_exists("neutron-server.service"):
+            ovs_services.append("neutron-api")
+        elif service_exists("neutron-periodic-workers.service") and not service_exists("neutron-server.service"):
+            ovs_services.append("neutron-periodic-workers.service")
+            ovs_services.append("apache2.service")
+        else:
+            ovs_services.append("neutron-server")
+            
+        if not run_command(ovs_services, "Restarting OVN services...", False, None, 3, 5):  return False
+
+    elif neutron_driver == "ovs":
+
+        print()
+
+        ovs_bridge_mappings = get_conf_option(conf_ml2, "ovs", "bridge_mappings")
+
+        bridge_mappings = [n for n in ovs_bridge_mappings.split(",") if n]
+
+        if "shares:br-shares" not in bridge_mappings:
+            bridge_mappings.append("shares:br-shares")
+
+        ovs_bridge_mappings_str = ",".join(bridge_mappings)
+
+        set_conf_option(conf_ml2, "ovs", "bridge_mappings", ovs_bridge_mappings_str)
+
+        print()  
+
+        if service_exists("neutron-server.service"):
+            if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron OVS services...", False, None, 3, 5): return False
+        elif service_exists("neutron-api.service") and is_debian():
+            if not run_command(["systemctl", "restart", "neutron-api", "neutron-rpc-server", "neutron-l3-agent", "neutron-openvswitch-agent", "neutron-metadata-agent", "nova-compute"], "Restarting Neutron services...", False, None, 3, 5): return False  
+        else:
+            if not run_command(["systemctl", "restart", "neutron-periodic-workers", "apache2", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron OVS services...", False, None, 3, 5): return False
+    
+    return True
+
+def create_shares_network(config, env):
+
+    share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
+
+    share_ip = ipaddress.ip_interface(f"{share_export_ip}/24")
+
+    share_ip_cidr = share_ip.network
+    share_gateway_ip = str(share_ip.network.network_address + 1)
+
+    networks_list = json.loads(os_run_output(["openstack", "network", "list", "-f", "json"], env=env))
+
+    shares_network_exists = any((net.get("name") or net.get("Name")) == "shares" for net in networks_list)
+
+    shares_subnet_id = ""
+
+    if not shares_network_exists:
+        print()
+
+        if not os_run(["openstack", "network", "create", "shares", "--provider-network-type", "flat", "--provider-physical-network", "shares", "--share"], "Creating Shares Network...", env=env): return False
+
+    subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env))
+    shares_subnet_exists = any((sub.get("Name") or sub.get("name")) == "shares_subnet" for sub in subnets_list)
+
+    if not shares_subnet_exists:
+        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp"], "Create Shares Subnet...", env=env) : return False
+
+    shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
+
+    internal_router_info = json.loads(os_run_output(["openstack", "router", "show", "internal_router", "-f", "json"], env=env))
+
+    interfaces = internal_router_info.get("interfaces_info", [])
+    shares_router_subnet_attached = any(iface["subnet_id"] == shares_subnet_id for iface in interfaces)
+
+    if not shares_router_subnet_attached:
+        print()
+
+        if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding Shares Subnet to Internal Router...", env=env): return False
+
     return True
 
 def conf_lvm(config):
@@ -242,6 +401,9 @@ def run_setup_lvm_backend(config, env):
         if not setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, "manila"): return False   
 
     if not conf_lvm_manila(config): return False
+
+    if not conf_shares_bridge(config): return False
+    if not create_shares_network(config, env) : return False
 
     if not finalize(env): return False
     if not finalize_lvm_backend(config, env=env): return False
