@@ -155,6 +155,8 @@ def create_services_users(config, env):
     install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
     install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
 
+    os_release = get(config, "openstack.OPENSTACK_RELEASE")
+
     services = get_services(env)
     assignments = get_role_assignments(env)
 
@@ -212,11 +214,16 @@ def create_services_users(config, env):
     if install_manila:
         services_user_create_cmds.append(["openstack", "user", "create", "--domain", "default", "--password", service_password, "manila", "--or-show"])
 
-        if "manila" not in existing_services:
-            services_create_cmds.append(["openstack", "service", "create", "--name", "manila", "--description", "OpenStack Shared File Systems", "share"])
+        manila_services = [
+            ("manilav2", "OpenStack Shared File Systems V2", "sharev2")
+        ] if os_release == "gazpacho" else [
+            ("manila", "OpenStack Shared File Systems", "share"),
+            ("manilav2", "OpenStack Shared File Systems V2", "sharev2"),
+        ]
 
-        if "manilav2" not in existing_services:
-            services_create_cmds.append(["openstack", "service", "create", "--name", "manilav2", "--description", "OpenStack Shared File Systems V2", "sharev2"])
+        for name, description, type_ in manila_services:
+            if name not in existing_services:
+                services_create_cmds.append(["openstack", "service", "create", "--name", name, "--description", description, type_])
 
         if ("manila", "service", "admin") not in existing_assignments:
             services_role_add_cmds.append(["openstack", "role", "add", "--project", "service", "--user", "manila", "admin"])
