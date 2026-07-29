@@ -56,7 +56,7 @@ def conf_shares_bridge(config):
 
     print()
 
-    if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares Bridge...") : return False
+    if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares bridge...") : return False
 
     shares_config = f"""
 auto br-shares
@@ -78,6 +78,9 @@ iface br-shares inet static
     run_command(["sysctl", "--system"], "Applying sysctl...")
 
     print()
+
+    run_command(["ip", "addr", "flush", "dev", "br-shares"], f"Flushing IPs on Shares bridge", ignore_errors=True)
+    run_command(["ip", "link", "set", "br-shares", "down"], f"Bringing Shares bridge down", ignore_errors=True)
 
     if not run_command(["systemctl", "restart", "networking"], "Restarting Networking service..."): return False
 
