@@ -28,6 +28,8 @@ WSGIScriptAlias /horizon /usr/share/openstack-dashboard/wsgi.py process-group=ho
 Alias /static /var/lib/openstack-dashboard/static
 Alias /horizon/static /var/lib/openstack-dashboard/static
 
+LimitRequestBody 0
+
 <Directory /usr/share/openstack-dashboard>
     Require all granted
 </Directory>
