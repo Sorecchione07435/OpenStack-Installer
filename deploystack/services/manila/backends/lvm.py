@@ -58,7 +58,6 @@ def conf_shares_bridge(config):
 
     print()
 
-    if not run_command(["ip", "addr", "replace", str(share_export_ip), "dev", "br-shares"], "Adding IP Address to Shares Bridge...") : return False
     if not run_command(["ip", "link", "set", "br-shares", "up"], "Bringing Shares Bridge UP..."): return False
 
     shares_config = f"""
