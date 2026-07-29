@@ -173,13 +173,13 @@ def create_shares_network(config, env):
     print()
 
     if not shares_network_exists:
-        if not os_run(["openstack", "network", "create", "shares", "--provider-network-type", "flat", "--provider-physical-network", "shares", "--share"], "Creating Shares Network...", env=env): return False
+        if not os_run(["openstack", "network", "create", "shares", "--provider-network-type", "flat", "--provider-physical-network", "shares", "--share"], "Creating shares network...", env=env): return False
 
     subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env))
     shares_subnet_exists = any((sub.get("Name") or sub.get("name")) == "shares_subnet" for sub in subnets_list)
 
     if not shares_subnet_exists:
-        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Create Shares Subnet...", env=env) : return False
+        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Create shares subnet...", env=env) : return False
 
     shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
 
@@ -191,7 +191,7 @@ def create_shares_network(config, env):
     if not shares_router_subnet_attached:
         print()
 
-        if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding Shares Subnet to Internal Router...", env=env): return False
+        if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding shares subnet to internal router...", env=env): return False
 
     return True
 
@@ -282,9 +282,6 @@ def conf_lvm(config):
 
 def conf_lvm_manila(config):
 
-    SERVICE_PATH = "/etc/systemd/system/manila-lvm-network.service"
-    script_path = "/usr/local/bin/manila-br-ex-ip.sh"
-
     backend_name = get(config, "manila.backends.lvm.BACKEND_NAME").lower()
 
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
@@ -292,8 +289,6 @@ def conf_lvm_manila(config):
 
     vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
     
-    public_bridge = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE")
-    public_cidr = get(config, "neutron.public_network.PUBLIC_SUBNET_CIDR")
 
     share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
 
