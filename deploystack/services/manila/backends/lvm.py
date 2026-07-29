@@ -325,25 +325,6 @@ def conf_lvm_manila(config):
     set_conf_option(manila_conf, "lvm", "lvm_share_export_ips", share_export_ip)
     set_conf_option(manila_conf, "lvm", "driver_handles_share_servers", "False")
 
-    try:
-        shutil.copy2(MANILA_LVM_NETWORK_SERVICE, SERVICE_PATH)
-
-        with open(MANILA_BRIDGE_IP_SCRIPT, "r") as f:
-            template = f.read()
-            ip_script_content = template.format(
-                PUBLIC_BRIDGE=public_bridge,
-                IP_CIDR=f"{share_export_ip}/{public_cidr.split('/')[1]}"
-            )
-
-        with open(script_path, "w") as f:
-            f.write(ip_script_content)
-
-        os.chmod(script_path, 0o755)
-
-    except Exception as e:
-        print(f"\n{colors.RED}Failed to write '{script_path}' with an unhandled exception: {e}{colors.RESET}")
-        return False
-
     return True
     
 def finalize(env):
@@ -351,8 +332,6 @@ def finalize(env):
     print()
 
     if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): return False
-
-    if not run_command(["systemctl", "enable", "--now", "manila-lvm-network.service"], "Enabling Manila LVM Network service..."): return False
 
     print()
 
@@ -363,8 +342,10 @@ def finalize(env):
 
     os.chmod("/etc/sudoers.d/manila-privsep", 0o440)
 
-    if not run_command(["systemctl", "restart", "manila-share", "manila-lvm-network"], "Restarting Manila Share services...", False, None, 3, 5):
+    if not run_command(["systemctl", "restart", "manila-share"], "Restarting Manila Share services...", False, None, 3, 5):
         return False
+
+    print()
     
     if not wait_manila_backend(env=env) : return False
 

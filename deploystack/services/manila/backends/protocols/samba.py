@@ -64,19 +64,23 @@ def conf_samba():
 
 def add_samba_user(config):
 
-    print()
-
     samba_username = get(config, "manila.backends.lvm.samba.SAMBA_SERVER_USER")
     samba_password = get(config, "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD")
 
     if not user_exists(samba_username):
+        print()
+
         if not run_command(["useradd", "-m", "-s", "/usr/sbin/nologin", samba_username], "Adding Samba User...") : return False
 
     if not samba_user_exists(samba_username):
+        print()
+
         if not smbpasswd_add(samba_username, samba_password):
             return False
 
     if not user_in_group(samba_username, "manila"):
+        print()
+        
         if not run_command(["usermod", "-aG", "manila", samba_username], "Adding Samba user to Manila group...") : return False
 
     return True

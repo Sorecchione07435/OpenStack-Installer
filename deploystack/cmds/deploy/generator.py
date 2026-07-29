@@ -297,12 +297,7 @@ def config_openstack(
                                 "type": "ip",
                             },
                             {
-                                "access": network,
-                                "level": "rw",
-                                "type": "ip",
-                            },
-                            {
-                                "access": "10.254.0.0/28",
+                                "access": "172.20.10.0/24",
                                 "level": "rw",
                                 "type": "ip",
                             },
@@ -417,7 +412,7 @@ def config_openstack(
             
             if not manila_lvm_physical_volume:
                 config_dict["manila"]["backends"]["lvm"].update({
-                    "SHARE_EXPORT_IP": ip,
+                    "SHARE_EXPORT_IP": "172.20.10.10",
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/manila-volumes.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
