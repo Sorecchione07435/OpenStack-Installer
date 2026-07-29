@@ -54,6 +54,8 @@ def conf_shares_bridge(config):
     share_export_ip = ipaddress.ip_interface(f"{share_export_ip}/24")
     share_export_gateway_ip = str(share_export_ip.network.network_address + 1)
 
+    print()
+
     if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares Bridge...") : return False
 
     print()
@@ -178,7 +180,7 @@ def create_shares_network(config, env):
     shares_subnet_exists = any((sub.get("Name") or sub.get("name")) == "shares_subnet" for sub in subnets_list)
 
     if not shares_subnet_exists:
-        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp"], "Create Shares Subnet...", env=env) : return False
+        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Create Shares Subnet...", env=env) : return False
 
     shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
 
