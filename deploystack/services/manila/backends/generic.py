@@ -142,32 +142,11 @@ def finalize_generic_backend(config, env):
 
     if not manila_service_image_exists:
         print()
-            
-        if not run_command([
-                "wget",
-                "--continue",
-                "--progress=dot:giga",
-                "--tries=3",
-                "--timeout=30",
-                "--read-timeout=60",
-                "-O",
-                manila_temp_image_file,
-                manila_image_url
-            ], "Downloading Manila service image... (this may take a while) ", timeout=3600):
-                return False
-        
-        if not os.path.exists(manila_temp_image_file):
-            print(f"{colors.RED}Error: Manila image was not downloaded{colors.RESET}")
-            return False
 
-        if not os_run([
-            "openstack", "image", "create", generic_service_image_name,
-            "--file", manila_temp_image_file,
-            "--disk-format", "qcow2",
-            "--container-format", "bare",
-            "--public"
-        ], "Uploading Manila image to Glance...", env=env):
-            return False
+        if not os.path.exists(manila_temp_image_file):
+            if not run_command(["wget", "--continue", "--progress=dot:giga", "--tries=3", "--timeout=30", "--read-timeout=60","-O", manila_temp_image_file, manila_image_url], "Downloading Manila service image... (this may take a while) ", timeout=3600): return False
+        
+        if not os_run(["openstack", "image", "create", generic_service_image_name, "--file", manila_temp_image_file, "--disk-format", "qcow2", "--container-format", "bare", "--public"], "Uploading Manila image to Glance...", env=env): return False
         
         try:
             os.remove(manila_temp_image_file)
@@ -183,14 +162,7 @@ def finalize_generic_backend(config, env):
     if not manila_service_flavor_exists:
         print()
         if not os_run([
-            "openstack", "flavor", "create",
-            "--id", str(generic_service_instance_flavor_id),
-            "--ram", str(generic_service_instance_flavor_ram),
-            "--disk", str(generic_service_instance_flavor_disk),
-            "--vcpus", str(generic_service_instance_flavor_vcpus),
-            generic_service_instance_flavor_name,
-        ], "Creating Manila service flavor...", env=env):
-            return False
+            "openstack", "flavor", "create", "--id", str(generic_service_instance_flavor_id), "--ram", str(generic_service_instance_flavor_ram), "--disk", str(generic_service_instance_flavor_disk), "--vcpus", str(generic_service_instance_flavor_vcpus), generic_service_instance_flavor_name], "Creating Manila service flavor...", env=env): return False
 
     # --- Share network ---
     share_networks_list = json.loads(os_run_output(["openstack", "share", "network", "list", "-f", "json"], env=env) or "[]")
@@ -227,8 +199,7 @@ def finalize_generic_backend(config, env):
             ], f"Creating tenant share '{network_name}' network...", env=env):
                 return False
 
-    if not create_shares(shares=shares, env=env, dhss=True):
-        return False
+    if not create_shares(shares=shares, env=env, dhss=True): return False
 
     return True
 

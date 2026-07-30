@@ -2,17 +2,31 @@ import subprocess
 import os
 import logging
 import time
+import json
+
 from dataclasses import dataclass, field
 
-from ..core.system_utils import service_exists
+from ..config.parser import get_conf_option
+
+from ..core.commands import run_command_output
+
+from ..core.system_utils import service_exists, is_debian, is_ubuntu_release
+
 from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 #logger = logging.get#logger(__name__)
 
 cinder_pkgs = ["cinder-api", "cinder-scheduler", "cinder-volume", "tgt"]
+manila_pkgs = ["manila-api", "manila-scheduler", "python3-manilaclient", "manila-share"]
+
+class CheckCategory:
+    SERVICES = "Services"
+    PACKAGES = "Packages"
+    CONFIG = "Config files"
+    ENDPOINTS = "Endpoints"
 
 @dataclass
 class CheckResult:
@@ -27,6 +41,27 @@ class CheckResult:
         lines = [f"{colors.GREEN}PASSED:{colors.RESET} {s}" for s in self.passed] + [f"{colors.RED}FAILED:{colors.RESET} {s}" for s in self.failed]
         return "\n".join(lines)
 
+def check_keystone_auth() -> tuple[bool, str]:
+    try:
+        token = run_command_output(["openstack", "token", "issue", "-f", "value", "-c", "id"])
+
+        if token.strip():
+            return True, ""
+
+        return False, "Empty Keystone token received"
+    except subprocess.CalledProcessError:
+        return False, "Keystone authentication failed. Check credentials or OS_* environment variables"
+
+    except subprocess.TimeoutExpired:
+        return False, "Keystone request timed out. Check Keystone service availability"
+
+    except FileNotFoundError:
+        return False, "OpenStack client command not found"
+    
+    except Exception as e:
+        logger.exception("Unexpected Keystone authentication error")
+        return False, str(e)
+
 def is_package_installed(pkg_name: str) -> bool:
     try:
         result = subprocess.run(
@@ -38,53 +73,48 @@ def is_package_installed(pkg_name: str) -> bool:
         return False
     
 def check_endpoint(service_name: str) -> bool:
-
     try:
-        result = subprocess.run(
-            ["openstack", "endpoint", "list", "--service", service_name,
-             "-f", "value", "-c", "ID"],
-            capture_output=True, text=True, timeout=10
-        )
-        return bool(result.stdout.strip())
-    except FileNotFoundError:
+        output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "--enabled", "-f", "json"])
 
+        return bool(json.loads(output))
+
+    except (
+        json.JSONDecodeError,
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        FileNotFoundError
+    ):
         return False
-    except subprocess.TimeoutExpired:
-
-        return False
-
 
 def check_service_active(svc: str) -> bool:
     try:
         result = subprocess.run(
-            ["systemctl", "is-active", "--quiet", svc],
+            ["systemctl", "is-active", svc],
             timeout=5
         )
         return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
-
 
 def check_deployment(include_endpoints: bool = True):
     result = CheckResult()
 
     services_list = ["apache2", "glance-api"]
 
-    if service_exists("nova-api.service"):
-        services_list.append("nova-api")
+    if service_exists("nova-api.service") and is_package_installed("nova-api"):
+        services_list.append("nova-api.service")
 
     if service_exists("neutron-server.service"):
         services_list.append("neutron-server")
     elif service_exists("neutron-api.service"):
         services_list.append("neutron-api")
-    else:
+    elif service_exists("neutron-periodic-workers.service"):
         services_list.append("neutron-periodic-workers")
 
     checks = [
-        ("Services", services_list, check_service_active),
-        ("Packages", ["apache2", "nova-common", "glance-api", "neutron-server"], is_package_installed),
-        ("Config files", [
+        (CheckCategory.SERVICES, services_list, check_service_active),
+        (CheckCategory.PACKAGES, ["apache2", "nova-common", "glance-api", "neutron-server"], is_package_installed),
+        (CheckCategory.CONFIG, [
             "/etc/keystone/keystone.conf", "/etc/glance/glance-api.conf",
             "/etc/nova/nova.conf", "/etc/neutron/neutron.conf"
         ], os.path.isfile),
@@ -93,20 +123,64 @@ def check_deployment(include_endpoints: bool = True):
     def add_check(category, items, fn):
         checks.append((category, items, fn))
 
-    if all(is_package_installed(pkg) for pkg in cinder_pkgs):
-        add_check("Services", ["cinder-scheduler", "cinder-volume", "tgt"], check_service_active)
-        add_check("Packages", cinder_pkgs, is_package_installed)
-        add_check("Config files", ["/etc/cinder/cinder.conf", "/etc/tgt/conf.d/cinder.conf"], os.path.isfile)
+    def add_packages_check(items):
+        add_check(CheckCategory.PACKAGES, items, is_package_installed)
 
+    def add_services_check(items):
+        add_check(CheckCategory.SERVICES, items, check_service_active)
+
+    def add_config_files_check(items):
+        add_check(CheckCategory.CONFIG, items, os.path.isfile)
+
+    def add_endpoints_check(items):
+        add_check(CheckCategory.ENDPOINTS, items, check_endpoint)
+
+    if all(is_package_installed(pkg) for pkg in cinder_pkgs):
+        add_services_check(["cinder-scheduler", "cinder-volume", "tgt"])
+        add_packages_check(cinder_pkgs)
+        add_config_files_check(["/etc/cinder/cinder.conf", "/etc/tgt/conf.d/cinder.conf"])
+
+        if include_endpoints:
+            add_endpoints_check(["volumev3"])
+
+    if all(is_package_installed(pkg) for pkg in manila_pkgs):
+        manila_conf = "/etc/manila/manila.conf"
+
+        add_config_files_check([manila_conf])
+        add_services_check(["manila-api", "manila-scheduler", "manila-share"])
+
+        if include_endpoints:
+            add_endpoints_check(["sharev2"])
+
+            if not is_debian() and not is_ubuntu_release("26.04"):
+                add_endpoints_check(["share"])
+
+        manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
+        manila_protocols_list = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols") or "").lower()
+
+        manila_protocols = [protocol for protocol in manila_protocols_list.split(",") if protocol]
+
+        if manila_backend == "lvm":
+            add_packages_check(["lvm2", "nfs-kernel-server"])
+
+            if "cifs" in manila_protocols:
+                smb_conf = "/etc/samba/smb.conf"
+
+                samba_services = ["smbd.service"]
+                
+                if service_exists("nmbd.service"):
+                    samba_services.append("nmbd.service")
+
+                add_packages_check(["samba", "samba-common-bin"])
+                add_config_files_check([smb_conf])
+                add_services_check(samba_services)
+
+        if "nfs" in manila_protocols:
+            add_packages_check(["nfs-kernel-server", "nfs-common"])
+            add_services_check(["nfs-server"])
 
     if include_endpoints:
-        checks.append(
-            ("Endpoints", ["identity", "compute", "image", "network"], check_endpoint)
-        )
-
-        if all(is_package_installed(pkg) for pkg in cinder_pkgs):
-            add_check("Endpoints", ["volumev3"], check_endpoint)
-
+        add_endpoints_check(["identity", "compute", "image", "network"])
 
     for category, items, check_fn in checks:
         for item in items:
@@ -161,7 +235,7 @@ if __name__ == "__main__":
     try:
         check_env_variables()
     except RuntimeError as e:
-        logging.error(f"Errore variabili d'ambiente: {e}")
+        logger.error(f"Environment variables error: {e}")
         exit(1)
 
     endpoint_result = check_deployment(include_endpoints=True)
@@ -169,7 +243,7 @@ if __name__ == "__main__":
 
     exit(0 if endpoint_result.ok else 1)
 
-def check_cinder_installed() -> bool:
+def check_cinder_available() -> bool:
 
     if not all(is_package_installed(pkg) for pkg in cinder_pkgs): return False
 
@@ -179,9 +253,9 @@ def check_cinder_installed() -> bool:
    
     return True
 
-def is_cinder_installed() -> bool:
+def is_cinder_available() -> bool:
 
-    if not check_cinder_installed():
+    if not check_cinder_available():
         print(f"{colors.RED}Cinder service is not installed or not available.{colors.RESET}\n")
         print(f"{colors.YELLOW}  • If you want block storage support, run 'deploystack deploy --allinone' or include Cinder in your deployment{colors.RESET}")
         print(f"{colors.YELLOW}  • Alternatively, continue without Cinder, but volume-based features will not be available{colors.RESET}\n")
@@ -190,12 +264,8 @@ def is_cinder_installed() -> bool:
     return True   
 
 def is_openstack_ready() -> bool:
-    
-    base_check = check_deployment(include_endpoints=False)
-    if not base_check.ok or not os.path.exists(MARKER_FILE):
-        print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
-        print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
-        print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
+
+    if not os.path.exists(MARKER_FILE):
         return False
 
     try:
@@ -204,6 +274,23 @@ def is_openstack_ready() -> bool:
         print(f"{colors.YELLOW}Shell is not authenticated. Source the environment file first:{colors.RESET}\n")
         print(f"  {colors.YELLOW}source /root/admin-openrc.sh{colors.RESET}  or")
         print(f"  {colors.GREEN}source /root/demo-openrc.sh{colors.RESET}\n")
+        return False
+ 
+    auth_ok, auth_error = check_keystone_auth()
+
+    if not auth_ok:
+        print(f"{colors.RED}OpenStack authentication failed.{colors.RESET}\n")
+        print(f"{colors.YELLOW}  • {auth_error}{colors.RESET}")
+        print(f"{colors.YELLOW}  • Verify your OpenStack credentials and environment variables.{colors.RESET}")
+        print(f"{colors.YELLOW}  • Source an admin environment file first:{colors.RESET}")
+        print(f"    {colors.GREEN}source /root/admin-openrc.sh{colors.RESET}\n")
+        return False
+
+    base_check = check_deployment(include_endpoints=False)
+    if not base_check.ok:
+        print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
+        print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
+        print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
         return False
 
     endpoint_check = check_deployment(include_endpoints=True)

@@ -2,7 +2,7 @@ import sys
 
 from .runner import reset as reset_volume
 
-from ....utils.tasks.check_deployment import is_openstack_ready, is_cinder_installed
+from ....utils.tasks.check_deployment import is_openstack_ready, is_cinder_available
 
 def init_parser(subparsers):
 
@@ -33,7 +33,7 @@ def reset(parser, args) -> None:
     if not is_openstack_ready():
         sys.exit(1)
 
-    if not is_cinder_installed():
+    if not is_cinder_available():
         sys.exit(1)
 
     reset_volume(args.volume, args.force)

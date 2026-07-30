@@ -82,6 +82,8 @@ iface br-shares inet static
     run_command(["ip", "addr", "flush", "dev", "br-shares"], f"Flushing IPs on Shares bridge", ignore_errors=True)
     run_command(["ip", "link", "set", "br-shares", "down"], f"Bringing Shares bridge down", ignore_errors=True)
 
+    print()
+
     if not run_command(["systemctl", "restart", "networking"], "Restarting Networking service..."): return False
 
     flat_networks_mappings = get_conf_option(conf_ml2, "ml2_type_flat", "flat_networks")
@@ -351,11 +353,9 @@ def finalize_lvm_backend(config, env):
     shares = get(config, "manila.shares") or []
     default_type_shares = get(config, "manila.share_types") or []
 
-    if not create_share_types(default_type_shares=default_type_shares, env=env):
-        return False
+    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
 
-    if not create_shares(shares=shares, env=env, dhss=False):
-        return False
+    if not create_shares(shares=shares, env=env, dhss=False): return False
 
     return True
 

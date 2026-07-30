@@ -116,7 +116,7 @@ def finalize():
 
     print()
 
-    samba_services = ["smbd"]
+    samba_services = ["smbd.service"]
 
     if service_exists("nmbd.service"):
         samba_services.append("nmbd.service")
