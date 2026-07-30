@@ -14,8 +14,6 @@ from .utils.shares import create_shares, create_share_types
 
 from .protocols.nfs import run_setup_nfs
 
-from ....utils.core import colors
-
 manila_conf = "/etc/manila/manila.conf"
 
 def _set_service_auth(conf, section, username, ip_address, region, password):
@@ -33,8 +31,7 @@ def install_pkgs():
 
     print()
 
-    if not apt_install(["manila-share"], "Installing Manila Share package..."):
-        return False
+    if not apt_install(["manila-share"], "Installing Manila Share package..."): return False
 
     return True 
 
@@ -134,7 +131,6 @@ def finalize_generic_backend(config, env):
     if not create_share_types(default_type_shares=default_type_shares, env=env):
         return False
 
-    # --- Immagine ---
     manila_service_image_exists = any(
         image.get("Name") == generic_service_image_name
         for image in images_list
@@ -145,27 +141,25 @@ def finalize_generic_backend(config, env):
 
         if not os.path.exists(manila_temp_image_file):
             if not run_command(["wget", "--continue", "--progress=dot:giga", "--tries=3", "--timeout=30", "--read-timeout=60","-O", manila_temp_image_file, manila_image_url], "Downloading Manila service image... (this may take a while) ", timeout=3600): return False
-        
-        if not os_run(["openstack", "image", "create", generic_service_image_name, "--file", manila_temp_image_file, "--disk-format", "qcow2", "--container-format", "bare", "--public"], "Uploading Manila image to Glance...", env=env): return False
+
+        if os.path.exists(manila_temp_image_file):
+            if not os_run(["openstack", "image", "create", generic_service_image_name, "--file", manila_temp_image_file, "--disk-format", "qcow2", "--container-format", "bare", "--public"], "Uploading Manila image to Glance...", env=env): return False
         
         try:
             os.remove(manila_temp_image_file)
         except FileNotFoundError:
             pass
 
-    # --- Flavor ---
-    manila_service_flavor_exists = any(
-        flavor.get("Name") == generic_service_instance_flavor_name
-        for flavor in flavors_list
-    )
+    manila_service_flavor_exists = any(flavor.get("Name") == generic_service_instance_flavor_name for flavor in flavors_list)
 
     if not manila_service_flavor_exists:
         print()
         if not os_run([
             "openstack", "flavor", "create", "--id", str(generic_service_instance_flavor_id), "--ram", str(generic_service_instance_flavor_ram), "--disk", str(generic_service_instance_flavor_disk), "--vcpus", str(generic_service_instance_flavor_vcpus), generic_service_instance_flavor_name], "Creating Manila service flavor...", env=env): return False
 
-    # --- Share network ---
     share_networks_list = json.loads(os_run_output(["openstack", "share", "network", "list", "-f", "json"], env=env) or "[]")
+
+    line_printed = False
 
     for service_net in service_networks:
 
@@ -185,19 +179,14 @@ def finalize_generic_backend(config, env):
             neutron_subnet_id = subnet.get("ID") or subnet.get("id")
             break
 
-        tenant_share_network_exists = any(
-            sn.get("Name") == network_name or sn.get("name") == network_name
-            for sn in share_networks_list
-        )
+        tenant_share_network_exists = any(sn.get("Name") == network_name or sn.get("name") == network_name for sn in share_networks_list)
 
         if not tenant_share_network_exists:
-            if not os_run([
-                "openstack", "share", "network", "create",
-                "--name", network_name,
-                "--neutron-net-id", str(neutron_network_id),
-                "--neutron-subnet-id", str(neutron_subnet_id),
-            ], f"Creating tenant share '{network_name}' network...", env=env):
-                return False
+            if not line_printed:
+                line_printed = True
+                print()
+
+            if not os_run(["openstack", "share", "network", "create", "--name", network_name, "--neutron-net-id", str(neutron_network_id), "--neutron-subnet-id", str(neutron_subnet_id)], f"Creating tenant share '{network_name}' network...", env=env): return False
 
     if not create_shares(shares=shares, env=env, dhss=True): return False
 
