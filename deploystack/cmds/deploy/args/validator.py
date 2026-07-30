@@ -1,3 +1,7 @@
+def validate_manila_backend(parser, args):
+    if args.install_cinder == "no" and args.manila_backend == "generic":
+        parser.error("Manila generic backend requires --install-cinder yes")
+
 def validate_manila_args(parser, args):
     if args.install_manila == "no":
         provided = [
@@ -11,6 +15,8 @@ def validate_manila_args(parser, args):
             parser.error(
                 "Manila options require --install-manila yes"
             )
+
+    validate_manila_backend(parser, args)
     
 def validate_cinder_args(parser, args):
     if args.install_cinder == "no":
