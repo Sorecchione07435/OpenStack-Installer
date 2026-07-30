@@ -1,12 +1,9 @@
-# Configure the Block Storage service (Cinder) (Controller + Storage Node)
+# Configure the Block Storage service (Cinder) (Controller + LVM Storage Node)
 
 import pwd
 import grp
 import os
 import subprocess
-import shutil
-import json
-import re
 
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install
