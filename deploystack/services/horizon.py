@@ -44,6 +44,9 @@ WSGIScriptAlias /dashboard /usr/share/openstack-dashboard/openstack_dashboard/ws
 WSGIDaemonProcess horizon user=horizon group=horizon processes=3 threads=10 display-name=%{GROUP}
 WSGIProcessGroup horizon
 WSGIApplicationGroup %{GLOBAL}
+
+LimitRequestBody 0
+
 Alias /static /var/lib/openstack-dashboard/static/
 Alias /dashboard/static /var/lib/openstack-dashboard/static/
 
