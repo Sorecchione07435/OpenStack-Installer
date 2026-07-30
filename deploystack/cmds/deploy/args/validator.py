@@ -1,7 +1,5 @@
-def validate_deploy_args(parser, args):
-
+def validate_manila_args(parser, args):
     if args.install_manila == "no":
-
         provided = [
             args.manila_lvm_physical_volume is not None,
             args.manila_lvm_image_size_in_gb is not None,
@@ -13,9 +11,9 @@ def validate_deploy_args(parser, args):
             parser.error(
                 "Manila options require --install-manila yes"
             )
-
+    
+def validate_cinder_args(parser, args):
     if args.install_cinder == "no":
-
         provided = [
             args.cinder_physical_volume is not None,
             args.cinder_lvm_image_size_in_gb != 5,
@@ -25,3 +23,10 @@ def validate_deploy_args(parser, args):
             parser.error(
                 "Cinder options require --install-cinder yes"
             )
+
+
+def validate_deploy_args(parser, args):
+
+    validate_manila_args(parser=parser, args=args)
+    validate_cinder_args(parser=parser, args=args)
+    

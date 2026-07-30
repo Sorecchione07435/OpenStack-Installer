@@ -60,7 +60,7 @@ def init_parser(subparsers):
     cinder.add_argument(
         "--cinder-lvm-image-size-in-gb",
         type=int,
-        default=5,
+        default=None,
         help="Size of the Cinder LVM image in GB (default: 5)"
     )
 
