@@ -197,7 +197,7 @@ def config_openstack(
 
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
-    config_dict["cinder"]["TARGET_IP_ADDRESS"] = ip
+    config_dict["cinder"]["TARGET_IP_ADDRESS"] = mgmt_ip
 
     config_dict["cinder"].setdefault("lvm", {})
 
