@@ -74,7 +74,7 @@ def is_package_installed(pkg_name: str) -> bool:
     
 def check_endpoint(service_name: str) -> bool:
     try:
-        output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "--enabled", "-f", "json"])
+        output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "-f", "json", "-c Enabled"])
 
         return bool(json.loads(output))
 
