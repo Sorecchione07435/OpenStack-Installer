@@ -89,7 +89,7 @@ def check_endpoint(service_name: str) -> bool:
 def check_service_active(svc: str) -> bool:
     try:
         result = subprocess.run(
-            ["systemctl", "is-active", svc],
+            ["systemctl", "is-active", "--quiet", svc],
             timeout=5
         )
         return result.returncode == 0
