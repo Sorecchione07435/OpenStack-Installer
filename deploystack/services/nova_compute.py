@@ -39,6 +39,8 @@ def conf_nova_compute(config):
     set_conf_option(nova_conf, "DEFAULT", "ram_allocation_ratio", str(ram_allocation_ratio))
     set_conf_option(nova_conf, "DEFAULT", "disk_allocation_ratio", str(disk_allocation_ratio))
 
+    set_conf_option(nova_conf, "DEFAULT", "allow_resize_to_same_host", "True")
+
     if not has_hw_virtualization():
         set_conf_option(nova_compute_conf, "libvirt", "virt_type", "qemu")
     else:
