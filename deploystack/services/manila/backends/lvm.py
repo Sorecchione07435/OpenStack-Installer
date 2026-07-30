@@ -179,7 +179,7 @@ def create_shares_network(config, env):
     shares_subnet_exists = any((sub.get("Name") or sub.get("name")) == "shares_subnet" for sub in subnets_list)
 
     if not shares_subnet_exists:
-        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Create shares subnet...", env=env) : return False
+        if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Creating shares subnet...", env=env) : return False
 
     shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
 
