@@ -539,6 +539,9 @@ def validate_manila(config) -> bool:
     share_protocols = get(config, "manila.SHARE_PROTOCOLS") or []
     share_helpers = get(config, "manila.SHARE_HELPERS") or []
 
+    share_types = get(config, "manila.share_types") or []
+    shares = get(config, "manila.shares") or []
+
     if isinstance(share_protocols, str):
         share_protocols = [share_protocols]
 
@@ -727,9 +730,6 @@ def validate_manila(config) -> bool:
         provider_networks = get(config, "neutron.provider_networks") or []
 
         service_networks = get(config, "manila.backends.generic.service_networks") or []
-
-        share_types = get(config, "manila.share_types") or []
-        shares = get(config, "manila.shares") or []
 
         generic_backend_fields = [
             "manila.backends.generic.BACKEND_NAME",
