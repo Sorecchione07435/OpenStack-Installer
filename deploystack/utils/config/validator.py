@@ -534,10 +534,10 @@ def validate_manila(config) -> bool:
             "CIFS": "manila.share.drivers.helpers.CIFSHelper",
         }
 
-    enabled_backend = (get("manila.backend") or "").lower()
+    enabled_backend = (get(config, "manila.backend") or "").lower()
 
-    share_protocols = get("manila.SHARE_PROTOCOLS") or []
-    share_helpers = get("manila.SHARE_HELPERS") or []
+    share_protocols = get(config, "manila.SHARE_PROTOCOLS") or []
+    share_helpers = get(config, "manila.SHARE_HELPERS") or []
 
     if isinstance(share_protocols, str):
         share_protocols = [share_protocols]
