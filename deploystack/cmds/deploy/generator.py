@@ -417,6 +417,8 @@ def config_openstack(
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
                 })
+
+                config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
             else:
                 config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
 

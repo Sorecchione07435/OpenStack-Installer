@@ -609,7 +609,10 @@ def validate_manila(config) -> bool:
                 ok = False
 
     if enabled_backend == "lvm":
+
         size = None
+
+        lvm_config = get(config, "manila.backends.lvm")
 
         lvm_physical_volume = (get(config, "manila.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
 
@@ -627,6 +630,10 @@ def validate_manila(config) -> bool:
             "manila.backends.lvm.SHARE_VOLUME_GROUP",
             "manila.backends.lvm.SHARE_EXPORT_IP",
         ]
+
+        if not lvm_config:
+            print(f"{colors.RED}Error: manila.backends.lvm section is missing{colors.RESET}")
+            return False
 
         for field in lvm_backend_fields:
             if not get(config, field) :
@@ -724,6 +731,8 @@ def validate_manila(config) -> bool:
 
         include_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
 
+        generic_config = get(config, "manila.backends.generic")
+
         generic_service_flavor_id = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID") or "")
         generic_service_flavor_ram = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM") or "")
         generic_service_flavor_vcpus = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS") or "")
@@ -745,6 +754,10 @@ def validate_manila(config) -> bool:
             "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS",
             "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.DISK",
         ]
+
+        if not generic_config:
+            print(f"{colors.RED}Error: manila.backends.generic section is missing{colors.RESET}")
+            ok = False
 
         for field in generic_backend_fields:
             if not get(config, field) :
