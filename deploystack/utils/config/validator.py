@@ -925,16 +925,19 @@ def validate_manila(config) -> bool:
 
                     is_dhss_enabled = spec.get("driver_handles_share_servers")
 
-                    if is_dhss_enabled is None:
+                    dhss_value = spec.get("driver_handles_share_servers")
+
+                    if dhss_value is None:
                         print(f"{colors.RED}Error: extra_specs.driver_handles_share_servers is missing{colors.RESET}")
                         ok = False
                     else:
-                        is_dhss_enabled = parse_bool(spec.get("driver_handles_share_servers"), False)
+                        is_dhss_enabled = parse_bool(dhss_value, False)
 
                         if is_dhss_enabled and enabled_backend == "lvm":
                             print(f"{colors.RED}Error: driver_handles_share_servers=yes "
                                 f"is not supported with LVM backend{colors.RESET}")
                             ok = False
+
                         elif enabled_backend == "generic" and not is_dhss_enabled:
                             print(f"{colors.RED}Error: generic backend requires "
                                 f"driver_handles_share_servers=yes{colors.RESET}")
