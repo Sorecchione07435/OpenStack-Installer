@@ -719,7 +719,10 @@ def validate_manila(config) -> bool:
                 ok = False
         else:
             ok = False
+
     elif enabled_backend == "generic":
+
+        include_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
 
         generic_service_flavor_id = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID") or "")
         generic_service_flavor_ram = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM") or "")
@@ -747,6 +750,10 @@ def validate_manila(config) -> bool:
             if not get(config, field) :
                 print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                 ok = False
+
+        if not include_cinder:
+            print(f"{colors.RED}Error: Manila Generic backend requires Cinder service to be enabled{colors.RESET}")
+            return False
 
         if connect_share_driver_to_tenant_network not in ("yes", "no"):
             print(f"{colors.RED}Error: 'manila.backends.generic.CONNECT_SHARE_SERVER_TO_TENANT_NETWORK' must be 'yes' or 'no' (got '{connect_share_driver_to_tenant_network}'){colors.RESET}")
