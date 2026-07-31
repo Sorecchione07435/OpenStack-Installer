@@ -974,7 +974,9 @@ def validate_manila(config) -> bool:
         }
 
         share_type_names = { st.get("name").lower() for st in share_types if isinstance(st, dict) and st.get("name") }
-        service_network_names = { net.get("name").lower() for net in service_networks if isinstance(net, dict) and net.get("name") }
+
+        if enabled_backend == "generic":
+            service_network_names = { net.get("name").lower() for net in service_networks if isinstance(net, dict) and net.get("name") }
 
         for share in shares:
             if not isinstance(share, dict):
