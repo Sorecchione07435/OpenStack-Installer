@@ -995,7 +995,7 @@ def validate_manila(config) -> bool:
                 print(f"{colors.RED}Error: shares.{name}.share_type is missing{colors.RESET}")
                 ok = False
             elif share_type.lower() not in share_type_names:
-                print(f"{colors.RED}Error: invalid share_type '{share_type}'. "s
+                print(f"{colors.RED}Error: invalid share_type '{share_type}'. "
                 f"Available: {list(share_type_names)}{colors.RESET}")
                 ok = False
 
