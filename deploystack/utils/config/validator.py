@@ -674,7 +674,7 @@ def validate_manila(config) -> bool:
 
                 loopback_lvm_size = validate_positive_int(lvm_backend_size_raw, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB")
 
-                if None in loopback_lvm_size:
+                if loopback_lvm_size is None:
                     ok = False
 
             required_lvm_loopback_fields = [
