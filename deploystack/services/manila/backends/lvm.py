@@ -18,8 +18,6 @@ from ....utils.config.setter import set_conf_option
 from ....utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ....utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
-from ....templates import MANILA_LVM_NETWORK_SERVICE, MANILA_BRIDGE_IP_SCRIPT
-
 from .utils import wait_manila_backend
 
 from .utils.shares import create_shares, create_share_types
