@@ -2,7 +2,7 @@ import shutil
 import os
 import ipaddress
 
-from .helpers import get_provider_networks, interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device
+from .helpers import get_provider_networks, interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int
 from ..core import colors
 from .parser import get
 
@@ -399,11 +399,22 @@ def validate_cinder(config) -> bool:
     ok = True
 
     size_raw = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
-    path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").lower()
-    pv = (get(config, "cinder.lvm.PHYSICAL_VOLUME") or "").lower()
+    path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
+    pv = (get(config, "cinder.lvm.PHYSICAL_VOLUME") or "").strip().lower()
     volume_clear = (get(config, "cinder.VOLUME_CLEAR") or "").lower()
     volume_clear_size = get(config, "cinder.VOLUME_CLEAR_SIZE")
 
+    required_fields = [
+        "cinder.lvm.VOLUME_GROUP",
+        "cinder.VOLUME_CLEAR",
+        "cinder.VOLUME_CLEAR_SIZE"
+    ]
+
+    for field in required_fields:
+        if not get(config, field):
+            print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+            ok = False
+            
     if pv:
         if not os.path.exists(pv):
             print(f"{colors.RED}Error: PHYSICAL_VOLUME '{pv}' does not exist{colors.RESET}")
@@ -421,28 +432,30 @@ def validate_cinder(config) -> bool:
             return False
     
     else:
-        size = None
-        if size_raw:
-            try:
-                size = int(size_raw)
-            except ValueError:
-                print(f"{colors.RED}Error: invalid integer for CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB{colors.RESET}")
-                ok = False
+        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
 
-        required_fields = [
+        if None in cinder_loopback_size_raw:
+            ok = False
+
+        required_loopback_fields = [
             "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
             "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
             "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH",
-            "cinder.lvm.VOLUME_GROUP",
-            "cinder.VOLUME_CLEAR",
-            "cinder.VOLUME_CLEAR_SIZE"
         ]
-        
-        loop_dev = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH") or "").lower()
 
-        for field in required_fields:
+        for field in required_loopback_fields:
             if not get(config, field) :
                 print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                ok = False
+
+        lvm_loop_path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH") or "").strip().lower()
+
+        if lvm_loop_path:
+            if not lvm_loop_path.startswith("/dev/loop"):
+                print(
+                    f"{colors.RED}Error: CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH must be a loop device, "
+                    f"found '{lvm_loop_path}'{colors.RESET}"
+                )
                 ok = False
 
         if path:
@@ -499,6 +512,414 @@ def validate_cinder(config) -> bool:
         ok = False
     
     return ok
+
+# --- Manila ---
+def validate_manila(config) -> bool:
+    ok = True
+
+    valid_backends = [
+            "lvm",
+            "generic"
+        ]
+    
+    valid_protocols = [
+            "NFS",
+            "CIFS"
+        ]
+    
+    valid_helpers = {
+            "NFS": "manila.share.drivers.helpers.NFSHelper",
+            "CIFS": "manila.share.drivers.helpers.CIFSHelper",
+        }
+
+    enabled_backend = (get("manila.backend") or "").lower()
+
+    share_protocols = get("manila.SHARE_PROTOCOLS") or []
+    share_helpers = get("manila.SHARE_HELPERS") or []
+
+    if isinstance(share_protocols, str):
+        share_protocols = [share_protocols]
+
+    if isinstance(share_helpers, dict):
+        share_helpers = [share_helpers]
+
+    share_protocols = [p.upper() for p in share_protocols]
+
+    if not enabled_backend:
+        print(f"{colors.RED}Error: manila.backend is missing{colors.RESET}")
+        ok = False
+
+    if not share_protocols:
+        print(f"{colors.RED}Error: manila.SHARE_PROTOCOLS is empty{colors.RESET}")
+        ok = False
+
+    if not share_helpers:
+        print(f"{colors.RED}Error: manila.SHARE_HELPERS is empty{colors.RESET}")
+        ok = False
+
+    if enabled_backend not in valid_backends:
+        print(f"{colors.RED}Error: manila.backend '{enabled_backend}' "
+        f"is not a valid backend{colors.RESET}"
+    )
+        ok = False
+
+    for protocol in share_protocols:
+        if protocol not in valid_protocols:
+            print(f"{colors.RED}Error: manila.SHARE_PROTOCOLS.{protocol} "
+                f"is not a valid protocol type{colors.RESET}"
+            )
+            ok = False
+
+    for helper in share_helpers:
+        if not isinstance(helper, dict):
+            print(f"{colors.RED}Error: invalid format for manila.SHARE_HELPERS entry '{helper}'{colors.RESET}")
+            ok = False
+            continue
+
+        for helper_type, helper_config in helper.items():
+            helper_type = helper_type.upper()
+            helper_name = (helper_config or {}).get("name")
+
+            if not helper_name:
+                print(
+                    f"{colors.RED}Error: manila.SHARE_HELPERS.{helper_type}.name "
+                    f"is missing{colors.RESET}"
+                )
+                ok = False
+                continue
+
+            expected = valid_helpers.get(helper_type)
+
+            if expected is None:
+                print(f"{colors.RED}Error: manila.SHARE_HELPERS.{helper_type} "
+                      f"is not a valid protocol type{colors.RESET}")
+                
+                ok = False
+                continue
+
+            if helper_name != expected:
+                print(f"{colors.RED}Error: invalid helper for {helper_type}: "
+                    f"expected '{expected}', got '{helper_name}'{colors.RESET}"
+                )
+                ok = False
+
+    if enabled_backend == "lvm":
+        size = None
+
+        lvm_physical_volume = (get(config, "manila.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
+
+        lvm_backend_size_raw = (get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB") or "")
+        lvm_backend_path = (get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH") or "").strip().lower()
+
+        lvm_share_driver = get(config, "manila.backends.lvm.SHARE_DRIVER") or ""
+        lvm_share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP") or ""
+
+        lvm_backend_fields = [
+            "manila.backends.lvm.samba.SAMBA_SERVER_USER",
+            "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD",
+            "manila.backends.lvm.BACKEND_NAME",
+            "manila.backends.lvm.SHARE_DRIVER",
+            "manila.backends.lvm.SHARE_VOLUME_GROUP",
+            "manila.backends.lvm.SHARE_EXPORT_IP",
+        ]
+
+        for field in lvm_backend_fields:
+            if not get(config, field) :
+                print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                ok = False
+
+        if lvm_physical_volume:
+            if not os.path.exists(lvm_physical_volume):
+                print(f"{colors.RED}Error: PHYSICAL_VOLUME '{lvm_physical_volume}' does not exist{colors.RESET}")
+                ok = False
+            else:
+                if (
+                    not lvm_physical_volume.startswith("/dev/")
+                    or lvm_physical_volume.startswith("/dev/loop")
+                    or is_loop_device(lvm_physical_volume)
+                ):
+                    print(f"{colors.RED}Error: loop devices are not allowed as Physical Volume "
+                        f"({lvm_physical_volume}){colors.RESET}")
+                    ok = False
+                elif not is_safe_lvm_device(lvm_physical_volume):
+                    print(f"{colors.RED}Error: Unsafe LVM device blocked for security: "
+                        f"{lvm_physical_volume}{colors.RESET}")
+                    ok = False
+        else:
+            if lvm_backend_size_raw:
+
+                loopback_lvm_size = validate_positive_int(lvm_backend_size_raw, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB")
+
+                if None in loopback_lvm_size:
+                    ok = False
+
+            required_lvm_loopback_fields = [
+                "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH",
+                "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB",
+                "manila.backends.lvm.MANILA_LVM_LOOP_PATH",
+            ]
+
+            for field in required_lvm_loopback_fields:
+                if not get(config, field) :
+                    print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                    ok = False
+
+            lvm_loop_path = (get(config, "manila.backends.lvm.MANILA_LVM_LOOP_PATH") or "").lower()
+
+            if lvm_loop_path and not lvm_loop_path.startswith("/dev/loop"):
+                print(f"{colors.RED}Error: MANILA_LVM_LOOP_PATH must be a loop device, "
+                    f"found '{lvm_loop_path}'{colors.RESET}")
+                ok = False
+
+            if lvm_backend_path:
+                directory = os.path.dirname(lvm_backend_path) or "/"
+    
+                while not os.path.exists(directory):
+                    parent = os.path.dirname(directory)
+                    if parent == directory:
+                        directory = "/"
+                        break
+                    directory = parent
+    
+                try:
+                    _, _, free = shutil.disk_usage(directory)
+                    free_gb = free / (1024**3)
+    
+                    if size is not None and size > free_gb:
+                        print(
+                            f"{colors.YELLOW}Warning: the requested Manila LVM image size ({size} GB) exceeds "
+                            f"the available disk space ({free_gb:.2f} GB). "
+                            f"The sparse file will be created successfully, but the volume group may run out "
+                            f"of space as volumes are written.{colors.RESET}"
+                        )
+    
+                except FileNotFoundError:
+                    print(f"{colors.RED}Error: cannot determine disk usage for {directory}{colors.RESET}")
+                    ok = False
+    
+        if lvm_share_driver != "manila.share.drivers.lvm.LVMShareDriver":
+            print(f"{colors.RED}Error: invalid LVM share driver '{lvm_share_driver}'. "
+                f"Expected 'manila.share.drivers.lvm.LVMShareDriver'{colors.RESET}")
+            ok = False
+
+        if validate_ip(lvm_share_export_ip, "manila.backends.lvm.SHARE_EXPORT_IP"):
+            share_export_ip = ipaddress.ip_address(lvm_share_export_ip)
+
+            if not share_export_ip.is_private:
+                print(
+                    f"{colors.RED}Error: IP address '{share_export_ip}' "
+                    f"in manila.backends.lvm.SHARE_EXPORT_IP is not a private address. "
+                    f"A private IP address is required{colors.RESET}"
+                )
+                ok = False
+        else:
+            ok = False
+    elif enabled_backend == "generic":
+
+        generic_service_flavor_id = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID") or "")
+        generic_service_flavor_ram = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM") or "")
+        generic_service_flavor_vcpus = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS") or "")
+        generic_service_flavor_disk = (get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.DISK") or "")
+
+        connect_share_driver_to_tenant_network = (get(config, "manila.backends.generic.CONNECT_SHARE_SERVER_TO_TENANT_NETWORK") or "")
+        provider_networks = get(config, "neutron.provider_networks") or []
+
+        service_networks = get(config, "manila.backends.generic.service_networks") or []
+
+        share_types = get(config, "manila.share_types") or []
+        shares = get(config, "manila.shares") or []
+
+        generic_backend_fields = [
+            "manila.backends.generic.BACKEND_NAME",
+            "manila.backends.generic.SERVICE_IMAGE_NAME",
+            "manila.backends.generic.INTERFACE_DRIVER",
+            "manila.backends.generic.CONNECT_SHARE_SERVER_TO_TENANT_NETWORK",
+            "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.NAME",
+            "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID",
+            "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM",
+            "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS",
+            "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.DISK",
+        ]
+
+        for field in generic_backend_fields:
+            if not get(config, field) :
+                print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                ok = False
+
+        if connect_share_driver_to_tenant_network not in ("yes", "no"):
+            print(f"{colors.RED}Error: 'manila.backends.generic.CONNECT_SHARE_SERVER_TO_TENANT_NETWORK' must be 'yes' or 'no' (got '{connect_share_driver_to_tenant_network}'){colors.RESET}")
+            ok = False
+
+        if not isinstance(service_networks, list):
+            print(f"{colors.RED}Error: manila.backends.generic.service_networks must be a list{colors.RESET}")
+            ok = False
+
+        if not service_networks:
+            print(f"{colors.RED}Error: manila.backends.generic.service_networks is empty{colors.RESET}")
+            ok = False
+
+        provider_network_names = set()
+        allowed_neutron_networks = {"internal"}
+
+        if not isinstance(provider_networks, list):
+            print(f"{colors.RED}Error: neutron.provider_networks must be a list{colors.RESET}")
+            ok = False
+        else:
+            for provider in provider_networks:
+                if not isinstance(provider, dict):
+                    print(f"{colors.RED}Error: invalid neutron.provider_networks entry '{provider}'{colors.RESET}")
+                    ok = False
+                    continue
+
+                name = provider.get("name")
+
+                if not name:
+                    print(f"{colors.RED}Error: neutron.provider_networks.name is missing{colors.RESET}")
+                    ok = False
+                    continue
+
+                name = name.lower()
+
+                if name in provider_network_names:
+                    print(f"{colors.RED}Error: duplicate neutron.provider_networks.name '{name}'{colors.RESET}")
+                    ok = False
+
+                provider_network_names.add(name)
+
+            allowed_neutron_networks |= provider_network_names
+
+        service_network_names = set()
+
+        for network in service_networks:
+            if not isinstance(network, dict):
+                print(f"{colors.RED}Error: invalid service_networks entry '{network}'{colors.RESET}")
+                ok = False
+                continue
+
+            name = network.get("name")
+            neutron_network = network.get("neutron_network")
+
+            if not name:
+                print(f"{colors.RED}Error: service_networks.name is missing{colors.RESET}")
+                ok = False
+                continue
+
+            name = name.lower()
+
+            if name in service_network_names:
+                print(f"{colors.RED}Error: duplicate service_networks.name '{name}'{colors.RESET}")
+                ok = False
+
+            service_network_names.add(name)
+
+            if not neutron_network:
+                print(f"{colors.RED}Error: service_networks.neutron_network is missing{colors.RESET}")
+                ok = False
+                continue
+
+            neutron_network = neutron_network.lower()
+
+            if neutron_network not in allowed_neutron_networks:
+                print(f"{colors.RED}Error: invalid neutron_network '{neutron_network}'. "
+                    f"Available neutron networks: {list(allowed_neutron_networks)}{colors.RESET}")
+                ok = False
+
+        flavor_id = validate_positive_int(generic_service_flavor_id, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID")
+        flavor_ram = validate_positive_int(generic_service_flavor_ram, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM")
+        flavor_vcpus = validate_positive_int(generic_service_flavor_vcpus, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.VCPUS")
+        flavor_disk = validate_positive_int(generic_service_flavor_disk, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.DISK")
+
+        if None in (flavor_id, flavor_ram, flavor_vcpus, flavor_disk):
+            ok = False
+
+    if not isinstance(share_types, list):
+        print(f"{colors.RED}Error: manila.share_types must be a list{colors.RESET}")
+        ok = False
+    else:
+        share_type_names = set()
+
+        valid_extra_specs = {
+            "driver_handles_share_servers",
+            "snapshot_support",
+            "create_share_from_snapshot_support",
+            "revert_to_snapshot_support",
+            "mount_snapshot_support",
+        }
+
+        for share_type in share_types:
+            if not isinstance(share_type, dict):
+                print(f"{colors.RED}Error: invalid share_types entry '{share_type}'{colors.RESET}")
+                ok = False,
+                continue
+
+            name = share_type.get("name")
+            is_public = share_type.get("is_public")
+            extra_specs = share_type.get("extra_specs") or []
+
+            if not name:
+                print(f"{colors.RED}Error: share_types.name is missing{colors.RESET}")
+                ok = False
+                continue
+
+            name = name.lower()
+
+            if name in share_type_names:
+                print(f"{colors.RED}Error: duplicate share_types.name '{name}'{colors.RESET}")
+                ok = False
+
+            share_type_names.add(name)
+
+            if is_public is None:
+                print(f"{colors.RED}Error: share_types.{name}.is_public is missing{colors.RESET}")
+                ok = False
+            elif str(is_public).lower() not in ("yes", "no", "true", "false"):
+                print(f"{colors.RED}Error: invalid share_types.{name}.is_public '{is_public}' "
+                f"must be yes/no{colors.RESET}")
+                ok = False
+
+            if not isinstance(extra_specs, list):
+                print(f"{colors.RED}Error: share_types.{name}.extra_specs must be a list{colors.RESET}")
+                ok = False
+                continue
+
+            for spec in extra_specs:
+                if not isinstance(spec, dict):
+                    print(f"{colors.RED}Error: invalid extra_specs entry '{spec}' "
+                    f"in share_type '{name}'{colors.RESET}")
+                    ok = False
+                    continue
+
+                for key, value in spec.items():
+                    if key not in valid_extra_specs:
+                        print(f"{colors.RED}Error: invalid extra_spec '{key}' "
+                            f"in share_type '{name}'. "
+                            f"Allowed values: {list(valid_extra_specs)}{colors.RESET}")
+                        ok = False
+
+                    if str(value).lower() not in ("yes", "no", "true", "false"):
+                        print(f"{colors.RED}Error: invalid value '{value}' "
+                        f"for extra_spec '{key}' in share_type '{name}'{colors.RESET}")
+                        ok = False
+
+                    if "driver_handles_share_servers" not in spec:
+                        print(f"{colors.RED}Error: extra_specs.driver_handles_share_servers is missing{colors.RESET}")
+                        ok = False
+                    else:
+                        is_dhss_enabled = parse_bool(spec.get("driver_handles_share_servers"), False)
+
+                        if is_dhss_enabled and enabled_backend == "lvm":
+                            print(f"{colors.RED}Error: driver_handles_share_servers=yes "
+                                f"is not supported with LVM backend{colors.RESET}")
+                            ok = False
+                        elif enabled_backend == "generic" and not is_dhss_enabled:
+                            print(f"{colors.RED}Error: generic backend requires "
+                                f"driver_handles_share_servers=yes{colors.RESET}")
+                            ok = False
+
+      
+    return ok
+
+    
 
 # --- Compute ---
 def validate_compute(config) -> bool:
@@ -585,7 +1006,8 @@ def validate_openstack(config) -> bool:
     return ok
 
 def validate_all(config) -> bool:
-    install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
+    include_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
+    include_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
 
     ok = True
     ok &= validate_passwords(config)
@@ -593,8 +1015,11 @@ def validate_all(config) -> bool:
     ok &= validate_public_network(config)
     ok &= validate_neutron(config)
 
-    if install_cinder:
+    if include_cinder:
         ok &= validate_cinder(config)
+
+    if include_manila:
+        ok &= validate_manila(config)
 
     ok &= validate_compute(config)
     ok &= validate_optional_services(config)

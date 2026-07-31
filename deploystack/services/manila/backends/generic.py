@@ -128,13 +128,9 @@ def finalize_generic_backend(config, env):
     images_list = json.loads(os_run_output(["openstack", "image", "list", "-f", "json"], env=env) or "[]")
     flavors_list = json.loads(os_run_output(["openstack", "flavor", "list", "-f", "json"], env=env) or "[]")
 
-    if not create_share_types(default_type_shares=default_type_shares, env=env):
-        return False
+    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
 
-    manila_service_image_exists = any(
-        image.get("Name") == generic_service_image_name
-        for image in images_list
-    )
+    manila_service_image_exists = any(image.get("Name") == generic_service_image_name for image in images_list)
 
     if not manila_service_image_exists:
         print()

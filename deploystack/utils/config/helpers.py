@@ -13,6 +13,16 @@ def get_root_device():
     except subprocess.CalledProcessError:
         return None
 
+def validate_positive_int(value, field):
+    try:
+        value = int(value)
+        if value <= 0:
+            print(f"{colors.RED}Error: {field} must be greater than zero{colors.RESET}")
+            return None
+        return value
+    except ValueError:
+        print(f"{colors.RED}Error: {field} must be an integer{colors.RESET}")
+        return None
 
 def get_root_disk():
     device = get_root_device()
