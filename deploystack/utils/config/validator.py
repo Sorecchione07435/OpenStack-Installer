@@ -923,6 +923,8 @@ def validate_manila(config) -> bool:
                         f"for extra_spec '{key}' in share_type '{name}'{colors.RESET}")
                         ok = False
 
+                    is_dhss_enabled = spec.get("driver_handles_share_servers")
+
                     if is_dhss_enabled is None:
                         print(f"{colors.RED}Error: extra_specs.driver_handles_share_servers is missing{colors.RESET}")
                         ok = False
