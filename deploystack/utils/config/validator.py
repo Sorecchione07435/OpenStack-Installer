@@ -398,6 +398,8 @@ def validate_neutron(config) -> bool:
 def validate_cinder(config) -> bool:
     ok = True
 
+    cinder_config = get(config, "cinder")
+
     size_raw = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
     path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
     pv = (get(config, "cinder.lvm.PHYSICAL_VOLUME") or "").strip().lower()
@@ -411,6 +413,10 @@ def validate_cinder(config) -> bool:
         "cinder.VOLUME_CLEAR",
         "cinder.VOLUME_CLEAR_SIZE"
     ]
+
+    if not cinder_config:
+        print(f"{colors.RED}Error: cinder section is missing{colors.RESET}")
+        return False
 
     for field in required_fields:
         if not get(config, field):
@@ -534,6 +540,8 @@ def validate_manila(config) -> bool:
             "CIFS": "manila.share.drivers.helpers.NASHelper",
         }
 
+    manila_config = get(config, "manila")
+
     enabled_backend = (get(config, "manila.BACKEND") or "").lower()
 
     share_protocols = get(config, "manila.SHARE_PROTOCOLS") or []
@@ -549,6 +557,10 @@ def validate_manila(config) -> bool:
         share_helpers = [share_helpers]
 
     share_protocols = [p.upper() for p in share_protocols]
+
+    if not manila_config:
+        print(f"{colors.RED}Error: manila section is missing{colors.RESET}")
+        return False
 
     if not enabled_backend:
         print(f"{colors.RED}Error: manila.backend is missing{colors.RESET}")
