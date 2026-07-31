@@ -943,10 +943,136 @@ def validate_manila(config) -> bool:
                     print(f"{colors.RED}Error: generic backend requires "
                         f"driver_handles_share_servers=yes{colors.RESET}")
                     ok = False
-      
-    return ok
 
-    
+    if not isinstance(shares, list):
+        print(f"{colors.RED}Error: manila.shares must be a list{colors.RESET}")
+        ok = False
+    else:
+        share_names = set()
+
+        valid_access_types = {
+            "ip",
+            "user",
+            "cert"
+            }
+
+        valid_access_levels = {
+            "rw",
+            "ro"
+        }
+
+        share_type_names = { st.get("name").lower() for st in share_types if isinstance(st, dict) and st.get("name") }
+        service_network_names = { net.get("name").lower() for net in service_networks if isinstance(net, dict) and net.get("name") }
+
+        for share in shares:
+            if not isinstance(share, dict):
+                print(f"{colors.RED}Error: invalid shares entry '{share}'{colors.RESET}")
+                ok = False
+                continue
+
+            name = share.get("name")
+            share_type = share.get("share_type")
+            share_protocol = share.get("share_protocol")
+            share_size = share.get("share_size")
+            is_public = share.get("is_public")
+            share_network = share.get("share_network")
+            access_rules = share.get("access_rules") or []
+
+            if not name:
+                print(f"{colors.RED}Error: shares.name is missing{colors.RESET}")
+                ok = False
+                continue
+
+            name = name.lower()
+
+            if name in share_names:
+                print(f"{colors.RED}Error: duplicate shares.name '{name}'{colors.RESET}")
+                ok = False
+
+            share_names.add(name)
+
+            if not share_type:
+                print(f"{colors.RED}Error: shares.{name}.share_type is missing{colors.RESET}")
+                ok = False
+            elif share_type.lower() not in share_type_names:
+                print(f"{colors.RED}Error: invalid share_type '{share_type}'. "s
+                f"Available: {list(share_type_names)}{colors.RESET}")
+                ok = False
+
+            if not share_protocol:
+                print(f"{colors.RED}Error: shares.{name}.share_protocol is missing{colors.RESET}")
+                ok = False
+            elif share_protocol.upper() not in share_protocols:
+                print(f"{colors.RED}Error: invalid share_protocol '{share_protocol}'. "
+                    f"Available: {share_protocols}{colors.RESET}")
+                ok = False
+
+            size = validate_positive_int(share_size, f"manila.shares.{name}.share_size")
+
+            if size is None: ok = False
+
+            if is_public is None:
+                print(f"{colors.RED}Error: shares.{name}.is_public is missing{colors.RESET}")
+                ok = False
+            elif str(is_public).lower() not in ("yes", "no", "true", "false"):
+                print(f"{colors.RED}Error: invalid shares.{name}.is_public "
+                f"'{is_public}'{colors.RESET}")
+                ok = False
+
+            if not share_network and enabled_backend == "generic":
+                print(f"{colors.RED}Error: shares.{name}.share_network is missing{colors.RESET}")
+                ok = False
+
+            if not isinstance(access_rules, list):
+                print(f"{colors.RED}Error: shares.{name}.access_rules must be a list{colors.RESET}")
+                ok = False
+                continue
+
+            for idx, rule in enumerate(access_rules):
+                if not isinstance(rule, dict):
+                    print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}] "
+                    f"must be a dictionary{colors.RESET}")
+                    ok = False
+                    continue
+
+                rule_type = rule.get("type")
+                access = rule.get("access")
+                level = rule.get("level")
+
+                if not rule_type:
+                    print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].type is missing{colors.RESET}")
+                    ok = False
+
+                if not access:
+                    print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is missing{colors.RESET}")
+                    ok = False
+
+                if rule_type not in ("ip", "user", "cert"):
+                    print(f"{colors.RED}Error: invalid access rule type '{rule_type}' in shares.{name}{colors.RESET}")
+                    ok = False
+
+                if level not in ("rw", "ro"):
+                    print(f"{colors.RED}Error: invalid access level '{level}' "
+                    f"in shares.{name}.access_rules[{idx}] "
+                    f"(allowed: rw, ro){colors.RESET}"
+                    )
+                    ok = False
+
+                protocol = (share_protocol or "").upper()
+
+                if enabled_backend == "lvm" and protocol == "CIFS":
+                    allowed_access_types = {"user"}
+                else:
+                    allowed_access_types = {"ip", "user", "cert"}
+
+                if rule_type not in allowed_access_types:
+                    print(f"{colors.RED}Error: invalid access rule type '{rule_type}' "
+                        f"for shares.{name}. "
+                        f"Allowed values: {allowed_access_types}"
+                        f"{colors.RESET}")
+                    ok = False
+   
+    return ok
 
 # --- Compute ---
 def validate_compute(config) -> bool:
