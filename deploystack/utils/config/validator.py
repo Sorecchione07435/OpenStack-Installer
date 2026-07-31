@@ -531,10 +531,10 @@ def validate_manila(config) -> bool:
     
     valid_helpers = {
             "NFS": "manila.share.drivers.helpers.NFSHelper",
-            "CIFS": "manila.share.drivers.helpers.CIFSHelper",
+            "CIFS": "manila.share.drivers.helpers.NASHelper",
         }
 
-    enabled_backend = (get(config, "manila.backend") or "").lower()
+    enabled_backend = (get(config, "manila.BACKEND") or "").lower()
 
     share_protocols = get(config, "manila.SHARE_PROTOCOLS") or []
     share_helpers = get(config, "manila.SHARE_HELPERS") or []
