@@ -404,6 +404,8 @@ def validate_cinder(config) -> bool:
     volume_clear = (get(config, "cinder.VOLUME_CLEAR") or "").lower()
     volume_clear_size = get(config, "cinder.VOLUME_CLEAR_SIZE")
 
+    size = None
+
     required_fields = [
         "cinder.lvm.VOLUME_GROUP",
         "cinder.VOLUME_CLEAR",
@@ -434,7 +436,7 @@ def validate_cinder(config) -> bool:
     else:
         cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
 
-        if None in cinder_loopback_size_raw:
+        if cinder_loopback_size_raw is None:
             ok = False
 
         required_loopback_fields = [
