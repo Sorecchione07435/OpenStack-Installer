@@ -240,6 +240,7 @@ def config_openstack(
                         "share_protocol": "NFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "share_network": "manila_internal_service_network",
                         "access_rules": [
                             {
@@ -264,6 +265,7 @@ def config_openstack(
                         "share_protocol": "NFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "share_network": "manila_public_service_network",
                         "access_rules": [
                             {
@@ -290,6 +292,7 @@ def config_openstack(
                         "share_protocol": "NFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "access_rules": [
                             {
                                 "access": "10.0.0.0/24",
@@ -328,6 +331,7 @@ def config_openstack(
                         "share_protocol": "CIFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "share_network": "manila_internal_service_network",
                         "access_rules": [
                             {
@@ -352,6 +356,7 @@ def config_openstack(
                         "share_protocol": "CIFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "share_network": "manila_public_service_network",
                         "access_rules": [
                             {
@@ -378,6 +383,7 @@ def config_openstack(
                         "share_protocol": "CIFS",
                         "share_size": 1,
                         "share_type": "default_share_type",
+                        "is_public": "no",
                         "access_rules": [
                             {
                                 "access": "samba-user",
