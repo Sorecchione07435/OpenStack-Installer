@@ -38,8 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 cmds = {
     "generate-config": generate_config,
-    "deploy":          deploy,
-    "launch":          launch,
-    "image":           image,
-    "volume":          volume 
+    "deploy":          deploy_parser,
+    "launch":          launch_parser,
+    "image":           image_config_parser,
+    "volume":          volume_config_parser 
 }

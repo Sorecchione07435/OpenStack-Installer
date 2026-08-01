@@ -128,6 +128,7 @@ def init_parser(subparsers):
     general_options.add_argument(
         "--os-management-gateway",
         type=str,
+        default=None,
         help="Override the OpenStack management gateway interface used by services"
     )
 
@@ -153,11 +154,12 @@ def deploy(parser, args) -> None:
 
         neutron_driver = args.neutron_driver or "ovs"
 
-        try:
-            ipaddress.ip_address(args.os_management_gateway)
-        except ValueError:
-            parser.error("--os-management-gateway has a invalid Gateway")
-            sys.exit(1)
+        if args.os_management_gateway:
+            try:
+                ipaddress.ip_address(args.os_management_gateway)
+            except ValueError:
+                parser.error("--os-management-gateway has a invalid Gateway")
+                sys.exit(1)
 
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"
