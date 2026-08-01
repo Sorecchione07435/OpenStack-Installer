@@ -19,6 +19,9 @@ class Spinner:
         self.running = True
         self.idx = 0
 
+        sys.stdout.write("\033[?25l")
+        sys.stdout.flush()
+
         self._old_term = termios.tcgetattr(self._stdin_fd)
         tty.setcbreak(self._stdin_fd)
         self.thread = threading.Thread(target=self._spin, daemon=True)
@@ -37,7 +40,6 @@ class Spinner:
         if self.thread:
             self.thread.join()
 
-        # ripristina terminale
         if self._old_term:
             termios.tcsetattr(self._stdin_fd, termios.TCSADRAIN, self._old_term)
 
@@ -50,5 +52,6 @@ class Spinner:
         color_code = color_codes.get(color, "")
         reset_code = color_codes["reset"]
         message_aligned = self.message.ljust(width)
-        sys.stdout.write(f"\r{message_aligned}[ {color_code}{done_message}{reset_code} ]\n")
+
+        sys.stdout.write(f"\r{message_aligned}[ {color_code}{done_message}{reset_code} ]\n\033[?25h")
         sys.stdout.flush()
