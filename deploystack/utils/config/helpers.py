@@ -93,7 +93,7 @@ def is_loop_busy(loop_dev) -> bool:
     )
     return result.returncode == 0
 
-def validate_ip(value: str, field_name: str, error_message = False) -> bool:
+def validate_ip(value: str, field_name: str, error_message = True) -> bool:
     try:
         ipaddress.ip_address(value)
         return True

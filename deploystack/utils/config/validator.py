@@ -1080,7 +1080,7 @@ def validate_manila(config) -> bool:
                         )
                         ok = False
         
-                if rule_type == "ip" and not validate_ip(access, error_message=False):
+                if rule_type == "ip" and not validate_ip(access, field_name=None, error_message=False):
                     print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is an invalid IP{colors.RESET}")
                     ok = False 
 
