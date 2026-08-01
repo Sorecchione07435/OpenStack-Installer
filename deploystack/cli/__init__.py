@@ -25,9 +25,9 @@ def build_parser() -> argparse.ArgumentParser:
             "DeployStack - OpenStack deployment and management utility"
         ),
         epilog=(
-            "Examples:\n"
-            f"  {colors.BRIGHT_BLUE}Deploy a single-node OpenStack environment:{colors.RESET}\n"
-            "    deploystack deploy --allinone\n\n"
+            "\nExamples:\n"
+            "  Deploy a single-node OpenStack environment:\n"
+            f"    {colors.BRIGHT_BLUE}deploystack deploy --allinone{colors.RESET}\n\n"
             "  Generate a configuration file:\n"
             f"    {colors.BRIGHT_BLUE}deploystack generate-config config.yaml{colors.RESET}\n\n"
             "  Launch an instance:\n"
@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog,
             max_help_position=50,
-            width=100
+            width=150
         ),
     )
 
