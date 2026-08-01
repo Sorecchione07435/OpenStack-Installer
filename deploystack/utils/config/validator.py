@@ -1071,25 +1071,36 @@ def validate_manila(config) -> bool:
                     print(f"{colors.RED}Error: invalid access rule type '{rule_type}' in shares.{name}{colors.RESET}")
                     ok = False
 
-                lvm_access_found = False
+                lvm_cidr_found = False
                 network = ip_network(f"{lvm_share_export_ip}/24", strict=False)
 
                 if enabled_backend == "lvm":
+                    try:
+                        export_ip = ip_address(lvm_share_export_ip)
+                        network = ip_network(f"{export_ip}/24", strict=False)
+                    except ValueError:
+                        print(
+                            f"{colors.RED}Error: lvm_share_export_ip must be a valid IP address{colors.RESET}"
+                        )
+                        ok = False
+
                     for share in shares:
                         for rule in share.get("access_rules", []):
                             if rule.get("type") == "ip":
                                 try:
-                                    access_network = ip_network(rule["access"], strict=True)
-                                    if access_network == network:
-                                        lvm_access_found = True
-                                        break
-                                except ValueError:
-                                    pass
+                                    access_network = ip_network(rule.get("access"), strict=True)
 
-                        if lvm_access_found:
+                                    if access_network == network:
+                                        lvm_cidr_found = True
+                                        break
+
+                                except ValueError:
+                                    continue
+
+                        if lvm_cidr_found:
                             break
 
-                    if not lvm_access_found:
+                    if not lvm_cidr_found:
                         print(
                             f"{colors.RED}Error: at least one LVM share must contain "
                             f"the CIDR {network} in access_rules{colors.RESET}"
