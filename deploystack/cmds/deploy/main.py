@@ -213,6 +213,7 @@ def deploy(parser, args) -> None:
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
             os_mgmt_iface=args.os_management_interface,
+            os_mgmt_gateway=args.os_management_gateway,
             os_release=args.os_release
         )
 
