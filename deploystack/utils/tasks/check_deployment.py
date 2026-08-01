@@ -207,10 +207,10 @@ def check_deployment(include_endpoints: bool = True):
 
             if "nfs" in manila_protocols:
                 logger.info("NFS protocol enabled (LVM backend), adding NFS checks.")
-                nfs_services = ["nfs-server.service"]
+                nfs_services = []
 
-                if service_exists("nmbd.service"):
-                    samba_services.append("nmbd.service")
+                if service_exists("nfs-server.service"):
+                    samba_services.append("nfs-server.service")
 
                     add_packages_check(["nfs-server"])
                     add_services_check(nfs_services)
