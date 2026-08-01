@@ -202,7 +202,7 @@ def conf_lvm(config):
     lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
     lvm_image_size_in_gb = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_SIZE_IN_GB")
 
-    vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
+    vg_name = get(config, "manila.backends.lvm.storage.SHARE_VOLUME_GROUP")
 
     if lvm_physical_volume:
         lvm_dev = lvm_physical_volume
