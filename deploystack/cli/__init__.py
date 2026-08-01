@@ -8,6 +8,8 @@ from ..cmds.generate_config import generate_config
 from ..cmds.image import image
 from ..cmds.volume import volume
 
+from ..utils.core import colors
+
 from ..cmds.deploy.main import init_parser as deploy_parser
 from ..cmds.launch.main import init_parser as launch_parser
 from ..cmds.generate_config import init_parser as generate_config_parser
@@ -24,16 +26,16 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         epilog=(
             "Examples:\n"
-            "  Deploy a single-node OpenStack environment:\n"
+            f"  {colors.BRIGHT_BLUE}Deploy a single-node OpenStack environment:{colors.RESET}\n"
             "    deploystack deploy --allinone\n\n"
             "  Generate a configuration file:\n"
-            "    deploystack generate-config config.yaml\n\n"
+            f"    {colors.BRIGHT_BLUE}deploystack generate-config config.yaml{colors.RESET}\n\n"
             "  Launch an instance:\n"
-            "    deploystack launch --help"
+            f"    {colors.BRIGHT_BLUE}deploystack launch --help{colors.RESET}"
         ),
         formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog,
-            max_help_position=35,
+            max_help_position=50,
             width=100
         ),
     )
