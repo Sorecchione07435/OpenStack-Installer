@@ -31,9 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
             "  Launch an instance:\n"
             "    deploystack launch --help"
         ),
-        formatter_class=lambda prog: argparse.HelpFormatter(
+        formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog,
-            max_help_position=30,
+            max_help_position=35,
             width=100
         ),
     )
