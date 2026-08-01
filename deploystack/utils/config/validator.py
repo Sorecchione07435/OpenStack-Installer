@@ -2,6 +2,8 @@ import shutil
 import os
 import ipaddress
 
+from ipaddress import ip_address, ip_network
+
 from .helpers import get_provider_networks, interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int
 from ..core import colors
 from .parser import get
@@ -1037,6 +1039,10 @@ def validate_manila(config) -> bool:
                 print(f"{colors.RED}Error: shares.{name}.share_network is missing{colors.RESET}")
                 ok = False
 
+            if share_network and enabled_backend == "lvm":
+                print(f"{colors.RED}Shares created with the LVM backend do not support the 'share_network' option.{colors.RESET}")
+                ok = False
+
             if not isinstance(access_rules, list):
                 print(f"{colors.RED}Error: shares.{name}.access_rules must be a list{colors.RESET}")
                 ok = False
@@ -1064,6 +1070,20 @@ def validate_manila(config) -> bool:
                 if rule_type not in ("ip", "user", "cert"):
                     print(f"{colors.RED}Error: invalid access rule type '{rule_type}' in shares.{name}{colors.RESET}")
                     ok = False
+
+                if enabled_backend == "lvm":
+                    network = ip_network(f"{lvm_share_export_ip}/24")
+                    ip = ip_address(access)
+
+                    if ip not in network:
+                        print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access "
+                        f"({access}) is not in the same subnet as lvm_share_export_ip "
+                        f"({network}){colors.RESET}")
+                        ok = False
+        
+                if rule_type == "ip" and not validate_ip(access, error_message=False):
+                    print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is an invalid IP{colors.RESET}")
+                    ok = False 
 
                 if level not in ("rw", "ro"):
                     print(f"{colors.RED}Error: invalid access level '{level}' "

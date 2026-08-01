@@ -93,12 +93,13 @@ def is_loop_busy(loop_dev) -> bool:
     )
     return result.returncode == 0
 
-def validate_ip(value: str, field_name: str) -> bool:
+def validate_ip(value: str, field_name: str, error_message = False) -> bool:
     try:
         ipaddress.ip_address(value)
         return True
     except ValueError:
-        print(f"{colors.RED}Error: '{field_name}' contains an invalid IP: {value}{colors.RESET}")
+        if error_message:
+            print(f"{colors.RED}Error: '{field_name}' contains an invalid IP: {value}{colors.RESET}")
         return False
 
 def validate_cidr(value: str, field_name: str) -> bool:
