@@ -110,7 +110,6 @@ def check_deployment(include_endpoints: bool = True):
     elif service_exists("neutron-api.service"):
         services_list.append("neutron-api")
     elif service_exists("neutron-periodic-workers.service"):
-        print("test2")
         services_list.append("neutron-periodic-workers")
 
     checks = [
@@ -155,6 +154,7 @@ def check_deployment(include_endpoints: bool = True):
             add_endpoints_check(["sharev2"])
 
             if not is_debian() and not is_ubuntu_release("26.04"):
+                print("test")
                 add_endpoints_check(["share"])
 
         manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
