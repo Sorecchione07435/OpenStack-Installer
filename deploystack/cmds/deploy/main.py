@@ -1,4 +1,4 @@
-import argparse
+import ipaddress
 import sys
 import os
 
@@ -126,6 +126,12 @@ def init_parser(subparsers):
     )
 
     general_options.add_argument(
+        "--os-management-gateway",
+        type=str,
+        help="Override the OpenStack management gateway interface used by services"
+    )
+
+    general_options.add_argument(
         "--generate-only",
         action="store_true",
         help="Generates a pre-compiled configuration file for the current system without starting the deployment"
@@ -146,6 +152,12 @@ def deploy(parser, args) -> None:
         manila_flag = args.install_manila
 
         neutron_driver = args.neutron_driver or "ovs"
+
+        try:
+            ipaddress.ip_address(args.os_management_gateway)
+        except ValueError:
+            parser.error("--os-management-gateway has a invalid Gateway")
+            sys.exit(1)
 
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"

@@ -43,7 +43,8 @@ def config_openstack(
     manila_backend: str = "",
     manila_share_protocols: str = "",
     os_release: str = "caracal",
-    os_mgmt_iface: str = ""
+    os_mgmt_iface: str = "",
+    os_mgmt_gateway: str = "",
 ):
 
     try:
@@ -91,7 +92,7 @@ def config_openstack(
         mgmt_ip = mgmt_iface_info["ip"]
         mgmt_ip_cidr = mgmt_iface_info["network_cidr"]
         mgmt_netmask = mgmt_iface_info["netmask"]
-        mgmt_gateway = mgmt_iface_info["gateway"]
+        mgmt_gateway = os_mgmt_gateway
     else:
         mgmt_iface = iface
 
