@@ -1072,13 +1072,12 @@ def validate_manila(config) -> bool:
                     ok = False
 
                 if enabled_backend == "lvm":
-                    network = ip_network(f"{lvm_share_export_ip}/24")
-                    ip = ip_address(access)
-
-                    if ip not in network:
-                        print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access "
-                        f"({access}) is not in the same subnet as lvm_share_export_ip "
-                        f"({network}){colors.RESET}")
+                    try:
+                        network = ip_network(lvm_share_export_ip)
+                    except ValueError:
+                        print(f"{colors.RED}Error: shares.{name}.lvm_share_export_ip "
+                            f"must be a valid network in CIDR notation (e.g. 172.20.10.0/24){colors.RESET}"
+                        )
                         ok = False
         
                 if rule_type == "ip" and not validate_ip(access, error_message=False):
