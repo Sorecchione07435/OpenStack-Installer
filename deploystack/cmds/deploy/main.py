@@ -138,6 +138,8 @@ def init_parser(subparsers):
         help="Generates a pre-compiled configuration file for the current system without starting the deployment"
     )
 
+    parser.set_defaults(cmd_parser=parser)
+
     return parser
 
 def deploy(parser, args) -> None:
