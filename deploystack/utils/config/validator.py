@@ -1073,10 +1073,32 @@ def validate_manila(config) -> bool:
 
                 if enabled_backend == "lvm":
                     try:
-                        network = ip_network(lvm_share_export_ip)
+                        lvm_network = ip_network(lvm_share_export_ip, strict=True)
                     except ValueError:
-                        print(f"{colors.RED}Error: shares.{name}.lvm_share_export_ip "
+                        print(
+                            f"{colors.RED}Error: shares.{name}.lvm_share_export_ip "
                             f"must be a valid network in CIDR notation (e.g. 172.20.10.0/24){colors.RESET}"
+                        )
+                        ok = False
+
+                    access_found = False
+
+                    for rule in access_rules:
+                        if rule.get("type") == "ip":
+                            try:
+                                access_network = ip_network(rule.get("access"), strict=True)
+
+                                if access_network.subnet_of(lvm_network):
+                                    access_found = True
+                                    break
+
+                            except ValueError:
+                                pass
+
+                    if not access_found:
+                        print(
+                            f"{colors.RED}Error: shares.{name}.access_rules must contain "
+                            f"at least one CIDR within lvm_share_export_ip ({lvm_network}){colors.RESET}"
                         )
                         ok = False
         
