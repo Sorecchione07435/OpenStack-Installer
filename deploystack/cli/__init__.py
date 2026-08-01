@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog,
-            max_help_position=max_cmd_len + 6,
+            max_help_position=max_cmd_len + 20,
             width=150
         ),
     )
