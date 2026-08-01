@@ -16,11 +16,6 @@ from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-)
-
 logger = logging.getLogger(__name__)
 #logger = logging.get#logger(__name__)
 
@@ -73,10 +68,7 @@ def is_package_installed(pkg_name: str) -> bool:
             ["dpkg-query", "-W", "-f=${Status}", pkg_name],
             capture_output=True, text=True, check=True
         )
-
-        installed = "install ok installed" in result.stdout
-        logger.debug("Package %s installed=%s", pkg_name, installed)
-        return installed
+        return "install ok installed" in result.stdout
     except subprocess.CalledProcessError:
         return False
     
@@ -84,13 +76,7 @@ def check_endpoint(service_name: str) -> bool:
     try:
         output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "-f", "json", "-c Enabled"])
 
-        endpoints = json.loads(output)
-        logger.debug(
-            "Endpoint %s found=%d",
-            service_name,
-            len(endpoints)
-        )
-        return bool(endpoints)
+        return bool(json.loads(output))
 
     except (
         json.JSONDecodeError,
@@ -100,52 +86,30 @@ def check_endpoint(service_name: str) -> bool:
     ):
         return False
 
-def check_service_active(svc):
-    logger.debug("Checking service %s", svc)
-
+def check_service_active(svc: str) -> bool:
     try:
-        result = subprocess.run(...)
-        logger.debug(
-            "Service %s active=%s (rc=%d)",
-            svc,
-            result.returncode == 0,
-            result.returncode
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", svc],
+            timeout=5
         )
         return result.returncode == 0
-    except Exception:
-        logger.exception("Unable to check service %s", svc)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 def check_deployment(include_endpoints: bool = True):
-    logger.debug("Starting deployment check (include_endpoints=%s)", include_endpoints)
-
     result = CheckResult()
 
     services_list = ["apache2", "glance-api"]
-    logger.debug("Initial services: %s", services_list)
 
-    if service_exists("nova-api.service"):
-        logger.debug("nova-api.service exists")
-
-        if is_package_installed("nova-api"):
-            logger.debug("Package nova-api is installed")
-            services_list.append("nova-api.service")
-        else:
-            logger.debug("Package nova-api is NOT installed")
-    else:
-        logger.debug("nova-api.service does not exist")
+    if service_exists("nova-api.service") and is_package_installed("nova-api"):
+        services_list.append("nova-api.service")
 
     if service_exists("neutron-server.service"):
-        logger.debug("Using neutron-server.service")
         services_list.append("neutron-server")
     elif service_exists("neutron-api.service"):
-        logger.debug("Using neutron-api.service")
         services_list.append("neutron-api")
     elif service_exists("neutron-periodic-workers.service"):
-        logger.debug("Using neutron-periodic-workers.service")
         services_list.append("neutron-periodic-workers")
-    else:
-        logger.debug("No neutron service found")
 
     checks = [
         (CheckCategory.SERVICES, services_list, check_service_active),
@@ -211,6 +175,16 @@ def check_deployment(include_endpoints: bool = True):
                 add_config_files_check([smb_conf])
                 add_services_check(samba_services)
 
+            if "nfs" in manila_protocols:
+
+                nfs_services = ["nfs-server.service"]
+
+                if service_exists("nmbd.service"):
+                    samba_services.append("nmbd.service")
+                
+                    add_packages_check(["nfs-server"])
+                    add_services_check(nfs_services)
+
         if "nfs" in manila_protocols:
             add_packages_check(["nfs-kernel-server", "nfs-common"])
             add_services_check(["nfs-server"])
@@ -219,31 +193,12 @@ def check_deployment(include_endpoints: bool = True):
         add_endpoints_check(["identity", "compute", "image", "network"])
 
     for category, items, check_fn in checks:
-        logger.debug("Running %s checks", category)
-
-    for item in items:
+        for item in items:
             label = f"[{category}] {item}"
-
-            logger.debug("Checking %s", label)
-
-            try:
-                ok = check_fn(item)
-            except Exception:
-                logger.exception("Exception while checking %s", label)
-                ok = False
-
-            if ok:
-                logger.debug("PASSED %s", label)
+            if check_fn(item):
                 result.passed.append(label)
             else:
-                logger.debug("FAILED %s", label)
                 result.failed.append(label)
-
-    logger.debug(
-        "Deployment check finished. Passed=%d Failed=%d",
-        len(result.passed),
-        len(result.failed)
-    )
 
     return result
 
