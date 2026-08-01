@@ -1072,6 +1072,7 @@ def validate_manila(config) -> bool:
                     ok = False
 
                 lvm_access_found = False
+                network = ip_network(f"{lvm_share_export_ip}/24", strict=False)
 
                 if enabled_backend == "lvm":
                     for share in shares:
