@@ -16,6 +16,11 @@ from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+)
+
 logger = logging.getLogger(__name__)
 #logger = logging.get#logger(__name__)
 
@@ -68,7 +73,10 @@ def is_package_installed(pkg_name: str) -> bool:
             ["dpkg-query", "-W", "-f=${Status}", pkg_name],
             capture_output=True, text=True, check=True
         )
-        return "install ok installed" in result.stdout
+
+        installed = "install ok installed" in result.stdout
+        logger.debug("Package %s installed=%s", pkg_name, installed)
+        return installed
     except subprocess.CalledProcessError:
         return False
     
@@ -76,7 +84,13 @@ def check_endpoint(service_name: str) -> bool:
     try:
         output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "-f", "json", "-c Enabled"])
 
-        return bool(json.loads(output))
+        endpoints = json.loads(output)
+        logger.debug(
+            "Endpoint %s found=%d",
+            service_name,
+            len(endpoints)
+        )
+        return bool(endpoints)
 
     except (
         json.JSONDecodeError,
@@ -86,31 +100,52 @@ def check_endpoint(service_name: str) -> bool:
     ):
         return False
 
-def check_service_active(svc: str) -> bool:
+def check_service_active(svc):
+    logger.debug("Checking service %s", svc)
+
     try:
-        result = subprocess.run(
-            ["systemctl", "is-active", "--quiet", svc],
-            timeout=5
+        result = subprocess.run(...)
+        logger.debug(
+            "Service %s active=%s (rc=%d)",
+            svc,
+            result.returncode == 0,
+            result.returncode
         )
         return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except Exception:
+        logger.exception("Unable to check service %s", svc)
         return False
 
 def check_deployment(include_endpoints: bool = True):
+    logger.debug("Starting deployment check (include_endpoints=%s)", include_endpoints)
+
     result = CheckResult()
 
     services_list = ["apache2", "glance-api"]
+    logger.debug("Initial services: %s", services_list)
 
-    if service_exists("nova-api.service") and is_package_installed("nova-api"):
-        print("test")
-        services_list.append("nova-api.service")
+    if service_exists("nova-api.service"):
+        logger.debug("nova-api.service exists")
+
+        if is_package_installed("nova-api"):
+            logger.debug("Package nova-api is installed")
+            services_list.append("nova-api.service")
+        else:
+            logger.debug("Package nova-api is NOT installed")
+    else:
+        logger.debug("nova-api.service does not exist")
 
     if service_exists("neutron-server.service"):
+        logger.debug("Using neutron-server.service")
         services_list.append("neutron-server")
     elif service_exists("neutron-api.service"):
+        logger.debug("Using neutron-api.service")
         services_list.append("neutron-api")
     elif service_exists("neutron-periodic-workers.service"):
+        logger.debug("Using neutron-periodic-workers.service")
         services_list.append("neutron-periodic-workers")
+    else:
+        logger.debug("No neutron service found")
 
     checks = [
         (CheckCategory.SERVICES, services_list, check_service_active),
@@ -154,7 +189,6 @@ def check_deployment(include_endpoints: bool = True):
             add_endpoints_check(["sharev2"])
 
             if not is_debian() and not is_ubuntu_release("26.04"):
-                print("test")
                 add_endpoints_check(["share"])
 
         manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
@@ -185,12 +219,31 @@ def check_deployment(include_endpoints: bool = True):
         add_endpoints_check(["identity", "compute", "image", "network"])
 
     for category, items, check_fn in checks:
-        for item in items:
+        logger.debug("Running %s checks", category)
+
+    for item in items:
             label = f"[{category}] {item}"
-            if check_fn(item):
+
+            logger.debug("Checking %s", label)
+
+            try:
+                ok = check_fn(item)
+            except Exception:
+                logger.exception("Exception while checking %s", label)
+                ok = False
+
+            if ok:
+                logger.debug("PASSED %s", label)
                 result.passed.append(label)
             else:
+                logger.debug("FAILED %s", label)
                 result.failed.append(label)
+
+    logger.debug(
+        "Deployment check finished. Passed=%d Failed=%d",
+        len(result.passed),
+        len(result.failed)
+    )
 
     return result
 
