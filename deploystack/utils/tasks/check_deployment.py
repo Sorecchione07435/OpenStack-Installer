@@ -102,6 +102,7 @@ def check_deployment(include_endpoints: bool = True):
     services_list = ["apache2", "glance-api"]
 
     if service_exists("nova-api.service") and is_package_installed("nova-api"):
+        print("test")
         services_list.append("nova-api.service")
 
     if service_exists("neutron-server.service"):
@@ -109,6 +110,7 @@ def check_deployment(include_endpoints: bool = True):
     elif service_exists("neutron-api.service"):
         services_list.append("neutron-api")
     elif service_exists("neutron-periodic-workers.service"):
+        print("test2")
         services_list.append("neutron-periodic-workers")
 
     checks = [
