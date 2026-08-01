@@ -18,7 +18,7 @@ from ....utils.config.setter import set_conf_option
 from ....utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ....utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
-from .utils import wait_manila_backend
+from .utils import wait_manila_backend, create_manila_sudoers_rule
 
 from .utils.shares import create_shares, create_share_types
 
@@ -330,12 +330,7 @@ def finalize(env):
 
     print()
 
-    sudoers_content = "manila ALL=(root) NOPASSWD: /usr/bin/privsep-helper\n"
-
-    with open("/etc/sudoers.d/manila-privsep", "w") as f:
-        f.write(sudoers_content)
-
-    os.chmod("/etc/sudoers.d/manila-privsep", 0o440)
+    create_manila_sudoers_rule()
 
     if not run_command(["systemctl", "restart", "manila-share"], "Restarting Manila Share services...", False, None, 3, 5):
         return False

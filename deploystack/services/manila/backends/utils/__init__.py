@@ -3,6 +3,7 @@ import time
 import pwd
 import grp
 import subprocess
+import os
 
 from .....utils.core.spinner import Spinner
 
@@ -41,6 +42,13 @@ def samba_user_exists(username):
 
     return any(line.partition(":")[0] == username for line in result.stdout.splitlines())
 
+def create_manila_sudoers_rule():
+    sudoers_content = "manila ALL=(root) NOPASSWD: /usr/bin/privsep-helper\n"
+
+    with open("/etc/sudoers.d/manila-privsep", "w") as f:
+        f.write(sudoers_content)
+
+    os.chmod("/etc/sudoers.d/manila-privsep", 0o440)
 
 def wait_manila_backend(env, timeout=120, interval=5):
 
