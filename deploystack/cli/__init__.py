@@ -16,6 +16,17 @@ from ..cmds.image import init_parser as image_config_parser
 
 from ..cmds.volume import init_parser as volume_config_parser
 
+class CustomHelpFormatter(argparse.HelpFormatter):
+    def add_arguments(self, actions):
+        actions = [
+            action for action in actions
+            if not (
+                isinstance(action, argparse._SubParsersAction)
+                and action.dest == "command"
+            )
+        ]
+        super().add_arguments(actions)
+
 def build_parser() -> argparse.ArgumentParser:
 
     parser = ColoredArgumentParser(
@@ -31,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  Launch an instance:\n"
             "    deploystack launch --help"
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=CustomHelpFormatter
     )
 
     subparsers = parser.add_subparsers(
