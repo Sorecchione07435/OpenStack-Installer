@@ -33,7 +33,7 @@ class Spinner:
                 sys.stdout.write(f"\r{self.message} {self.spinner[self.idx]}")
                 sys.stdout.flush()
                 self.idx = (self.idx + 1) % len(self.spinner)
-            time.sleep(0.5)
+            time.sleep(0.3)
 
     def stop(self, done_message="DONE", color="yellow", width=80):
         self.running = False
