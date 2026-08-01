@@ -20,6 +20,8 @@ from ..cmds.volume import init_parser as volume_config_parser
 
 def build_parser() -> argparse.ArgumentParser:
 
+    max_cmd_len = max(len(c) for c in cmds.keys())
+
     parser = ColoredArgumentParser(
         description=(
             "DeployStack - OpenStack deployment and management utility"
@@ -35,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog,
-            max_help_position=50,
+            max_help_position=max_cmd_len + 6,
             width=150
         ),
     )
