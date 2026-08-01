@@ -72,9 +72,6 @@ def config_openstack(
 
     dns_list = []
 
-    if cinder_lvm_image_size_in_gb is None:
-        cinder_lvm_image_size_in_gb = 5
-
     virt_type = "kvm" if has_hw_virtualization() else "qemu"
 
     start_ip = str(ipaddress.IPv4Address(int(ipaddress.IPv4Address(ip)) + 50))
@@ -193,6 +190,9 @@ def config_openstack(
     elif install_manila.lower() == "yes" and install_cinder.lower() == "no":
         manila_loop = get_free_loops(count=1)[0]
     elif install_manila.lower() == "no" and install_cinder.lower() == "yes":
+        if cinder_lvm_image_size_in_gb is None:
+            cinder_lvm_image_size_in_gb = 5
+            
         cinder_loop = get_free_loops(count=1)[0]
 
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
@@ -418,7 +418,10 @@ def config_openstack(
             
             if not manila_lvm_physical_volume:
                 config_dict["manila"]["backends"]["lvm"].update({
-                    "SHARE_EXPORT_IP": "172.20.10.10",
+                    "SHARE_EXPORT_IP": "172.20.10.10",   
+                })
+
+                config_dict["manila"]["backends"]["lvm"]["storage"].update({
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/manila-volumes.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
@@ -426,7 +429,7 @@ def config_openstack(
 
                 config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
             else:
-                config_dict["manila"]["backends"]["lvm"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
+                config_dict["manila"]["backends"]["lvm"]["storage"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
 
             config_dict["manila"]["backends"].pop("generic", None)
     else:

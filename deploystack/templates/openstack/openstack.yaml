@@ -147,25 +147,26 @@ manila:
       # Manila share driver used by this backend.
       SHARE_DRIVER: "manila.share.drivers.lvm.LVMShareDriver"
 
-      SHARE_VOLUME_GROUP: "manila-volumes"
-
       SHARE_EXPORT_IP: "172.20.10.10"
 
-      # -------------------------
-      # Physical volume configuration
-      # -------------------------
+      storage:
+        # -------------------------
+        # Physical volume configuration
+        # -------------------------
 
-      PHYSICAL_VOLUME: ""
+        SHARE_VOLUME_GROUP: "manila-volumes"
 
-      # -------------------------
-      # Loopback device configuration
-      # -------------------------
+        PHYSICAL_VOLUME: ""
 
-      MANILA_LVM_IMAGE_FILE_PATH: "/var/lib/manila/manila-volumes.img"
+        # -------------------------
+        # Loopback device configuration
+        # -------------------------
 
-      MANILA_LVM_IMAGE_SIZE_IN_GB: "10"
+        MANILA_LVM_IMAGE_FILE_PATH: "/var/lib/manila/manila-volumes.img"
 
-      MANILA_LVM_LOOP_PATH: "/dev/loop0"
+        MANILA_LVM_IMAGE_SIZE_IN_GB: "10"
+
+        MANILA_LVM_LOOP_PATH: "/dev/loop0"
 
   # Shares to create automatically after deployment.
   share_types:

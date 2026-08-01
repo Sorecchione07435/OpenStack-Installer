@@ -197,10 +197,10 @@ def create_shares_network(config, env):
 
 def conf_lvm(config):
 
-    lvm_physical_volume = get(config, "manila.backends.lvm.PHYSICAL_VOLUME")
-    lvm_image_file_path = get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH")
-    lvm_loop_dev = get(config, "manila.backends.lvm.MANILA_LVM_LOOP_PATH")
-    lvm_image_size_in_gb = get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB")
+    lvm_physical_volume = get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME")
+    lvm_image_file_path = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH")
+    lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
+    lvm_image_size_in_gb = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_SIZE_IN_GB")
 
     vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
 
@@ -287,7 +287,7 @@ def conf_lvm_manila(config):
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
 
-    vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
+    vg_name = get(config, "manila.backends.lvm.storage.SHARE_VOLUME_GROUP")
     
 
     share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
@@ -359,16 +359,16 @@ def finalize_lvm_backend(config, env):
 
 def run_setup_lvm_backend(config, env):
 
-    lvm_image_file_path = get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH")
-    lvm_loop_dev = get(config, "manila.backends.lvm.MANILA_LVM_LOOP_PATH")
+    lvm_image_file_path = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH")
+    lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
 
-    vg_name = get(config, "manila.backends.lvm.SHARE_VOLUME_GROUP")
+    vg_name = get(config, "manila.backends.lvm.storage.SHARE_VOLUME_GROUP")
 
     if not install_pkgs(): return False
 
     if not conf_lvm(config): return False
 
-    using_loopback = not get(config, "manila.backends.lvm.PHYSICAL_VOLUME")
+    using_loopback = not get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME")
 
     if using_loopback:
         if not write_loopback_lvm_env("manila", lvm_image_file_path, lvm_loop_dev, vg_name, description="Manila Loopback LVM", before_services="manila-share.service"): return False   

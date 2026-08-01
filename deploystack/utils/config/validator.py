@@ -628,10 +628,10 @@ def validate_manila(config) -> bool:
 
         lvm_config = get(config, "manila.backends.lvm")
 
-        lvm_physical_volume = (get(config, "manila.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
+        lvm_physical_volume = (get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME") or "").strip().lower()
 
-        lvm_backend_size_raw = (get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB") or "")
-        lvm_backend_path = (get(config, "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH") or "").strip().lower()
+        lvm_backend_size_raw = (get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_SIZE_IN_GB") or "")
+        lvm_backend_path = (get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH") or "").strip().lower()
 
         lvm_share_driver = get(config, "manila.backends.lvm.SHARE_DRIVER") or ""
         lvm_share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP") or ""
@@ -641,7 +641,7 @@ def validate_manila(config) -> bool:
             "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD",
             "manila.backends.lvm.BACKEND_NAME",
             "manila.backends.lvm.SHARE_DRIVER",
-            "manila.backends.lvm.SHARE_VOLUME_GROUP",
+            "manila.backends.lvm.storage.SHARE_VOLUME_GROUP",
             "manila.backends.lvm.SHARE_EXPORT_IP",
         ]
 
@@ -674,15 +674,15 @@ def validate_manila(config) -> bool:
         else:
             if lvm_backend_size_raw:
 
-                loopback_lvm_size = validate_positive_int(lvm_backend_size_raw, "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB")
+                loopback_lvm_size = validate_positive_int(lvm_backend_size_raw, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_SIZE_IN_GB")
 
                 if loopback_lvm_size is None:
                     ok = False
 
             required_lvm_loopback_fields = [
-                "manila.backends.lvm.MANILA_LVM_IMAGE_FILE_PATH",
-                "manila.backends.lvm.MANILA_LVM_IMAGE_SIZE_IN_GB",
-                "manila.backends.lvm.MANILA_LVM_LOOP_PATH",
+                "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH",
+                "manila.backends.lvm.storage.MANILA_LVM_IMAGE_SIZE_IN_GB",
+                "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH",
             ]
 
             for field in required_lvm_loopback_fields:
@@ -690,7 +690,7 @@ def validate_manila(config) -> bool:
                     print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                     ok = False
 
-            lvm_loop_path = (get(config, "manila.backends.lvm.MANILA_LVM_LOOP_PATH") or "").lower()
+            lvm_loop_path = (get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH") or "").lower()
 
             if lvm_loop_path and not lvm_loop_path.startswith("/dev/loop"):
                 print(f"{colors.RED}Error: MANILA_LVM_LOOP_PATH must be a loop device, "
