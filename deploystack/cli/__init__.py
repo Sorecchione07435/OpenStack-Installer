@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         title="Commands",
         dest="command",
-        metavar=""
+        metavar="",
         required=True
     )
 
