@@ -9,7 +9,7 @@ def init_parser(subparsers):
 
     parser = subparsers.add_parser(
         "generate-config",
-        help="Generate a template configuration file",
+        help="  Generate a template configuration file",
     )
 
     parser.add_argument("file", help="Path to configuration file")
