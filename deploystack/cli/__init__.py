@@ -19,10 +19,23 @@ from ..cmds.volume import init_parser as volume_config_parser
 def build_parser() -> argparse.ArgumentParser:
 
     parser = ColoredArgumentParser(
-        description="DeployStack Utility"
+        description=(
+            "DeployStack - OpenStack deployment and management utility"
+        ),
+        epilog=(
+            "Examples:\n"
+            "  Deploy a single-node OpenStack environment:\n"
+            "    deploystack deploy --allinone\n\n"
+            "  Generate a configuration file:\n"
+            "    deploystack generate-config config.yaml\n\n"
+            "  Launch an instance:\n"
+            "    deploystack launch --help"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
     subparsers = parser.add_subparsers(
+        title="Commands",
         dest="command",
         metavar="<command>",
         required=True
