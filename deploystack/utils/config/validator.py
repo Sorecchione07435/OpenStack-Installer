@@ -1081,8 +1081,13 @@ def validate_manila(config) -> bool:
                         ok = False
         
                 if rule_type == "ip" and not validate_ip(access, field_name=None, error_message=False):
-                    print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is an invalid IP{colors.RESET}")
-                    ok = False 
+                    try:
+                        ip_network(access, strict=True)
+                    except ValueError:
+                        print(
+                            f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is an invalid CIDR{colors.RESET}"
+                        )
+                        ok = False
 
                 if level not in ("rw", "ro"):
                     print(f"{colors.RED}Error: invalid access level '{level}' "
