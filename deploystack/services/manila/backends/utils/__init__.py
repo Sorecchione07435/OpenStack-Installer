@@ -138,11 +138,11 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
                     status = share_info.get("status", "").lower()
 
                     if status == "available":
-                        spinner.stop(done_message="DONE", color="yellow", width=70)
+                        spinner.stop(done_message="DONE", color="yellow", width=60)
                         return share_info
 
                     if status in ("error", "error_deleting"):
-                        spinner.stop(done_message="ERROR", color="red", width=70)
+                        spinner.stop(done_message="ERROR", color="red", width=60)
 
                         print(f"\n{colors.RED}ERROR: {share_name} entered error state: {status}{colors.RESET}\n")
 
@@ -160,7 +160,7 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
 
             time.sleep(0.1)
 
-        spinner.stop(done_message="TIMEOUT", color="red", width=70)
+        spinner.stop(done_message="TIMEOUT", color="red", width=60)
 
         print(
             f"\n{colors.RED}ERROR: {share_name} did not become available "
@@ -171,7 +171,7 @@ def wait_share_available(share_name, env, timeout=120, interval=5):
 
     finally:
         if spinner.running:
-            spinner.stop(done_message="FAILED", color="red", width=70)
+            spinner.stop(done_message="FAILED", color="red", width=60)
 
 def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
@@ -194,11 +194,11 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
                     status = share_info.get("status", "").lower()
 
                     if status == "available":
-                        spinner.stop(done_message="DONE", color="yellow", width=70)
+                        spinner.stop(done_message="DONE", color="yellow", width=60)
                         return share_info
 
                     if status in ("error", "error_deleting"):
-                        spinner.stop(done_message="ERROR", color="red", width=70)
+                        spinner.stop(done_message="ERROR", color="red", width=60)
 
                         print(f"\n{colors.RED}ERROR: {share_name} entered error state: {status}{colors.RESET}\n")
 
@@ -218,7 +218,7 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
             time.sleep(0.1)
 
-        spinner.stop(done_message="TIMEOUT", color="red", width=70)
+        spinner.stop(done_message="TIMEOUT", color="red", width=60)
 
         print(
             f"\n{colors.RED}ERROR: {share_name} did not become available "
@@ -229,4 +229,4 @@ def wait_dhss_share_available(share_name, env, timeout=600, interval=10):
 
     finally:
         if spinner.running:
-            spinner.stop(done_message="FAILED", color="red", width=70)
+            spinner.stop(done_message="FAILED", color="red", width=60)

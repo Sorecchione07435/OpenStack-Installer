@@ -54,7 +54,7 @@ def conf_shares_bridge(config):
 
     print()
 
-    if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding Shares bridge...") : return False
+    if not run_command(["ovs-vsctl", "--may-exist", "add-br", "br-shares"], "Adding shares bridge...") : return False
 
     shares_config = f"""
 auto br-shares
@@ -63,7 +63,6 @@ iface br-shares inet static
     netmask 255.255.255.0
     post-up ip route add 10.0.0.0/24 via {share_export_gateway_ip} dev br-shares
     pre-down ip route del 10.0.0.0/24 via {share_export_gateway_ip} dev br-shares
-    post-up sysctl -w net.ipv4.conf.br-shares.rp_filter=2
 """
 
     with open(INTERFACES_FILE, "w") as f:
@@ -77,8 +76,8 @@ iface br-shares inet static
 
     print()
 
-    run_command(["ip", "addr", "flush", "dev", "br-shares"], f"Flushing IPs on Shares bridge", ignore_errors=True)
-    run_command(["ip", "link", "set", "br-shares", "down"], f"Bringing Shares bridge down", ignore_errors=True)
+    run_command(["ip", "addr", "flush", "dev", "br-shares"], f"Flushing IPs on shares bridge", ignore_errors=True)
+    run_command(["ip", "link", "set", "br-shares", "down"], f"Bringing shares bridge down", ignore_errors=True)
 
     print()
 
