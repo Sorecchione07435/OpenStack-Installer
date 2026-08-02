@@ -33,6 +33,7 @@ from ....utils.core import colors
 manila_conf = "/etc/manila/manila.conf"
 
 conf_ml2 = "/etc/neutron/plugins/ml2/ml2_conf.ini"
+conf_openvswitch = "/etc/neutron/plugins/ml2/openvswitch_agent.ini"
 
 def install_pkgs():
 
@@ -133,7 +134,7 @@ iface br-shares inet static
 
         print()
 
-        ovs_bridge_mappings = get_conf_option(conf_ml2, "ovs", "bridge_mappings")
+        ovs_bridge_mappings = get_conf_option(conf_openvswitch, "ovs", "bridge_mappings")
 
         bridge_mappings = [n for n in ovs_bridge_mappings.split(",") if n]
 
@@ -142,7 +143,7 @@ iface br-shares inet static
 
         ovs_bridge_mappings_str = ",".join(bridge_mappings)
 
-        set_conf_option(conf_ml2, "ovs", "bridge_mappings", ovs_bridge_mappings_str)
+        set_conf_option(conf_openvswitch, "ovs", "bridge_mappings", ovs_bridge_mappings_str)
 
         print()  
 
