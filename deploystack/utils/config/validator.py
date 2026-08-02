@@ -991,7 +991,9 @@ def validate_manila(config) -> bool:
             service_network_names = { net.get("name").lower() for net in service_networks if isinstance(net, dict) and net.get("name") }
 
         lvm_cidr_found = False
-        network = ip_network(f"{lvm_share_export_ip}/24", strict=False)
+
+        if enabled_backend == "lvm":
+            network = ip_network(f"{lvm_share_export_ip}/24", strict=False)
 
         if enabled_backend == "lvm":
             try:
