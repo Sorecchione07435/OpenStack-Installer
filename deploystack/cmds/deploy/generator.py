@@ -428,7 +428,10 @@ def config_openstack(
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
                 })
 
-                config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
+                if manila_share_protocols.lower() in "cifs":
+                    config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
+                else:
+                    config_dict["manila"]["backends"]["lvm"].pop("samba", None)
             else:
                 config_dict["manila"]["backends"]["lvm"]["storage"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
 
