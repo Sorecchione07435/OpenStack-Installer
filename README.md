@@ -99,7 +99,7 @@ git pull
 ```
 
 > [!INFO]
-> * The installed package will reflect updates after reinstalling with `pip install .`.
+> - The installed package will reflect updates after reinstalling with `pip install .`.
 
 
 
