@@ -93,8 +93,8 @@ def conf_ovs_bridges(config):
 
         if iface_exists(bridge):
             if port:
-                run_command_sync(["ovs-vsctl", "--if-exists", "del-port", bridge, port], f"Deleting port {port} from {bridge}")
-            run_command_sync(["ovs-vsctl", "--if-exists", "del-br", bridge], f"Deleting bridge {bridge}")
+                run_command_sync(["ovs-vsctl", "--if-exists", "del-port", bridge, port])
+            run_command_sync(["ovs-vsctl", "--if-exists", "del-br", bridge])
 
     print()
 
