@@ -8,9 +8,12 @@ from ....utils.apt.apt import apt_install
 from ....utils.config.parser import get
 from ....utils.core import colors
 
+from ....utils.core.system_utils import is_debian
+
 from ....utils.config.helpers import parse_bool
 
-settings_file = "/etc/openstack-dashboard/local_settings.py"
+local_settings_file = "/etc/openstack-dashboard/local_settings.py"
+manila_shares_settings_file = "/etc/openstack-dashboard/local_settings.d/_90_manila_shares.py"
 
 manila_ui_enabled_dir = "/usr/lib/python3/dist-packages/manila_ui/local/enabled/"
 openstack_dashboard_local_enabled_dir = "/usr/share/openstack-dashboard/openstack_dashboard/local/enabled/"
@@ -26,12 +29,19 @@ def disable_unsupported_protocols_options(config):
 
     protocols = get(config, "manila.SHARE_PROTOCOLS") or []
 
+    current_settings_file = ""
+
+    if is_debian():
+        current_settings_file = manila_shares_settings_file
+    else:
+        current_settings_file = local_settings_file
+
     try:
         OPENSTACK_MANILA_FEATURES = {
             "enabled_share_protocols": protocols
         }
 
-        with open(settings_file, "r") as f:
+        with open(current_settings_file, "r") as f:
             content = f.read()
 
         content = re.sub(
@@ -47,7 +57,7 @@ def disable_unsupported_protocols_options(config):
             + "\n"
         )
 
-        with open(settings_file, "w") as f:
+        with open(current_settings_file, "w") as f:
             f.write(content)
 
         return True
@@ -138,12 +148,12 @@ def setup_manila_horizon(config):
     if not install_pkgs():
         return False
 
-    if not add_dashboard_ui_symlink():
-        return False
-
     if not is_generic:
         if not disable_dhss_dashboard_panels():
             return False
+
+    if not add_dashboard_ui_symlink():
+        return False
 
     if not disable_unsupported_protocols_options(config):
         return False
