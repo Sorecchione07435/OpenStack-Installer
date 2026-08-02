@@ -84,7 +84,7 @@ deploystack --help
 > [!WARNING]
 > DeployStack installed from source currently requires root execution. Since the deploystack executable resides inside the virtual environment, sudo cannot locate it.
 >
-> Copy venv/Scripts/deploystack to /usr/bin/deploystack so it is available system-wide.
+> Copy `venv/Scripts/deploystack` to `/usr/bin/deploystack` so it is available system-wide.
 
 
 ---
