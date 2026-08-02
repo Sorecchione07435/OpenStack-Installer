@@ -11,7 +11,6 @@ import json
 from ....utils.core.commands import run_command, os_run, os_run_output
 from ....utils.apt.apt import apt_install
 
-
 from ....utils.config.parser import get, get_conf_option
 from ....utils.config.setter import set_conf_option
 
@@ -22,7 +21,9 @@ from .utils import wait_manila_backend, create_manila_sudoers_rule
 
 from .utils.shares import create_shares, create_share_types
 
-from ....utils.core.system_utils import service_exists, is_debian
+from ....utils.core.system_utils import service_exists, is_debian, is_ubuntu_release
+
+from ...patches.manila.directio import run_setup_directio_patch
 
 from .protocols.nfs import run_setup_nfs
 from .protocols.samba import run_setup_samba
@@ -367,6 +368,9 @@ def run_setup_lvm_backend(config, env):
     if using_loopback:
         if not write_loopback_lvm_env("manila", lvm_image_file_path, lvm_loop_dev, vg_name, description="Manila Loopback LVM", before_services="manila-share.service"): return False   
         if not setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, "manila"): return False   
+
+        if not is_debian() and is_ubuntu_release("26.04"):
+            if not run_setup_directio_patch(): return False
 
     if not conf_lvm_manila(config): return False
 

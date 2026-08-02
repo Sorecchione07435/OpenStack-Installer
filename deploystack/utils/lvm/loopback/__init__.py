@@ -139,7 +139,7 @@ def setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, service):
 
         with open(LOOPBACK_START_SCRIPT, "r") as f:
             template = f.read()
-            cinder_loopback_service_start_script_content = template.format(
+            loopback_service_start_script_content = template.format(
                 lvm_loop_dev=lvm_loop_dev,
                 lvm_image_file_path=lvm_image_file_path,
                 VG_NAME=vg_name
@@ -147,15 +147,15 @@ def setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, service):
 
         with open(LOOPBACK_STOP_SCRIPT, "r") as f:
             template = f.read()
-            cinder_loopback_service_stop_script_content = template.format(
+            loopback_service_stop_script_content = template.format(
                 lvm_loop_dev=lvm_loop_dev,
                 lvm_image_file_path=lvm_image_file_path,
                 VG_NAME=vg_name
             )
 
         for path, content in [
-            (f"/usr/local/bin/{service}-loopback-start.sh", cinder_loopback_service_start_script_content),
-            (f"/usr/local/bin/{service}-loopback-stop.sh", cinder_loopback_service_stop_script_content),
+            (f"/usr/local/bin/{service}-loopback-start.sh", loopback_service_start_script_content),
+            (f"/usr/local/bin/{service}-loopback-stop.sh", loopback_service_stop_script_content),
             ]:
             with open(path, "w") as f:
                 f.write(content)
