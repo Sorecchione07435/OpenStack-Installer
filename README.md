@@ -12,7 +12,8 @@ The instructions below describe a **temporary installation** method for developm
 
 ## 1. System Preparation
 
-> ⚠️ **Compatibility note**: DeployStack only runs stably on **Ubuntu 22.04/24.04 LTS**. On other distributions or versions, some features may not work as expected.
+> [!WARNING]
+> **Compatibility note**: DeployStack only runs stably on **Ubuntu 22.04/24.04 LTS**. On other distributions or versions, some features may not work as expected.
 
 Ensure you have the necessary tools for Python 3:
 
@@ -45,6 +46,7 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
+> [!NOTE]
 > Using a virtual environment avoids conflicts with system packages.
 
 ---
@@ -76,9 +78,13 @@ deploystack --help
 
 ✅ DeployStack is now ready for development and testing.
 
-> ⚠️ **Note:** For production, an official `.deb` package will be provided, which installs the CLI properly in the system PATH and manages dependencies automatically.
+> [!NOTE]
+>  For production, an official `.deb` package will be provided, which installs the CLI properly in the system PATH and manages dependencies automatically.
 
-> ⚠️ **Warning:** DeployStack installed from source currently requires root execution. The `sudo` command is unable to resolve the `deploystack` binary in `/usr/bin` because it resides within the virtual environment rather than the system path.
+> [!WARNING]
+> DeployStack installed from source currently requires root execution. The `sudo` command is unable to resolve the `deploystack` binary in `/usr/bin` because it resides within the virtual environment rather than the system path.
+>
+> To solve this you can copy the DeployStack binary located inside the virtual env `venv/Scripts/deploystack` to `/usr/bin/deploystack` so that it is accessible even without being logged in as root.
 
 
 ---
@@ -92,7 +98,8 @@ cd ~/DeployStack
 git pull
 ```
 
-* The installed package will reflect updates after reinstalling with `pip install .`.
+> [!INFO]
+> * The installed package will reflect updates after reinstalling with `pip install .`.
 
 
 
