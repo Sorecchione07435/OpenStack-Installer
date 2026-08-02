@@ -82,9 +82,9 @@ deploystack --help
 >  For production, an official `.deb` package will be provided, which installs the CLI properly in the system PATH and manages dependencies automatically.
 
 > [!WARNING]
-> DeployStack installed from source currently requires root execution. The `sudo` command is unable to resolve the `deploystack` binary in `/usr/bin` because it resides within the virtual environment rather than the system path.
+> DeployStack installed from source currently requires root execution. Since the deploystack executable resides inside the virtual environment, sudo cannot locate it.
 >
-> To solve this you can copy the DeployStack binary located inside the virtual env `venv/Scripts/deploystack` to `/usr/bin/deploystack` so that it is accessible even without being logged in as root.
+> Copy venv/Scripts/deploystack to /usr/bin/deploystack so it is available system-wide.
 
 
 ---
