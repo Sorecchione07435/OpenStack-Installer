@@ -132,8 +132,6 @@ iface br-shares inet static
 
     elif neutron_driver == "ovs":
 
-        print()
-
         ovs_bridge_mappings = get_conf_option(conf_openvswitch, "ovs", "bridge_mappings")
 
         bridge_mappings = [n for n in ovs_bridge_mappings.split(",") if n]
