@@ -637,13 +637,23 @@ def validate_manila(config) -> bool:
         lvm_share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP") or ""
 
         lvm_backend_fields = [
-            "manila.backends.lvm.samba.SAMBA_SERVER_USER",
-            "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD",
             "manila.backends.lvm.BACKEND_NAME",
             "manila.backends.lvm.SHARE_DRIVER",
             "manila.backends.lvm.storage.SHARE_VOLUME_GROUP",
             "manila.backends.lvm.SHARE_EXPORT_IP",
         ]
+
+        for protocol in share_protocols:
+            if "CIFS" in protocol:
+                samba_fields = [
+                    "manila.backends.lvm.samba.SAMBA_SERVER_USER",
+                    "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD",
+                ]
+
+                for field in samba_fields:
+                    if not get(config, field) :
+                        print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                        ok = False
 
         if not lvm_config:
             print(f"{colors.RED}Error: manila.backends.lvm section is missing{colors.RESET}")
