@@ -429,7 +429,7 @@ def config_openstack(
                 })
 
                 for protocol in manila_share_protocols:
-                    if manila_share_protocols.lower() in "cifs":
+                    if protocol.lower() in "cifs":
                         config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
                     else:
                         config_dict["manila"]["backends"]["lvm"].pop("samba", None)
