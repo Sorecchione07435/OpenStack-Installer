@@ -353,12 +353,12 @@ def finalize_lvm_backend(config, env):
 
     create_shares = parse_bool((get(config, "manila.CREATE_SHARES") or "").lower(), False)
 
+    default_type_shares = get(config, "manila.share_types") or []
+
+    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
+
     if create_shares:
         shares = get(config, "manila.shares") or []
-        default_type_shares = get(config, "manila.share_types") or []
-
-
-        if not create_share_types(default_type_shares=default_type_shares, env=env): return False
 
         if not create_shares(shares=shares, env=env, dhss=False): return False
 

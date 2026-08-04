@@ -115,6 +115,8 @@ def finalize_generic_backend(config, env):
 
     generic_service_image_name = get(config, "manila.backends.generic.SERVICE_IMAGE_NAME")
 
+    default_type_shares = get(config, "manila.share_types") or []
+
     generic_service_instance_flavor_name = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.NAME")
     generic_service_instance_flavor_id = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.ID")
     generic_service_instance_flavor_ram = get(config, "manila.backends.generic.SERVICE_INSTANCE_FLAVOR.RAM")
@@ -126,6 +128,8 @@ def finalize_generic_backend(config, env):
     networks_list = json.loads(os_run_output(["openstack", "network", "list", "-f", "json"], env=env) or "[]")
     images_list = json.loads(os_run_output(["openstack", "image", "list", "-f", "json"], env=env) or "[]")
     flavors_list = json.loads(os_run_output(["openstack", "flavor", "list", "-f", "json"], env=env) or "[]")
+    
+    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
 
     manila_service_image_exists = any(image.get("Name") == generic_service_image_name for image in images_list)
 
@@ -183,10 +187,7 @@ def finalize_generic_backend(config, env):
 
     if create_shares:
         shares = get(config, "manila.shares") or []
-        default_type_shares = get(config, "manila.share_types") or []
 
-        if not create_share_types(default_type_shares=default_type_shares, env=env): return False
-        
         if not create_shares(shares=shares, env=env, dhss=True): return False
 
     return True
