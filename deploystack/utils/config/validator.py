@@ -552,6 +552,8 @@ def validate_manila(config) -> bool:
     share_types = get(config, "manila.share_types") or []
     shares = get(config, "manila.shares") or []
 
+    create_shares = (get(config, "manila.CREATE_SHARES") or "").lower()
+
     if isinstance(share_protocols, str):
         share_protocols = [share_protocols]
 
@@ -568,6 +570,10 @@ def validate_manila(config) -> bool:
         print(f"{colors.RED}Error: manila.backend is missing{colors.RESET}")
         ok = False
 
+    if not create_shares:
+        print(f"{colors.RED}Error: manila.CREATE_SHARES is missing{colors.RESET}")
+        ok = False
+
     if not share_protocols:
         print(f"{colors.RED}Error: manila.SHARE_PROTOCOLS is empty{colors.RESET}")
         ok = False
@@ -580,6 +586,11 @@ def validate_manila(config) -> bool:
         print(f"{colors.RED}Error: manila.backend '{enabled_backend}' "
         f"is not a valid backend{colors.RESET}"
     )
+        ok = False
+
+    if str(create_shares).lower() not in ("yes", "no", "true", "false"):
+        print(f"{colors.RED}Error: invalid manila.CREATE_SHARES "
+        f"must be yes/no{colors.RESET}")
         ok = False
 
     for protocol in share_protocols:
@@ -974,16 +985,7 @@ def validate_manila(config) -> bool:
     else:
         share_names = set()
 
-        valid_access_types = {
-            "ip",
-            "user",
-            "cert"
-            }
-
-        valid_access_levels = {
-            "rw",
-            "ro"
-        }
+        valid_access_levels = { "rw", "ro" }
 
         share_type_names = { st.get("name").lower() for st in share_types if isinstance(st, dict) and st.get("name") }
 
@@ -1088,7 +1090,7 @@ def validate_manila(config) -> bool:
                 ok = False
 
             if share_network and enabled_backend == "lvm":
-                print(f"{colors.RED}Shares created with the LVM backend do not support the 'share_network' option.{colors.RESET}")
+                print(f"{colors.RED}Shares with the LVM backend do not support the 'share_network' option.{colors.RESET}")
                 ok = False
 
             if not isinstance(access_rules, list):
@@ -1126,7 +1128,7 @@ def validate_manila(config) -> bool:
                         print(f"{colors.RED}Error: shares.{name}.access_rules[{idx}].access is an invalid CIDR{colors.RESET}")
                         ok = False
 
-                if level not in ("rw", "ro"):
+                if level not in valid_access_levels:
                     print(f"{colors.RED}Error: invalid access level '{level}' "
                     f"in shares.{name}.access_rules[{idx}] "
                     f"(allowed: rw, ro){colors.RESET}"

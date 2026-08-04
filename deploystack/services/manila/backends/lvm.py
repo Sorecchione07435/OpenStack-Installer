@@ -14,6 +14,8 @@ from ....utils.apt.apt import apt_install
 from ....utils.config.parser import get, get_conf_option
 from ....utils.config.setter import set_conf_option
 
+from ....utils.config.helpers import parse_bool
+
 from ....utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ....utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
@@ -158,6 +160,13 @@ def create_shares_network(config, env):
 
     share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
 
+    neutron_driver = config.get("neutron", {}).get("DRIVER", "ovs").lower()
+    create_bridges = (
+            get(config, "neutron.ovn.CREATE_BRIDGES", "no").lower() == "yes"
+            if neutron_driver == "ovn"
+            else get(config, "neutron.ovs.CREATE_BRIDGES", "no").lower() == "yes"
+        )
+
     share_ip = ipaddress.ip_interface(f"{share_export_ip}/24")
 
     share_ip_cidr = share_ip.network
@@ -180,17 +189,17 @@ def create_shares_network(config, env):
     if not shares_subnet_exists:
         if not os_run(["openstack", "subnet", "create", "shares_subnet", "--subnet-range", str(share_ip_cidr), "--gateway", share_gateway_ip, "--no-dhcp", "--network", "shares"], "Creating shares subnet...", env=env) : return False
 
-    shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
+    if create_bridges:
+        shares_subnet_id = os_run_output(["openstack", "subnet", "show", "shares_subnet", "-f", "value", "-c", "id"], env=env).strip()
+        internal_router_info = json.loads(os_run_output(["openstack", "router", "show", "internal_router", "-f", "json"], env=env))
 
-    internal_router_info = json.loads(os_run_output(["openstack", "router", "show", "internal_router", "-f", "json"], env=env))
+        interfaces = internal_router_info.get("interfaces_info", [])
+        shares_router_subnet_attached = any(iface.get("subnet_id") == shares_subnet_id for iface in interfaces)
 
-    interfaces = internal_router_info.get("interfaces_info", [])
-    shares_router_subnet_attached = any(iface["subnet_id"] == shares_subnet_id for iface in interfaces)
+        if not shares_router_subnet_attached:
+            print()
 
-    if not shares_router_subnet_attached:
-        print()
-
-        if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding shares subnet to internal router...", env=env): return False
+            if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding shares subnet to internal router...", env=env): return False
 
     return True
 
@@ -342,12 +351,16 @@ def finalize(env):
 
 def finalize_lvm_backend(config, env):
 
-    shares = get(config, "manila.shares") or []
-    default_type_shares = get(config, "manila.share_types") or []
+    create_shares = parse_bool((get(config, "manila.CREATE_SHARES") or "").lower(), False)
 
-    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
+    if create_shares:
+        shares = get(config, "manila.shares") or []
+        default_type_shares = get(config, "manila.share_types") or []
 
-    if not create_shares(shares=shares, env=env, dhss=False): return False
+
+        if not create_share_types(default_type_shares=default_type_shares, env=env): return False
+
+        if not create_shares(shares=shares, env=env, dhss=False): return False
 
     return True
 

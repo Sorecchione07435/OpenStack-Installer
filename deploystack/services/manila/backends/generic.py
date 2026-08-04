@@ -108,6 +108,8 @@ def finalize(env):
 
 def finalize_generic_backend(config, env):
 
+    create_shares = parse_bool((get(config, "manila.CREATE_SHARES") or "").lower(), False)
+
     manila_temp_image_file = "/tmp/manila-service-image.qcow2"
     manila_image_url = "https://tarballs.opendev.org/openstack/manila-image-elements/images/manila-service-image-master.qcow2"
 
@@ -121,14 +123,9 @@ def finalize_generic_backend(config, env):
 
     service_networks = get(config, "manila.backends.generic.service_networks") or []
 
-    shares = get(config, "manila.shares") or []
-    default_type_shares = get(config, "manila.share_types") or []
-
     networks_list = json.loads(os_run_output(["openstack", "network", "list", "-f", "json"], env=env) or "[]")
     images_list = json.loads(os_run_output(["openstack", "image", "list", "-f", "json"], env=env) or "[]")
     flavors_list = json.loads(os_run_output(["openstack", "flavor", "list", "-f", "json"], env=env) or "[]")
-
-    if not create_share_types(default_type_shares=default_type_shares, env=env): return False
 
     manila_service_image_exists = any(image.get("Name") == generic_service_image_name for image in images_list)
 
@@ -184,7 +181,13 @@ def finalize_generic_backend(config, env):
 
             if not os_run(["openstack", "share", "network", "create", "--name", network_name, "--neutron-net-id", str(neutron_network_id), "--neutron-subnet-id", str(neutron_subnet_id)], f"Creating tenant share '{network_name}' network...", env=env): return False
 
-    if not create_shares(shares=shares, env=env, dhss=True): return False
+    if create_shares:
+        shares = get(config, "manila.shares") or []
+        default_type_shares = get(config, "manila.share_types") or []
+
+        if not create_share_types(default_type_shares=default_type_shares, env=env): return False
+        
+        if not create_shares(shares=shares, env=env, dhss=True): return False
 
     return True
 

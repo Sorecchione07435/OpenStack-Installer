@@ -12,7 +12,7 @@ from ..utils.config.setter import set_conf_option
 from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 from ..utils.core.system_utils import service_exists, is_debian
-from ..utils.lvm.loopback import set_lvm_filter, write_loopback_lvm_env, setup_loopback_service
+from ..utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ..utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
 cinder_conf = "/etc/cinder/cinder.conf"

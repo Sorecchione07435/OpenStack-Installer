@@ -98,6 +98,11 @@ manila:
   # lvm: exports shares directly from the storage node using LVM (simple, single-node)
   BACKEND: "generic"
 
+  # Automatically create Manila shares defined in the configuration.
+  # yes: creates configured shares after the backend setup is completed
+  # no: only configures Manila backend without creating shares
+  CREATE_SHARES: "yes"
+
   # Supported share protocols.
   # Examples: NFS, CIFS
 

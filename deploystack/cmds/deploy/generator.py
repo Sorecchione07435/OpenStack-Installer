@@ -222,6 +222,7 @@ def config_openstack(
 
         service_networks = []
 
+        config_dict["manila"]["CREATE_SHARES"] = "yes"
         config_dict["manila"]["BACKEND"] = manila_backend
         config_dict["manila"]["SHARE_PROTOCOLS"] = [
             protocol.upper() for protocol in manila_share_protocols
