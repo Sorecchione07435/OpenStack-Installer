@@ -108,7 +108,7 @@ def finalize(env):
 
 def finalize_generic_backend(config, env):
 
-    create_shares = parse_bool((get(config, "manila.CREATE_SHARES") or "").lower(), False)
+    create_shares_enabled = parse_bool((get(config, "manila.CREATE_SHARES") or "").lower(), False)
 
     manila_temp_image_file = "/tmp/manila-service-image.qcow2"
     manila_image_url = "https://tarballs.opendev.org/openstack/manila-image-elements/images/manila-service-image-master.qcow2"
@@ -185,7 +185,7 @@ def finalize_generic_backend(config, env):
 
             if not os_run(["openstack", "share", "network", "create", "--name", network_name, "--neutron-net-id", str(neutron_network_id), "--neutron-subnet-id", str(neutron_subnet_id)], f"Creating tenant share '{network_name}' network...", env=env): return False
 
-    if create_shares:
+    if create_shares_enabled:
         shares = get(config, "manila.shares") or []
 
         if not create_shares(shares=shares, env=env, dhss=True): return False
