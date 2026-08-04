@@ -99,6 +99,6 @@ git pull
 ```
 
 > [!TIP]
-> * The installed package will reflect updates after reinstalling with `pip install .`.
+> The installed package will reflect updates after reinstalling with `pip install .`.
 
 For usage instructions and additional documentation, see the Wiki at [DeployStack Wiki](https://github.com/Sorecchione07435/DeployStack/wiki).
