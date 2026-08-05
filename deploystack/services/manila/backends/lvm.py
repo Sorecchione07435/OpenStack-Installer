@@ -8,7 +8,7 @@ import shutil
 import ipaddress
 import json
 
-from ....utils.core.commands import run_command, os_run, os_run_output
+from ....utils.core.commands import run_command, os_run, os_run_output, run_commands
 from ....utils.apt.apt import apt_install
 
 from ....utils.config.parser import get, get_conf_option
@@ -203,6 +203,38 @@ def create_shares_network(config, env):
 
     return True
 
+def setup_iptables_rules(config):
+
+    print()
+
+    protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
+    enabled_share_protocols = ",".join(protocols)
+
+    if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
+
+    iptables_commands = [
+        "iptables -P INPUT DROP",
+        "iptables -P FORWARD DROP",
+        "iptables -P OUTPUT ACCEPT",
+
+        "iptables -A INPUT -i lo -j ACCEPT",
+        "iptables -A INPUT -i br-shares -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT",
+    ]
+
+    if "NFS" in enabled_share_protocols:
+        iptables_commands.append("iptables -A INPUT -i br-shares -p tcp --dport 2049 -j ACCEPT")
+        iptables_commands.append("iptables -A INPUT -i br-shares -p udp --dport 2049 -j ACCEPT")
+
+    if "CIFS" in enabled_share_protocols:
+        iptables_commands.append("iptables -A INPUT -i br-shares -p tcp --dport 445 -j ACCEPT")
+        iptables_commands.append("iptables -A INPUT -i br-shares -p udp --dport 445 -j ACCEPT")
+
+    if not run_commands(iptables_commands, "Applying firewall policy...") : return False
+
+    if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
+
+    return True
+
 def conf_lvm(config):
 
     lvm_physical_volume = get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME")
@@ -388,6 +420,7 @@ def run_setup_lvm_backend(config, env):
 
     if not conf_shares_bridge(config): return False
     if not create_shares_network(config, env) : return False
+    if not setup_iptables_rules(config): return False
 
     if not finalize(env): return False
     if not finalize_lvm_backend(config, env=env): return False
