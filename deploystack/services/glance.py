@@ -99,7 +99,7 @@ def upload_cirros_image(env):
 
     if not run_command(
         ["wget", "-O", image_file_path, cirros_image_url],
-        "Downloading Cirros image...",
+        "Downloading cirros image...",
         False, None, 5, 5
     ):
         return False
@@ -144,7 +144,7 @@ def upload_cirros_image(env):
         "--disk-format", "qcow2",
         "--container-format", "bare",
         "--public"
-    ], "Adding Cirros image...", env=env):
+    ], "Uploading cirros image...", env=env):
         return False
 
     os.remove(image_file_path)
