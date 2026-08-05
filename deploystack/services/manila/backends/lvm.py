@@ -213,23 +213,23 @@ def setup_iptables_rules(config):
     if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
 
     iptables_commands = [
-        "iptables -P INPUT DROP",
-        "iptables -P FORWARD DROP",
-        "iptables -P OUTPUT ACCEPT",
+        "iptables", "-P", "INPUT", "DROP",
+        "iptables", "-P", "FORWARD", "DROP",
+        "iptables", "-P", "OUTPUT", "ACCEPT",
 
-        "iptables -A INPUT -i lo -j ACCEPT",
-        "iptables -A INPUT -i br-shares -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT",
+        "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT",
+        "iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT",
     ]
 
     if "NFS" in enabled_share_protocols:
-        iptables_commands.append("iptables -A INPUT -i br-shares -p tcp --dport 2049 -j ACCEPT")
-        iptables_commands.append("iptables -A INPUT -i br-shares -p udp --dport 2049 -j ACCEPT")
+        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "2049", "-j", "ACCEPT")
+        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "2049", "-j", "ACCEPT")
 
     if "CIFS" in enabled_share_protocols:
-        iptables_commands.append("iptables -A INPUT -i br-shares -p tcp --dport 445 -j ACCEPT")
-        iptables_commands.append("iptables -A INPUT -i br-shares -p udp --dport 445 -j ACCEPT")
+        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "445", "-j", "ACCEPT")
+        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "445", "-j", "ACCEPT")
 
-    if not run_commands(iptables_commands, "Applying firewall policy...") : return False
+    if not run_commands(iptables_commands, "Applying firewall rules...") : return False
 
     if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
 
