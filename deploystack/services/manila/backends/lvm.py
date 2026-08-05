@@ -8,7 +8,7 @@ import tempfile
 import ipaddress
 import json
 
-from ....utils.core.commands import run_command, os_run, os_run_output, run_commands, run_command_sync
+from ....utils.core.commands import run_command, os_run, os_run_output, run_commands, run_command_sync, run_command_output
 from ....utils.apt.apt import apt_install
 
 from ....utils.config.parser import get, get_conf_option
@@ -179,21 +179,22 @@ def setup_iptables_rules(config):
 
     print()
 
-    def rule_exists(rule_args):
-        check_cmd = ["iptables", "-C"] + rule_args
-        return run_command_sync(check_cmd, check=False)
+    def _iptables_rule_exists(rule_args):
+        try:
+            run_command_output(["iptables", "-C"] + rule_args)
+            return True
+        except Exception:
+            return False
 
-    def ensure_rule(chain, *rule_args):
-        full_rule = [chain] + list(rule_args)
-        if not rule_exists(full_rule):
-            cmd = ["iptables", "-A"] + full_rule
-            if not run_command(cmd, f"Applying rule: {' '.join(cmd)}"):
-                return False
-        return True
+    def _iptables_chain_exists(chain_name):
+        try:
+            run_command_output(["iptables", "-nL", chain_name])
+            return True
+        except Exception:
+            return False
 
     def ensure_chain(chain_name):
-        list_cmd = ["iptables", "-nL", chain_name]
-        if not run_command_sync(list_cmd, check=False):
+        if not _iptables_chain_exists(chain_name):
             if not run_command(["iptables", "-N", chain_name], f"Creating chain {chain_name}..."):
                 return False
         return True
@@ -201,8 +202,13 @@ def setup_iptables_rules(config):
     if not run_command(["iptables", "-P", "OUTPUT", "ACCEPT"], "Setting OUTPUT policy..."):
         return False
 
-    if not ensure_rule("INPUT", "-i", "lo", "-j", "ACCEPT"):
-        return False
+    def ensure_rule(chain, *rule_args):
+        full_rule = [chain] + list(rule_args)
+        if not _iptables_rule_exists(full_rule):
+            cmd = ["iptables", "-A"] + full_rule
+            if not run_command(cmd, f"Applying rule: {' '.join(cmd)}"):
+                return False
+        return True
 
     if not ensure_rule(
         "INPUT", "-i", "br-shares",
