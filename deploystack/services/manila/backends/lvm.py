@@ -180,12 +180,12 @@ def setup_iptables_rules(config):
     print()
 
     iptables_commands = [
-        "iptables", "-P", "INPUT", "DROP",
-        "iptables", "-P", "FORWARD", "DROP",
-        "iptables", "-P", "OUTPUT", "ACCEPT",
+        ["iptables", "-P", "INPUT", "DROP"],
+        ["iptables", "-P", "FORWARD", "DROP"],
+        ["iptables", "-P", "OUTPUT", "ACCEPT"],
 
-        "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT",
-        "iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT",
+        ["iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+        ["iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
     ]
 
     if "NFS" in enabled_share_protocols:
