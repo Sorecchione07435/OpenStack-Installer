@@ -70,7 +70,7 @@ def create_share_types(default_type_shares, env):
         ]
 
         if is_share_public:
-            cmd += ["--public", "True"]
+            cmd += ["--public", "true"]
 
         if extra_specs:
             cmd.append("--extra-specs")
@@ -101,6 +101,10 @@ def create_shares(shares, env, dhss: bool = False):
             share_type = share.get("share_type")
             share_protocol = share["share_protocol"]
             share_size = share["share_size"]
+            is_public = parse_bool(
+                        share_type.get("is_public"),
+                        False
+                    )
             share_network = None
 
             if dhss:
@@ -118,6 +122,9 @@ def create_shares(shares, env, dhss: bool = False):
 
                 if dhss:
                     share_create_cmd += ["--share-network", share_network]
+
+                if is_public:
+                    cmd += ["--public", "true"]
                 
                 share_create_cmd += [share_protocol, str(share_size)]
 
