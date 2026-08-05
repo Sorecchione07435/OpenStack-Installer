@@ -4,7 +4,7 @@ import os
 import pwd
 import grp
 import subprocess
-import shutil
+import tempfile
 import ipaddress
 import json
 
@@ -162,41 +162,80 @@ def setup_iptables_rules(config):
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
 
-    with open("/tmp/iptables-persistent.seed", "w") as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
         f.write(
             "iptables-persistent iptables-persistent/autosave_v4 boolean true\n"
-            "iptables-persistent iptables-persistent/autosave_v6 boolean true\n"
+            "iptables-persistent iptables-persistent/autosave_v6 boolean false\n"
         )
+        seed_file = f.name
 
-    if not run_command_sync([
-        "debconf-set-selections",
-        "/tmp/iptables-persistent.seed"
-    ]) : return False
-
-    os.remove("/tmp/iptables-persistent.seed")
+    try:
+        if not run_command_sync(["debconf-set-selections", seed_file]):
+            return False
+    finally:
+        os.remove(seed_file)
 
     if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
 
     print()
 
-    iptables_commands = [
-        ["iptables", "-P", "INPUT", "DROP"],
-        ["iptables", "-P", "FORWARD", "DROP"],
-        ["iptables", "-P", "OUTPUT", "ACCEPT"],
+    def rule_exists(rule_args):
+        check_cmd = ["iptables", "-C"] + rule_args
+        return run_command_sync(check_cmd, check=False)
 
-        ["iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
-        ["iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
-    ]
+    def ensure_rule(chain, *rule_args):
+        full_rule = [chain] + list(rule_args)
+        if not rule_exists(full_rule):
+            cmd = ["iptables", "-A"] + full_rule
+            if not run_command(cmd, f"Applying rule: {' '.join(cmd)}"):
+                return False
+        return True
+
+    def ensure_chain(chain_name):
+        list_cmd = ["iptables", "-nL", chain_name]
+        if not run_command_sync(list_cmd, check=False):
+            if not run_command(["iptables", "-N", chain_name], f"Creating chain {chain_name}..."):
+                return False
+        return True
+
+    if not run_command(["iptables", "-P", "OUTPUT", "ACCEPT"], "Setting OUTPUT policy..."):
+        return False
+
+    if not ensure_rule("INPUT", "-i", "lo", "-j", "ACCEPT"):
+        return False
+
+    if not ensure_rule(
+        "INPUT", "-i", "br-shares",
+        "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED",
+        "-j", "ACCEPT"
+    ):
+        return False
+
+    if not ensure_chain("BR_SHARES"):
+        return False
+
+    if not run_command(["iptables", "-F", "BR_SHARES"], "Flushing br_shares chain..."):
+        return False
+
+    if not ensure_rule("INPUT", "-i", "br-shares", "-j", "BR_SHARES"):
+        return False
+
+    br_shares_rules = []
 
     if "NFS" in enabled_share_protocols:
-        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "2049", "-j", "ACCEPT"])
-        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "2049", "-j", "ACCEPT"])
+        br_shares_rules.append(["-p", "tcp", "--dport", "2049", "-j", "ACCEPT"])
+        br_shares_rules.append(["-p", "udp", "--dport", "2049", "-j", "ACCEPT"])
 
     if "CIFS" in enabled_share_protocols:
-        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "445", "-j", "ACCEPT"])
-        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "445", "-j", "ACCEPT"])
+        br_shares_rules.append(["-p", "tcp", "--dport", "445", "-j", "ACCEPT"])
+        br_shares_rules.append(["-p", "udp", "--dport", "445", "-j", "ACCEPT"])
 
-    if not run_commands(iptables_commands, "Applying firewall rules...") : return False
+    br_shares_rules.append(["-j", "DROP"])
+
+    iptables_commands = [["iptables", "-A", "BR_SHARES"] + r for r in br_shares_rules]
+
+    if not run_commands(iptables_commands, "Applying firewall rules..."):
+        return False
 
     if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
 
