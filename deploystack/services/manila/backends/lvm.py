@@ -159,6 +159,8 @@ iface br-shares inet static
 
 def setup_iptables_rules(config):
 
+    print()
+
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
 
@@ -202,29 +204,32 @@ def setup_iptables_rules(config):
     if not run_command(["iptables", "-P", "OUTPUT", "ACCEPT"], "Setting OUTPUT policy..."):
         return False
 
-    def ensure_rule(chain, *rule_args):
+    def ensure_rule(chain, *rule_args, description=None):
         full_rule = [chain] + list(rule_args)
         if not _iptables_rule_exists(full_rule):
             cmd = ["iptables", "-A"] + full_rule
-            if not run_command(cmd, f"Applying rule: {' '.join(cmd)}"):
+            if not run_command(cmd, description):
                 return False
         return True
 
     if not ensure_rule(
         "INPUT", "-i", "br-shares",
         "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED",
-        "-j", "ACCEPT"
-    ):
+        "-j", "ACCEPT", description="Allowing established/related traffic on br-shares..."):
         return False
 
     if not ensure_chain("BR_SHARES"):
         return False
 
+    print()
+
     if not run_command(["iptables", "-F", "BR_SHARES"], "Flushing br_shares chain..."):
         return False
 
-    if not ensure_rule("INPUT", "-i", "br-shares", "-j", "BR_SHARES"):
+    if not ensure_rule("INPUT", "-i", "br-shares", "-j", "BR_SHARES", description="Routing br-shares traffic to BR_SHARES chain..."):
         return False
+
+    print()
 
     br_shares_rules = []
 
@@ -242,6 +247,8 @@ def setup_iptables_rules(config):
 
     if not run_commands(iptables_commands, "Applying firewall rules..."):
         return False
+
+    print()
 
     if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
 
