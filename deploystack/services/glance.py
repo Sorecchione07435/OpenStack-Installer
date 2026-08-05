@@ -82,27 +82,18 @@ def upload_cirros_image(env):
     filename = cirros_image_url.split("/")[-1]
     image_file_path = f"/tmp/{filename}"
 
-    images_list_json = os_run_output(
-        ["openstack", "image", "list", "-f", "json"],
-        env=env
-    )
+    images_list_json = os_run_output(["openstack", "image", "list", "-f", "json"], env=env)
+
     images_list = json.loads(images_list_json)
 
-    cirros_image_exists = any(
-        image.get("Name") == image_name for image in images_list
-    )
+    cirros_image_exists = any(image.get("Name") == image_name for image in images_list)
 
     if cirros_image_exists:
         return True
 
     print()
 
-    if not run_command(
-        ["wget", "-O", image_file_path, cirros_image_url],
-        "Downloading cirros image...",
-        False, None, 5, 5
-    ):
-        return False
+    if not run_command(["wget", "-O", image_file_path, cirros_image_url], "Downloading cirros image...", False, None, 5, 5): return False
 
     if not os.path.exists(image_file_path) or os.path.getsize(image_file_path) == 0:
         print(f"{colors.RED}ERROR: Invalid Cirros image download (missing or empty file){colors.RESET}")
