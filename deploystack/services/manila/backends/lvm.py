@@ -156,6 +156,52 @@ iface br-shares inet static
     
     return True
 
+
+def setup_iptables_rules(config):
+
+    protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
+    enabled_share_protocols = ",".join(protocols)
+
+    with open("/tmp/iptables-persistent.seed", "w") as f:
+        f.write(
+            "iptables-persistent iptables-persistent/autosave_v4 boolean true\n"
+            "iptables-persistent iptables-persistent/autosave_v6 boolean true\n"
+        )
+
+    if not run_command_sync([
+        "debconf-set-selections",
+        "/tmp/iptables-persistent.seed"
+    ]) : return False
+
+    os.remove("/tmp/iptables-persistent.seed")
+
+    if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
+
+    print()
+
+    iptables_commands = [
+        "iptables", "-P", "INPUT", "DROP",
+        "iptables", "-P", "FORWARD", "DROP",
+        "iptables", "-P", "OUTPUT", "ACCEPT",
+
+        "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT",
+        "iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT",
+    ]
+
+    if "NFS" in enabled_share_protocols:
+        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "2049", "-j", "ACCEPT"])
+        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "2049", "-j", "ACCEPT"])
+
+    if "CIFS" in enabled_share_protocols:
+        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "445", "-j", "ACCEPT"])
+        iptables_commands.append(["iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "445", "-j", "ACCEPT"])
+
+    if not run_commands(iptables_commands, "Applying firewall rules...") : return False
+
+    if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
+
+    return True
+
 def create_shares_network(config, env):
 
     share_export_ip = get(config, "manila.backends.lvm.SHARE_EXPORT_IP")
@@ -200,53 +246,6 @@ def create_shares_network(config, env):
             print()
 
             if not os_run(["openstack", "router", "add", "subnet", "internal_router", shares_subnet_id], "Adding shares subnet to internal router...", env=env): return False
-
-    return True
-
-def setup_iptables_rules(config):
-
-    print()
-
-    protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
-    enabled_share_protocols = ",".join(protocols)
-
-    with open("/tmp/iptables-persistent.seed", "w") as f:
-        f.write(
-            "iptables-persistent iptables-persistent/autosave_v4 boolean true\n"
-            "iptables-persistent iptables-persistent/autosave_v6 boolean true\n"
-        )
-
-    if not run_command_sync([
-        "debconf-set-selections",
-        "/tmp/iptables-persistent.seed"
-    ]) : return False
-
-    os.remove("/tmp/iptables-persistent.seed")
-
-    if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
-
-    print()
-
-    iptables_commands = [
-        "iptables", "-P", "INPUT", "DROP",
-        "iptables", "-P", "FORWARD", "DROP",
-        "iptables", "-P", "OUTPUT", "ACCEPT",
-
-        "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT",
-        "iptables", "-A", "INPUT", "-i", "br-shares", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT",
-    ]
-
-    if "NFS" in enabled_share_protocols:
-        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "2049", "-j", "ACCEPT")
-        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "2049", "-j", "ACCEPT")
-
-    if "CIFS" in enabled_share_protocols:
-        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "tcp", "--dport", "445", "-j", "ACCEPT")
-        iptables_commands.append("iptables", "-A", "INPUT", "-i", "br-shares", "-p", "udp", "--dport", "445", "-j", "ACCEPT")
-
-    if not run_commands(iptables_commands, "Applying firewall rules...") : return False
-
-    if not run_command(["netfilter-persistent", "save"], "Saving iptables rules...") : return False
 
     return True
 
