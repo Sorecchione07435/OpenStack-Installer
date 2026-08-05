@@ -212,6 +212,8 @@ def setup_iptables_rules(config):
 
     if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
 
+    print()
+
     iptables_commands = [
         "iptables", "-P", "INPUT", "DROP",
         "iptables", "-P", "FORWARD", "DROP",
