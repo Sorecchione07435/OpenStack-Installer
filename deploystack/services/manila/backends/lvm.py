@@ -8,7 +8,7 @@ import shutil
 import ipaddress
 import json
 
-from ....utils.core.commands import run_command, os_run, os_run_output, run_commands
+from ....utils.core.commands import run_command, os_run, os_run_output, run_commands, run_command_sync
 from ....utils.apt.apt import apt_install
 
 from ....utils.config.parser import get, get_conf_option
@@ -209,6 +209,19 @@ def setup_iptables_rules(config):
 
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
+
+    with open("/tmp/iptables-persistent.seed", "w") as f:
+        f.write(
+            "iptables-persistent iptables-persistent/autosave_v4 boolean true\n"
+            "iptables-persistent iptables-persistent/autosave_v6 boolean true\n"
+        )
+
+    if not run_command_sync([
+        "debconf-set-selections",
+        "/tmp/iptables-persistent.seed"
+    ]) : return False
+
+    os.remove("/tmp/iptables-persistent.seed")
 
     if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
 
