@@ -101,10 +101,7 @@ def create_shares(shares, env, dhss: bool = False):
             share_type = share.get("share_type")
             share_protocol = share["share_protocol"]
             share_size = share["share_size"]
-            is_public = parse_bool(
-                        share_type.get("is_public"),
-                        False
-                    )
+            is_public = parse_bool(share["is_public"], False)
             share_network = None
 
             if dhss:
