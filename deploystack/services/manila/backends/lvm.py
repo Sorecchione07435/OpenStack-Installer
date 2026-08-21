@@ -301,6 +301,8 @@ def create_shares_network(config, env):
 
 def conf_lvm(config):
 
+    os.makedirs("/var/lib/manila/images", exist_ok=True)
+
     lvm_physical_volume = get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME")
     lvm_image_file_path = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH")
     lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
