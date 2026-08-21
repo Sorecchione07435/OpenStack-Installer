@@ -25,6 +25,8 @@ from ...services.neutron import run_setup_neutron
 from ...services.manila import run_setup_manila
 from ...services.horizon import run_setup_horizon
 
+from ...services import get_base_host
+
 from ...utils.config.helpers import parse_bool
 
 def deploy(config_file):
@@ -133,11 +135,11 @@ def deploy(config_file):
 
     if install_horizon:
         if is_debian():
-            print(f" - Horizon Dashboard: http://{ip_address}/horizon")
+            print(f" - Horizon Dashboard: http://{get_base_host(config)}/horizon")
         else:
-            print(f" - Horizon Dashboard: http://{ip_address}/dashboard")
+            print(f" - Horizon Dashboard: http://{get_base_host(config)}/dashboard")
 
-    print(f" - Keystone API:      http://{ip_address}:5000/\n")
+    print(f" - Keystone API:      http://{get_base_host(config)}:5000/\n")
 
     print(f"{colors.YELLOW}Tip:{colors.RESET} Use the ADMIN credentials you configured in your config file to log in.")
     print(f"{colors.YELLOW}Note:{colors.RESET} Make sure your firewall allows HTTP/HTTPS access to this host.")
