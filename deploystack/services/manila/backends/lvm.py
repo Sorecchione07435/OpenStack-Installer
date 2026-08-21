@@ -159,8 +159,6 @@ iface br-shares inet static
 
 def setup_iptables_rules(config):
 
-    print()
-
     protocols = get(config, "manila.SHARE_PROTOCOLS", default=["NFS"])
     enabled_share_protocols = ",".join(protocols)
 

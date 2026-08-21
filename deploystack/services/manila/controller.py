@@ -98,7 +98,7 @@ def finalize(config):
 
     return True
     
-def run_setup_common_manila(config, backend_fn, env):
+def run_setup_controller_manila(config, backend_fn, env):
 
     backend = get(config, "manila.BACKEND")
 

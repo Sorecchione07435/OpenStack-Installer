@@ -121,7 +121,7 @@ def create_shares(shares, env, dhss: bool = False):
                     share_create_cmd += ["--share-network", share_network]
 
                 if is_public:
-                    cmd += ["--public", "true"]
+                    share_create_cmd += ["--public", "true"]
                 
                 share_create_cmd += [share_protocol, str(share_size)]
 

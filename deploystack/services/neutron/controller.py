@@ -129,7 +129,7 @@ def finalize():
 
     return True
 
-def run_setup_neutron_common(config, driver_fn, env):
+def run_setup_controller_neutron(config, driver_fn, env):
     
     if not install_pkgs(): return False
     if not conf_neutron(config): return False
