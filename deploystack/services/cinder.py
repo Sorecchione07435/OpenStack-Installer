@@ -137,6 +137,8 @@ def conf_cinder(config):
     volume_clear = get(config, "cinder.VOLUME_CLEAR")
     volume_clear_size = int(get(config, "cinder.VOLUME_CLEAR_SIZE"))
 
+    VG_NAME = get(config, "cinder.lvm.VOLUME_GROUP")
+
     if isinstance(target_scsi_ip_address, dict) or target_scsi_ip_address is None or "{network.HOST_IP}" in str(target_scsi_ip_address):
         target_scsi_ip_address = ip_address 
 
@@ -160,7 +162,7 @@ def conf_cinder(config):
     set_conf_option(cinder_conf, "keystone_authtoken", "password", service_password)
 
     set_conf_option(cinder_conf, "lvm", "volume_driver", "cinder.volume.drivers.lvm.LVMVolumeDriver")
-    set_conf_option(cinder_conf, "lvm", "volume_group", "cinder-volumes")
+    set_conf_option(cinder_conf, "lvm", "volume_group", VG_NAME)
     set_conf_option(cinder_conf, "lvm", "volume_backend_name", "LVM")
     set_conf_option(cinder_conf, "lvm", "iscsi_protocol", "iscsi")
     set_conf_option(cinder_conf, "lvm", "iscsi_helper", "tgtadm")
@@ -205,7 +207,8 @@ def conf_cinder(config):
     db_migration_cmd = [
     "sudo", "-u", "cinder",
     "cinder-manage", "db", "sync"
-]
+    ]
+
     if not run_command(db_migration_cmd, "Running Cinder DB Migrations...") : return False
     
     return True

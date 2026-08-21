@@ -15,6 +15,8 @@ from ..utils.config.helpers import parse_bool
 
 from .manila.horizon import setup_manila_horizon
 
+from . import get_base_host
+
 settings_file = "/etc/openstack-dashboard/local_settings.py"
 
 ubuntu_apache_conf = "/etc/apache2/conf-enabled/openstack-dashboard.conf"
@@ -145,8 +147,8 @@ def conf_horizon(config):
         return False
 
     settings_to_set = {
-        "OPENSTACK_HOST": f'"{ip_address}"',
-        "OPENSTACK_KEYSTONE_URL": f'"http://{ip_address}:5000/v3"',
+        "OPENSTACK_HOST": f'"{get_base_host(config)}"',
+        "OPENSTACK_KEYSTONE_URL": f'"http://{get_base_host(config)}:5000/v3"',
         "DEBUG": "False",
         "ALLOWED_HOSTS": "['*']",
         "DEFAULT_THEME": "'default'",

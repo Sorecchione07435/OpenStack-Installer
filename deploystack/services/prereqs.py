@@ -36,6 +36,47 @@ UBUNTU_NATIVE_OPENSTACK = {
     "resolute": "gazpacho",    # 26.04
 }
 
+def update_etc_hosts(ip_address, domain):
+    hosts_path = "/etc/hosts"
+    
+    short_name = domain.split('.')[0]
+    
+    entry = f"{ip_address} {domain} {short_name}"
+    
+    try:
+        with open(hosts_path, "r") as f:
+            lines = f.readlines()
+            
+        updated = False
+        new_lines = []
+        for line in lines:
+
+            if domain in line:
+                new_lines.append(f"{entry}\n")
+                updated = True
+            else:
+                new_lines.append(line)
+
+        if not updated:
+            new_lines.append(f"\n{entry}\n")
+            
+        with open(hosts_path, "w") as f:
+            f.writelines(new_lines)
+            
+        return True
+    except PermissionError:
+        return False
+
+def set_hostname(config):
+    ip_address = get(config, "network.HOST_IP")
+    host_domain = get(config, "network.HOST_DOMAIN")
+
+    if not run_command(["hostnamectl", "set-hostname", host_domain], f"Setting Hostname to '{host_domain}'...") : return False
+
+    if not update_etc_hosts(ip_address, host_domain) : return False
+
+    return True
+
 def _add_uca_repo(release: str):
     
     result = run_command(
@@ -208,6 +249,10 @@ def add_rabbitmq_openstack_user(config):
 def run_setup_prereqs(config):
 
     ip_address = get(config, "network.HOST_IP")
+    host_domain = get(config, "network.HOST_DOMAIN") or None
+
+    if host_domain:
+        if not set_hostname(config) : return False
 
     if not set_openstack_release(config): return False
     if not install_pkgs(config): return False

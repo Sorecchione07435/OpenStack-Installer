@@ -13,6 +13,8 @@ network:
   HOST_DNS_SERVERS: 
   HOST_MGMT_INTERFACE: ""
 
+  HOST_DOMAIN: ""
+
 neutron:
   DRIVER: "ovs"           # ovs | ovn
   

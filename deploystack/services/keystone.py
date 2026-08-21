@@ -11,6 +11,8 @@ from ..utils.config.setter import set_conf_option
 from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
+from . import get_base_host
+
 keystone_conf = "/etc/keystone/keystone.conf"
 
 def get_endpoints(env=None):
@@ -43,15 +45,16 @@ def install_pkgs():
 def conf_keystone(config):
 
     print()
+
+    ip_address = get(config, "network.HOST_IP")
       
     db_password = get(config, "passwords.DATABASE_PASSWORD")
-    ip_address = get(config, "network.HOST_IP")
 
     admin_password = get(config, "passwords.ADMIN_PASSWORD")
 
     os_region_name = get(config, "openstack.REGION_NAME")
 
-    identity_url = f"http://{ip_address}:5000/v3/"
+    identity_url = f"http://{get_base_host(config)}:5000/v3/"
 
     set_conf_option(keystone_conf, "database", "connection", f"mysql+pymysql://keystone:{db_password}@{ip_address}/keystone")
 
@@ -251,8 +254,6 @@ def create_services_users(config, env):
 def create_services_endpoints(config, env):
 
     print()
-  
-    ip_address = get(config, "network.HOST_IP")
 
     install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
     install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
@@ -260,11 +261,11 @@ def create_services_endpoints(config, env):
     os_region_name = get(config, "openstack.REGION_NAME")
     os_release = get(config, "openstack.OPENSTACK_RELEASE")
 
-    glance_url = f"http://{ip_address}:9292"
+    glance_url = f"http://{get_base_host(config)}:9292"
 
-    placement_url = f"http://{ip_address}:8778"
-    nova_url = f"http://{ip_address}:8774/v2.1"
-    neutron_url = f"http://{ip_address}:9696"
+    placement_url = f"http://{get_base_host(config)}:8778"
+    nova_url = f"http://{get_base_host(config)}:8774/v2.1"
+    neutron_url = f"http://{get_base_host(config)}:9696"
 
     endpoints = get_endpoints(env=env)
 
@@ -319,7 +320,7 @@ def create_services_endpoints(config, env):
     if install_manila:
 
         if os_release == "gazpacho":
-            manila_url = f"http://{ip_address}:8786/v2"
+            manila_url = f"http://{get_base_host(config)}:8786/v2"
 
             if ("sharev2", "public", os_region_name, manila_url) not in existing_endpoints:
                 endpoints_create_cmds.append(["openstack", "endpoint", "create", "--region", os_region_name, "sharev2", "public", manila_url])
@@ -330,8 +331,8 @@ def create_services_endpoints(config, env):
             if ("sharev2", "admin", os_region_name, manila_url) not in existing_endpoints:
                 endpoints_create_cmds.append(["openstack", "endpoint", "create", "--region", os_region_name, "sharev2", "admin", manila_url])
         else:
-            manilav1_url = f"http://{ip_address}:8786/v1/%(tenant_id)s"
-            manilav2_url = f"http://{ip_address}:8786/v2"
+            manilav1_url = f"http://{get_base_host(config)}:8786/v1/%(tenant_id)s"
+            manilav2_url = f"http://{get_base_host(config)}:8786/v2"
 
             if ("share", "public", os_region_name, manilav1_url) not in existing_endpoints:
                 endpoints_create_cmds.append(["openstack", "endpoint", "create", "--region", os_region_name, "share", "public", manilav1_url])
@@ -352,7 +353,7 @@ def create_services_endpoints(config, env):
                 endpoints_create_cmds.append(["openstack", "endpoint", "create", "--region", os_region_name, "sharev2", "admin", manilav2_url])
 
     if install_cinder:
-        cinder_url = f"http://{ip_address}:8776/v3/%(project_id)s"
+        cinder_url = f"http://{get_base_host(config)}:8776/v3/%(project_id)s"
 
         if ("volumev3", "public", os_region_name, cinder_url) not in existing_endpoints:
             endpoints_create_cmds.append(["openstack", "endpoint", "create", "--region", os_region_name, "volumev3", "public", cinder_url])
@@ -369,8 +370,6 @@ def create_services_endpoints(config, env):
 
 def generate_environment_cli_scripts(config):
      
-    ip_address = get(config, "network.HOST_IP")
-
     admin_password = get(config, "passwords.ADMIN_PASSWORD")
     demo_password = get(config, "passwords.DEMO_PASSWORD")
      
@@ -380,7 +379,7 @@ export OS_USER_DOMAIN_NAME=Default
 export OS_PROJECT_NAME=admin
 export OS_USERNAME=admin
 export OS_PASSWORD={admin_password}
-export OS_AUTH_URL=http://{ip_address}:5000/v3
+export OS_AUTH_URL=http://{get_base_host(config)}:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
      """
@@ -391,7 +390,7 @@ export OS_USER_DOMAIN_NAME=Default
 export OS_PROJECT_NAME=demo
 export OS_USERNAME=demo
 export OS_PASSWORD={demo_password}
-export OS_AUTH_URL=http://{ip_address}:5000/v3
+export OS_AUTH_URL=http://{get_base_host(config)}:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
 """
