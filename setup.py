@@ -39,7 +39,8 @@ setup(
         "tqdm",
         "bs4",
         "passlib",
-        "pexpect"
+        "pexpect",
+        "validators"
     ],
     python_requires=">=3.10",
     entry_points={

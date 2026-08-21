@@ -71,9 +71,11 @@ def set_hostname(config):
     ip_address = get(config, "network.HOST_IP")
     host_domain = get(config, "network.HOST_DOMAIN")
 
-    if not run_command(["hostnamectl", "set-hostname", host_domain], f"Setting Hostname to '{host_domain}'...") : return False
+    if not run_command(["hostnamectl", "set-hostname", host_domain], f"Setting Hostname to {host_domain}...") : return False
 
     if not update_etc_hosts(ip_address, host_domain) : return False
+
+    print()
 
     return True
 

@@ -5,6 +5,8 @@ import subprocess
 from .parser import get
 from ..core import colors
 
+prohibited_pw_chars = [' ', '$', '`', '\\']
+
 def get_root_device():
     try:
         return subprocess.check_output(

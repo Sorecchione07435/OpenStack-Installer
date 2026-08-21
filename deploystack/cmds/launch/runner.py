@@ -10,6 +10,8 @@ import json
 import ipaddress
 from passlib.hash import sha512_crypt
 
+from ...utils.config.helpers import prohibited_pw_chars
+
 from ...utils.core import colors
 from ...templates import CLOUD_CONFIG_LINUX, CLOUD_CONFIG_LINUX_NO_ROOT
 
@@ -487,12 +489,8 @@ def launch(
     timeout: int        = 100
 ) -> None:
 
-    prohibited_pw_chars = [' ', '$', '`', '\\']
-
     os.makedirs(SSH_KEY_PATH, exist_ok=True)
     key_path = os.path.join(SSH_KEY_PATH, f"id_{name}")
-
-    #keypair = ensure_keypair(key_path, name)
 
     image_id   = get_default_image(image)
     flavor_id  = get_default_flavor(flavor)
@@ -546,7 +544,6 @@ def launch(
     )
 
     if password_enabled and password:
-
         server_id = create_server_with_password(
             name, image_id, flavor_id, network_id,
             keypair, os_type, os_admin_user, password, public_key

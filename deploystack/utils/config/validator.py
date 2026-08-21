@@ -1,14 +1,15 @@
 import shutil
 import os
 import ipaddress
+import validators
 
 from ipaddress import ip_address, ip_network
 
-from .helpers import get_provider_networks, interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int
+from .helpers import interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int
 from ..core import colors
 from .parser import get
 
-from ...utils.config.helpers import parse_bool
+from ...utils.config.helpers import parse_bool, prohibited_pw_chars
 
 # --- Passwords ---
 def validate_passwords(config) -> bool:
@@ -19,6 +20,14 @@ def validate_passwords(config) -> bool:
         if not value:
             print(f"{colors.RED}Error: passwords.{key} is not set{colors.RESET}")
             ok = False
+
+        if " " in value:
+            print(f"{colors.RED}Error: '{required}' password invalid: contains spaces{colors.RESET}")
+            ok = False
+        elif any(c in value for c in prohibited_pw_chars):
+            print(f"{colors.RED}Error: '{required}' password invalid: contains illegal characters{colors.RESET}")
+            ok = False
+
     return ok
 
 # --- Public network ---
@@ -57,6 +66,13 @@ def validate_host_network(config) -> bool:
         for dns in dns_list:
             if not validate_ip(dns, "network.HOST_DNS_SERVERS"):
                 ok = False
+
+    host_domain = get(config, "network.HOST_DOMAIN") or ""
+
+    if host_domain:
+        if not validators.domain(host_domain):
+            print(f"{colors.RED}Error: Field 'network.HOST_DOMAIN' as invalid domain name")
+            ok = False
 
     return ok
 
@@ -665,6 +681,15 @@ def validate_manila(config) -> bool:
                     if not get(config, field) :
                         print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                         ok = False
+
+                samba_password = get(config, "manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD")
+
+                if " " in samba_password:
+                    print(f"{colors.RED}Error: 'manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD' password invalid: contains spaces{colors.RESET}")
+                    ok = False
+                elif any(c in value for c in prohibited_pw_chars):
+                    print(f"{colors.RED}Error: 'manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD' password invalid: contains illegal characters{colors.RESET}")
+                    ok = False
 
         if not lvm_config:
             print(f"{colors.RED}Error: manila.backends.lvm section is missing{colors.RESET}")
