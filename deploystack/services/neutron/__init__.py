@@ -1,6 +1,6 @@
 from .ovs import run_setup_ovs_neutron
 from .ovn import run_setup_ovn_neutron
-from .common import run_setup_neutron_common
+from .controller import run_setup_neutron_common
 
 def run_setup_neutron(config, env):
     driver = config.get("neutron", {}).get("DRIVER", "ovs").lower()
