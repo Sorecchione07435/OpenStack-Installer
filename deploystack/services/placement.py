@@ -57,14 +57,10 @@ def finalize(config):
     
     ip_address = get(config, "network.HOST_IP")    
 
-    placement_service = []
-
     if service_exists("placement-api.service") and is_debian():
-        placement_service.append("placement-api")
+        if not run_command(["systemctl", "restart", "placement-api"], "Restarting Placement API..."): return False
     else:
-        placement_service.append("apache2")
-
-    if not run_command(["systemctl", "restart"] + placement_service, "Restarting Apache2..."): return False
+        if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."): return False
     
     if not nc_wait(ip_address, 8778) : return False
 

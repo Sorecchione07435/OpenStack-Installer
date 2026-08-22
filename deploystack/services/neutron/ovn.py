@@ -232,8 +232,6 @@ def conf_ovn_controller(config):
         f"external_ids:hostname={hostname}",]
 
         if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller") : return False
-    else:
-        print()
 
     return True
 
