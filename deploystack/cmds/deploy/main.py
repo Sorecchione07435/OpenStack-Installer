@@ -16,8 +16,10 @@ def init_parser(subparsers):
     help="Start the OpenStack Deployment on the current node"
 )
 
+    deployment_options = parser.add_argument_group("Deployment Options")
     general_options = parser.add_argument_group("General Options")
-    group = general_options.add_mutually_exclusive_group(required=True)
+
+    group = deployment_options.add_mutually_exclusive_group(required=True)
 
     manila = parser.add_argument_group("Manila Options")
     cinder = parser.add_argument_group("Cinder Options")
