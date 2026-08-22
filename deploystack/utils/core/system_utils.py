@@ -13,8 +13,6 @@ from time import sleep, time
 from ...utils.core import colors
 from ...utils.config.parser import get
 
-from .commands import run_command
-
 def is_package_installed(package_name: str | list[str]) -> bool:
     try:
         if isinstance(package_name, list):
@@ -92,6 +90,8 @@ def nc_wait(addr: str, port: int, timeout: int = 30) -> bool:
         sleep(1)
 
 def enable_ipv4_forwarding() -> bool:
+
+    from .commands import run_command
 
     with open("/proc/sys/net/ipv4/ip_forward") as f:
         ip_forward = int(f.read().strip())
