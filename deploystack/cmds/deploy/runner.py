@@ -129,7 +129,7 @@ def deploy(config_file):
             sys.exit(1) 
             return False
     
-    print(f"\n*** {colors.GREEN}OpenStack Deployment Completed Successfully!{colors.RESET} ***")
+    print(f"\n*** {colors.GREEN}OpenStack Deployment Completed Successfully!{colors.RESET} ******")
 
     print(f"\n{colors.BRIGHT_BLUE}Access your OpenStack services:{colors.RESET}")
 
