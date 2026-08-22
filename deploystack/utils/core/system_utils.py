@@ -13,6 +13,8 @@ from time import sleep, time
 from ...utils.core import colors
 from ...utils.config.parser import get
 
+from .commands import run_command
+
 def is_package_installed(package_name: str | list[str]) -> bool:
     try:
         if isinstance(package_name, list):
@@ -88,6 +90,27 @@ def nc_wait(addr: str, port: int, timeout: int = 30) -> bool:
             sys.exit(1);
             return False
         sleep(1)
+
+def enable_ipv4_forwarding() -> bool:
+
+    with open("/proc/sys/net/ipv4/ip_forward") as f:
+        ip_forward = int(f.read().strip())
+
+    if ip_forward != 1:
+        if not run_command(["sysctl", "-w", "net.ipv4.ip_forward=1"], "Enabling IPv4 IP Forwarding...") : return False
+
+        if not os.path.exists("/etc/sysctl.d/99-openstack-forwarding.conf"):
+            with open("/etc/sysctl.d/99-openstack-forwarding.conf") as f:
+                f.write("net.ipv4.ip_forward = 1")
+
+    return True
+
+def is_module_loaded(module_name):
+    with open("/proc/modules") as f:
+        return any(
+            line.split()[0] == module_name
+            for line in f
+        )
 
 def service_exists(service_name):
     result = subprocess.run(["systemctl", "list-unit-files", service_name], capture_output=True, text=True)

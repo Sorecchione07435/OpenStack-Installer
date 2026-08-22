@@ -4,6 +4,9 @@ import os
 import shutil
 import json
 import time
+import socket
+
+from pathlib import Path
 
 from ...utils.core.commands import run_command, run_command_sync, os_run, os_run_output
 from ...utils.apt.apt import apt_install
@@ -11,7 +14,7 @@ from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
-from ...utils.core.system_utils import service_exists, is_debian
+from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded, enable_ipv4_forwarding
 
 from ...templates import OVN_BRIDGES_INTERFACES, OVN_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
 
@@ -48,7 +51,6 @@ def conf_ovn_bridges(config):
 
     public_iface = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE_INTERFACE")
     public_bridge = get(config, "neutron.ovn.OVN_PUBLIC_BRIDGE")
-    internal_bridge = "br-int" 
 
     ip_address = get(config, "network.HOST_IP")
     ip_address_netmask = get(config, "network.HOST_IP_NETMASK")
@@ -157,14 +159,34 @@ def conf_ovn_bridges(config):
 
 def conf_ovn_controller(config):
 
-    print()
-
     ip_address = get(config, "network.HOST_IP")
 
     ovn_sb_port = get(config, "neutron.ovn.OVN_SB_PORT")
     ovn_encap_type = get(config, "neutron.ovn.OVN_ENCAP_TYPE")
     
     provider_networks = get(config, "neutron.provider_networks", [])
+
+    kernel_modules = ["openvswitch"]
+
+    line_printed = False
+
+    if "geneve" in ovn_encap_type:
+        kernel_modules += ["vport_geneve", "geneve"]
+
+    for module in kernel_modules:
+        if not is_module_loaded(module):
+            if not line_printed:
+                print()
+                line_printed = True
+
+            if not run_command(["modprobe", module], f"Loading kernel module '{module}'...") : return False
+
+    modules_file = Path("/etc/modules-load.d/ovn-controller.conf")
+
+    modules_file.parent.mkdir(parents=True, exist_ok=True)
+    modules_file.write_text("\n".join(kernel_modules) + "\n")
+
+    print()
 
     bridge_mappings = ",".join(
         f'{n["name"]}:{n["bridge"]}'
@@ -196,6 +218,16 @@ def conf_ovn_controller(config):
          "external-ids:ovn-cms-options=enable-chassis-as-gw"],
         "Enabling chassis as OVN gateway"
     ) : return False
+
+    if is_debian():
+        # Workaround for OVN hostname handling on Debian
+        
+        hostname = socket.gethostname().split(".")[0]
+
+        set_ovn_hostname_cmd = ["ovs-vsctl", "set", "Open_vSwitch", ".", f"external_ids:system-id={hostname}",
+        f"external_ids:hostname={hostname}",]
+
+        if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller...") : return False
 
     return True
 
@@ -240,8 +272,6 @@ def conf_ovn_neutron(config):
     tenant_network_vni_range = get(config, "neutron.tenant_network.VNI_RANGE", "1:1000")
 
     ovn_l3_scheduler = get(config, "neutron.ovn.OVN_L3_SCHEDULER", "leastloaded").lower()
-
-    service_password = get(config, "passwords.SERVICE_PASSWORD")
     
     provider_networks = get(config, "neutron.provider_networks", [])
 
@@ -289,6 +319,17 @@ def conf_ovn_neutron(config):
     set_conf_option(conf_ml2, "ovn", "ovn_l3_scheduler", ovn_l3_scheduler)
     set_conf_option(conf_ml2, "ovn", "ovn_metadata_enabled", "true")
 
+    if is_debian():
+        cpus = os.cpu_count() or 1
+
+        if cpus == 1:
+            workers = 1
+        else:
+            workers = min(max(2, cpus), 8)
+
+        set_conf_option(neutron_conf, "DEFAULT", "api_workers", str(workers))
+        set_conf_option(neutron_conf, "DEFAULT", "rpc_workers", "0")
+
     set_conf_option(neutron_conf, "ovn", "enable_distributed_floating_ip", "true" if enable_distributed_floating_ip else "false")
 
     set_conf_option(conf_nova, "os_vif_ovs", "ovsdb_connection", "unix:/var/run/openvswitch/db.sock")
@@ -301,16 +342,17 @@ def finalize(config):
 
     ip_address = get(config, "network.HOST_IP")
 
-    run_command_sync(["ovs-vsctl", "set-manager",
-                      f"ptcp:6640:{ip_address}",
-                      "punix:/var/run/openvswitch/db.sock"])
+    run_command_sync(["ovs-vsctl", "set-manager", f"ptcp:6640:{ip_address}","punix:/var/run/openvswitch/db.sock"])
     
     udev_rule = 'SUBSYSTEM=="unix", ACTION=="add", DEVPATH=="/var/run/openvswitch/db.sock", MODE="0666"\n'
+
 
     with open("/etc/udev/rules.d/99-openvswitch.rules", "w") as f:
         f.write(udev_rule)
 
     shutil.copy(OVS_PERMISSIONS_SERVICE, "/etc/systemd/system/ovs-nova-perms.service")
+
+    if not enable_ipv4_forwarding() : return False
 
     if not run_command(["systemctl", "daemon-reload"], "Reloading system daemon...") : return False
     if not run_command(["systemctl", "enable", "--now", "ovs-nova-perms.service"], "Enabling OVS Nova Permission Service...") : return False

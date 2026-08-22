@@ -5,13 +5,15 @@ import shutil
 import json
 import time
 
+from pathlib import Path
+
 from ...utils.core.commands import run_command, os_run_output, os_run, run_command_sync
 from ...utils.apt.apt import apt_install
 from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
-from ...utils.core.system_utils import service_exists, is_debian
+from ...utils.core.system_utils import service_exists, is_debian, enable_ipv4_forwarding, is_module_loaded
 from ...templates import OVS_BRIDGES_INTERFACES, OVS_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
 
 from .network.security_group import add_rules_to_default_sg
@@ -283,10 +285,18 @@ def conf_neutron_ovs(config):
     return True
 
 def finalize(config):
-           
-    print()
 
     ip_address = get(config, "network.HOST_IP")
+
+    if not is_module_loaded("openvswitch"):
+        print()
+
+        if not run_command(["modprobe", "openvswitch"], f"Loading kernel module 'openvswitch'...") : return False
+
+    modules_file = Path("/etc/modules-load.d/openvswitch.conf")
+    
+    modules_file.parent.mkdir(parents=True, exist_ok=True)
+    modules_file.write_text("openvswitch\n")
 
     udev_rule = 'SUBSYSTEM=="unix", ACTION=="add", DEVPATH=="/var/run/openvswitch/db.sock", MODE="0666"\n'
 
@@ -294,6 +304,8 @@ def finalize(config):
         f.write(udev_rule)
 
     shutil.copy(OVS_PERMISSIONS_SERVICE, "/etc/systemd/system/ovs-nova-perms.service")
+
+    if not enable_ipv4_forwarding() : return False
 
     if not run_command(["systemctl", "daemon-reload"], "Reloading system daemon...") : return False
     if not run_command(["systemctl", "enable", "--now", "ovs-nova-perms.service"], "Enabling OVS Nova Permission Service...") : return False
