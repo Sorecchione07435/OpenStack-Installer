@@ -213,6 +213,8 @@ def conf_ovn_controller(config):
         "Setting OVN bridge mappings"
     ) : return False
 
+    print()
+
     if not run_command(
         ["ovs-vsctl", "set", "open", ".",
          "external-ids:ovn-cms-options=enable-chassis-as-gw"],
@@ -222,12 +224,16 @@ def conf_ovn_controller(config):
     if is_debian():
         # Workaround for OVN hostname handling on Debian
         
+        print()
+
         hostname = socket.gethostname().split(".")[0]
 
         set_ovn_hostname_cmd = ["ovs-vsctl", "set", "Open_vSwitch", ".", f"external_ids:system-id={hostname}",
         f"external_ids:hostname={hostname}",]
 
-        if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller...") : return False
+        if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller") : return False
+    else:
+        print()
 
     return True
 

@@ -97,13 +97,20 @@ def enable_ipv4_forwarding() -> bool:
         ip_forward = int(f.read().strip())
 
     if ip_forward != 1:
-        if not run_command(["sysctl", "-w", "net.ipv4.ip_forward=1"], "Enabling IPv4 IP Forwarding...") : return False
+        if not run_command(
+            ["sysctl", "-w", "net.ipv4.ip_forward=1"],
+            "Enabling IPv4 IP Forwarding..."
+        ):
+            return False
 
-        if not os.path.exists("/etc/sysctl.d/99-openstack-forwarding.conf"):
-            with open("/etc/sysctl.d/99-openstack-forwarding.conf") as f:
-                f.write("net.ipv4.ip_forward = 1")
+    sysctl_file = "/etc/sysctl.d/99-openstack-forwarding.conf"
+
+    if not os.path.exists(sysctl_file):
+        with open(sysctl_file, "w") as f:
+            f.write("net.ipv4.ip_forward = 1\n")
 
     return True
+
 
 def is_module_loaded(module_name):
     with open("/proc/modules") as f:
