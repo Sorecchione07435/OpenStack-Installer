@@ -14,13 +14,13 @@ def enable_ipv4_forwarding() -> bool:
             "Enabling IPv4 IP Forwarding..."
         ):
             return False
+        else:
+            print()
 
     sysctl_file = "/etc/sysctl.d/99-openstack-forwarding.conf"
 
     if not os.path.exists(sysctl_file):
         with open(sysctl_file, "w") as f:
             f.write("net.ipv4.ip_forward = 1\n")
-
-    print()
 
     return True
