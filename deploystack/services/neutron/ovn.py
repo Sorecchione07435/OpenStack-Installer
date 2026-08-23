@@ -222,48 +222,14 @@ def conf_ovn_controller(config):
     ) : return False
 
     if is_debian():
-        # Workaround for OVN hostname handling on Debian
-        
-        print()
+        # Debian's ovs-record-hostname.service correctly derives
+        # the FQDN from the system hostname configuration.
 
-        hostname = socket.gethostname().split(".")[0]
-
-        set_ovn_hostname_cmd = ["ovs-vsctl", "set", "Open_vSwitch", ".", f"external_ids:system-id={hostname}",
-        f"external_ids:hostname={hostname}",]
-
-        hosts_file = Path("/etc/hosts")
-
-        hostname = socket.gethostname()
-        fqdn = socket.getfqdn()
-
-        lines = hosts_file.read_text().splitlines()
-
-        new_lines = []
-        found = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            if stripped and not stripped.startswith("#"):
-                parts = stripped.split()
-
-                if parts[0] == "127.0.1.1":
-                    new_lines.append(f"127.0.1.1\t{fqdn} {hostname}")
-                    found = True
-                    continue
-
-            new_lines.append(line)
-
-        if not found:
-            new_lines.append(f"127.0.1.1\t{fqdn} {hostname}")
-
-        hosts_file.write_text("\n".join(new_lines) + "\n")
-
-        if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller") : return False
-
-        print()
-
-        if not run_command(["systemctl", "restart", "ovs-record-hostname.service"], "Restarting OVS Record Hostname Service...") : return False
+        if not run_command(
+            ["systemctl", "restart", "ovs-record-hostname.service"],
+            "Restarting OVS Record Hostname Service..."
+        ):
+            return False
 
     return True
 
