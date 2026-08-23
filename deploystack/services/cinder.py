@@ -153,6 +153,7 @@ def conf_cinder(config):
 
     set_conf_option(cinder_conf, "keystone_authtoken", "memcached_servers", "127.0.0.1:11211")
     set_conf_option(cinder_conf, "keystone_authtoken", "www_authenticate_uri", f"http://{ip_address}:5000/")
+    set_conf_option(cinder_conf, "keystone_authtoken", "region_name", os_region_name)
     set_conf_option(cinder_conf, "keystone_authtoken", "auth_url", f"http://{ip_address}:5000/")
     set_conf_option(cinder_conf, "keystone_authtoken", "auth_type", "password")
     set_conf_option(cinder_conf, "keystone_authtoken", "project_domain_name", "Default")
