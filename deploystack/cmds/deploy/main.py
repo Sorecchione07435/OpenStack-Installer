@@ -19,20 +19,26 @@ def init_parser(subparsers):
     deployment_options = parser.add_argument_group("Deployment Options")
     general_options = parser.add_argument_group("General Options")
 
-    group = deployment_options.add_mutually_exclusive_group(required=True)
+    deployment_group = deployment_options.add_mutually_exclusive_group(required=True)
 
     manila = parser.add_argument_group("Manila Options")
     cinder = parser.add_argument_group("Cinder Options")
 
-    group.add_argument(
+    deployment_group.add_argument(
         "--allinone",
         action="store_true",
         help="Runs a complete OpenStack deployment using an automatically generated configuration."
     )
 
-    group.add_argument(
+    deployment_group.add_argument(
         "--config-file",
         help="Path to the configuration file"
+    )
+
+    deployment_group.add_argument(
+        "--generate-only",
+        action="store_true",
+        help="Generates a pre-compiled configuration file for the current system without starting the deployment"
     )
 
     cinder.add_argument(
@@ -132,12 +138,6 @@ def init_parser(subparsers):
         type=str,
         default=None,
         help="Override the OpenStack management gateway interface used by services"
-    )
-
-    general_options.add_argument(
-        "--generate-only",
-        action="store_true",
-        help="Generates a pre-compiled configuration file for the current system without starting the deployment"
     )
 
     parser.set_defaults(cmd_parser=parser)
