@@ -148,6 +148,8 @@ def init_parser(subparsers):
 
 def deploy(parser, args) -> None:
 
+    parser = args.cmd_parser
+
     if args.allinone:
 
         validate_deploy_args(parser, args)
@@ -159,13 +161,6 @@ def deploy(parser, args) -> None:
         manila_flag = args.install_manila
 
         neutron_driver = args.neutron_driver or "ovs"
-
-        if args.os_management_gateway:
-            try:
-                ipaddress.ip_address(args.os_management_gateway)
-            except ValueError:
-                parser.error("--os-management-gateway has a invalid Gateway")
-                sys.exit(1)
 
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"

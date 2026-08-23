@@ -1,3 +1,12 @@
+import ipaddress
+
+def validate_management_args(parser, args):
+     if args.os_management_gateway:
+        try:
+            ipaddress.ip_address(args.os_management_gateway)
+        except ValueError:
+            parser.error("--os-management-gateway has a invalid Gateway")
+
 def validate_manila_backend(parser, args):
     if args.install_cinder == "no" and args.manila_backend == "generic":
         parser.error("Manila generic backend requires --install-cinder yes")
@@ -30,9 +39,10 @@ def validate_cinder_args(parser, args):
                 "Cinder options require --install-cinder yes"
             )
 
-
 def validate_deploy_args(parser, args):
 
-    validate_manila_args(parser=parser, args=args)
-    validate_cinder_args(parser=parser, args=args)
+    validate_management_args(parser, args)
+
+    validate_manila_args(parser, args)
+    validate_cinder_args(parser, args)
     
