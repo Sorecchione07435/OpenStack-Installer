@@ -45,13 +45,13 @@ def patch_manila_directio():
         with open(manila_lvm_file_path, "w") as f:
             f.write(new_code)
 
-        if not run_command_sync(["systemctl", "restart" "manila-share"]) : return False
+        if not run_command_sync(["systemctl", "restart", "manila-share"]) : return False
 
     return True
 
 def run_setup_directio_patch():
 
-    if not patch_manila_directio() : return False
+    if not patch_manila_directio(): return False
 
     if not append_service_patch(): return False
 
