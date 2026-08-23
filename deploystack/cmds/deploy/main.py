@@ -25,12 +25,14 @@ def init_parser(subparsers):
     cinder = parser.add_argument_group("Cinder Options")
 
     deployment_group.add_argument(
+        "-aio",
         "--allinone",
         action="store_true",
         help="Runs a complete OpenStack deployment using an automatically generated configuration."
     )
 
     deployment_group.add_argument(
+        "-c",
         "--config-file",
         help="Path to the configuration file"
     )
