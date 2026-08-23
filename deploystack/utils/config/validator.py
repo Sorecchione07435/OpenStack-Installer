@@ -687,7 +687,7 @@ def validate_manila(config) -> bool:
                 if " " in samba_password:
                     print(f"{colors.RED}Error: 'manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD' password invalid: contains spaces{colors.RESET}")
                     ok = False
-                elif any(c in value for c in prohibited_pw_chars):
+                elif any(c in samba_password for c in prohibited_pw_chars):
                     print(f"{colors.RED}Error: 'manila.backends.lvm.samba.SAMBA_SERVER_USER_PASSWORD' password invalid: contains illegal characters{colors.RESET}")
                     ok = False
 
