@@ -35,7 +35,7 @@ def init_parser(subparsers):
         help="Path to the configuration file"
     )
 
-    deployment_group.add_argument(
+    deployment_options.add_argument(
         "--generate-only",
         action="store_true",
         help="Generates a pre-compiled configuration file for the current system without starting the deployment"
