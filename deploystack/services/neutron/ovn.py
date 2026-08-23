@@ -157,6 +157,35 @@ def conf_ovn_bridges(config):
 
     return True
 
+def conf_ovn_db_connections(config):
+
+    print()
+
+    ip_address = get(config, "network.HOST_IP")
+
+    ovn_sb_port = get(config, "neutron.ovn.OVN_SB_PORT")
+    ovn_nb_port = get(config, "neutron.ovn.OVN_NB_PORT")
+
+    run_command_sync(['ovs-vsctl', 'set-manager', 'ptcp:6640:127.0.0.1'])
+
+    run_command(
+        ["ovn-nbctl",
+         "--db=unix:/var/run/ovn/ovnnb_db.sock",
+         "set-connection", f"ptcp:{ovn_nb_port}:{ip_address}", "--",
+         "set", "connection", ".", "inactivity_probe=60000"],
+        f"Opening NB DB on TCP {ovn_nb_port}"
+    )
+
+    run_command(
+        ["ovn-sbctl",
+         "--db=unix:/var/run/ovn/ovnsb_db.sock",
+         "set-connection", f"ptcp:{ovn_sb_port}:{ip_address}", "--",
+         "set", "connection", ".", "inactivity_probe=60000"],
+        f"Opening SB DB on TCP {ovn_sb_port}"
+    )
+
+    return True
+
 def conf_ovn_controller(config):
 
     ip_address = get(config, "network.HOST_IP")
@@ -225,41 +254,17 @@ def conf_ovn_controller(config):
         # Debian's ovs-record-hostname.service correctly derives
         # the FQDN from the system hostname configuration.
 
+        print()
+
+        hostname = socket.gethostname().split(".")[0]
+
+        if not run_command(["ovs-vsctl", "set", "Open_vSwitch", ".", f"external_ids:hostname={hostname}"], "Setting Hostname to OVN Controller...") : return False
+
         if not run_command(
             ["systemctl", "restart", "ovs-record-hostname.service"],
             "Restarting OVS Record Hostname Service..."
         ):
             return False
-
-    return True
-
-
-def conf_ovn_db_connections(config):
-
-    print()
-
-    ip_address = get(config, "network.HOST_IP")
-
-    ovn_sb_port = get(config, "neutron.ovn.OVN_SB_PORT")
-    ovn_nb_port = get(config, "neutron.ovn.OVN_NB_PORT")
-
-    run_command_sync(['ovs-vsctl', 'set-manager', 'ptcp:6640:127.0.0.1'])
-
-    run_command(
-        ["ovn-nbctl",
-         "--db=unix:/var/run/ovn/ovnnb_db.sock",
-         "set-connection", f"ptcp:{ovn_nb_port}:{ip_address}", "--",
-         "set", "connection", ".", "inactivity_probe=60000"],
-        f"Opening NB DB on TCP {ovn_nb_port}"
-    )
-
-    run_command(
-        ["ovn-sbctl",
-         "--db=unix:/var/run/ovn/ovnsb_db.sock",
-         "set-connection", f"ptcp:{ovn_sb_port}:{ip_address}", "--",
-         "set", "connection", ".", "inactivity_probe=60000"],
-        f"Opening SB DB on TCP {ovn_sb_port}"
-    )
 
     return True
 
