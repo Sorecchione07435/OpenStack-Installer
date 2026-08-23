@@ -97,6 +97,8 @@ def enable_ipv4_forwarding() -> bool:
         ip_forward = int(f.read().strip())
 
     if ip_forward != 1:
+        print()
+
         if not run_command(
             ["sysctl", "-w", "net.ipv4.ip_forward=1"],
             "Enabling IPv4 IP Forwarding..."
@@ -108,6 +110,8 @@ def enable_ipv4_forwarding() -> bool:
     if not os.path.exists(sysctl_file):
         with open(sysctl_file, "w") as f:
             f.write("net.ipv4.ip_forward = 1\n")
+
+    
 
     return True
 
