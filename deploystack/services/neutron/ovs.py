@@ -13,8 +13,9 @@ from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
-from ...utils.core.system_utils import service_exists, is_debian, enable_ipv4_forwarding, is_module_loaded
+from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded
 from ...templates import OVS_BRIDGES_INTERFACES, OVS_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
+from .utils import enable_ipv4_forwarding
 
 from .network.security_group import add_rules_to_default_sg
 

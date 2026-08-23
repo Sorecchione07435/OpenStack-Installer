@@ -14,7 +14,8 @@ from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
-from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded, enable_ipv4_forwarding
+from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded
+from .utils import enable_ipv4_forwarding
 
 from ...templates import OVN_BRIDGES_INTERFACES, OVN_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
 
@@ -63,7 +64,6 @@ def conf_ovn_bridges(config):
 
     is_dual_nic = (public_iface != management_iface)
 
-    line1 = False
     custom_bridges = bool(bridges)
 
     for iface in [public_iface, public_bridge]:
@@ -231,8 +231,12 @@ def conf_ovn_controller(config):
         set_ovn_hostname_cmd = ["ovs-vsctl", "set", "Open_vSwitch", ".", f"external_ids:system-id={hostname}",
         f"external_ids:hostname={hostname}",]
 
-        hosts = Path("/etc/hosts")
-        lines = hosts.read_text().splitlines()
+        hosts_file = Path("/etc/hosts")
+
+        hostname = socket.gethostname()
+        fqdn = socket.getfqdn()
+
+        lines = hosts_file.read_text().splitlines()
 
         new_lines = []
         found = False
@@ -244,16 +248,16 @@ def conf_ovn_controller(config):
                 parts = stripped.split()
 
                 if parts[0] == "127.0.1.1":
-                    new_lines.append(f"127.0.1.1\t{hostname}")
+                    new_lines.append(f"127.0.1.1\t{fqdn} {hostname}")
                     found = True
                     continue
 
             new_lines.append(line)
 
         if not found:
-            new_lines.append(f"127.0.1.1\t{hostname}")
+            new_lines.append(f"127.0.1.1\t{fqdn} {hostname}")
 
-        hosts.write_text("\n".join(new_lines) + "\n")
+        hosts_file.write_text("\n".join(new_lines) + "\n")
 
         if not run_command(set_ovn_hostname_cmd, "Setting hostname to OVN Controller") : return False
 
