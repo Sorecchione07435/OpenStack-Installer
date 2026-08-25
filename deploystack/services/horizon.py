@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import tempfile
+import pformat
 
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
@@ -141,7 +142,10 @@ def install_pkgs(config):
     return True
 
 def conf_horizon(config):
+
     ip_address = get(config, "network.HOST_IP")
+    install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
+
     if not ip_address:
         print(f"{colors.RED}Missing HOST_IP{colors.RESET}")
         return False
@@ -156,6 +160,39 @@ def conf_horizon(config):
     }
 
     settings_to_set["WEBROOT"] = "'/horizon/'" if is_debian() else "'/dashboard/'"
+
+    if install_cinder_backup:
+        try:
+            OPENSTACK_CINDER_FEATURES = {
+                "enable_backup": True
+            }
+
+            with open(settings_file, "r") as f:
+                content = f.read()
+
+            content = re.sub(
+                r"OPENSTACK_CINDER_FEATURES\s*=\s*\{.*?\}\s*",
+                "",
+                content,
+                flags=re.DOTALL
+            )
+
+            content += (
+                "\nOPENSTACK_CINDER_FEATURES = "
+                + pformat(OPENSTACK_CINDER_FEATURES)
+                + "\n"
+            )
+
+            with open(settings_file, "w") as f:
+                f.write(content)
+
+        except Exception as e:
+            print(
+                f"\n{colors.ERROR}"
+                f"Unable to update Horizon Cinder Backup settings: {e}"
+                f"{colors.RESET}\n"
+            )
+            return False
 
     content = ""
     if os.path.exists(settings_file):
