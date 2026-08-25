@@ -13,7 +13,7 @@ from ..utils.config.parser import get
 from ..utils.config.setter import set_conf_option
 from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
-from ..utils.core.system_utils import service_exists, is_debian
+from ..utils.core.system_utils import service_exists, is_debian, is_package_installed
 from ..utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ..utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
@@ -167,6 +167,11 @@ def conf_cinder_backup(config):
         mount_options = get(config, "cinder.backup.drivers.nfs.MOUNT_OPTIONS") or None
 
         ip_address = get(config, "network.HOST_IP")
+
+        if not is_package_installed("nfs-kernel-server"):
+            print()
+            
+            if not apt_install(["nfs-kernel-server"], "Installing NFS Kernel Server...") : return False
 
         exports_file = Path("/etc/exports")
 
