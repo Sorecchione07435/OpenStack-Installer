@@ -177,8 +177,11 @@ def conf_cinder_backup(config):
         
         export_line = f"{export_path} {ip_address}(rw,sync,no_subtree_check)"
 
-        with exports_file.open("r") as f:
-            lines = {line.strip() for line in f}
+        lines = set()
+
+        if exports_file.exists():
+            with exports_file.open("r") as f:
+                lines = {line.strip() for line in f}
 
         if export_line not in lines:
             with exports_file.open("a") as f:
