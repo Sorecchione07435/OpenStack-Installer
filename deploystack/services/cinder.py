@@ -131,8 +131,6 @@ def conf_lvm(config):
 
 def conf_cinder_backup(config):
 
-    print()
-
     backup_driver = get(config, "cinder.backup.DRIVER").lower()
 
     backup_compression_algorithm = get(config, "cinder.backup.COMPRESSION_ALGORITHM").lower()
@@ -186,6 +184,8 @@ def conf_cinder_backup(config):
             with exports_file.open("a") as f:
                 f.write(f"{export_line}\n")
 
+            print()
+            
             if not run_command(["exportfs", "-ra"], "Applying NFS exports...") : return False
 
         set_conf_option(cinder_conf, "DEFAULT", "backup_driver", "cinder.backup.drivers.nfs.NFSBackupDriver")
