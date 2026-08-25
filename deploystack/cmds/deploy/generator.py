@@ -227,6 +227,8 @@ def config_openstack(
         config_dict["cinder"]["backup"]["BACKUP_SHA_BLOCK_SIZE_BYTES"] = backup_sha_block_size_in_bytes
 
         config_dict["cinder"]["backup"]["BACKUP_WORKERS"] = backup_workers
+    else:
+        config_dict["cinder"].pop("backup", None)
 
     config_dict["cinder"].setdefault("lvm", {})
 
