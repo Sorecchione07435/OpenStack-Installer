@@ -23,7 +23,7 @@ from .utils import wait_manila_backend, create_manila_sudoers_rule
 
 from .utils.shares import create_shares, create_share_types
 
-from ....utils.core.system_utils import service_exists, is_debian, is_ubuntu_release
+from ....utils.core.system_utils import service_exists, is_debian, is_ubuntu_release, is_package_installed
 
 from ...patches.manila.directio import run_setup_directio_patch
 
@@ -174,8 +174,11 @@ def setup_iptables_rules(config):
             return False
     finally:
         os.remove(seed_file)
-
-    if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
+    
+    if not is_package_installed("iptables-persistent"):
+        print()
+        
+        if not apt_install(["iptables-persistent"], "Installing IP Tables Persistent package...") : return False
 
     print()
 
