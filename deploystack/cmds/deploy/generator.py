@@ -207,7 +207,7 @@ def config_openstack(
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
     config_dict["cinder"]["TARGET_IP_ADDRESS"] = mgmt_ip
 
-    if enable_cinder_backup:
+    if enable_cinder_backup.lower() == "yes":
         config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "yes"
 
         config_dict["cinder"]["backup"]["DRIVER"] = cinder_backup_driver
