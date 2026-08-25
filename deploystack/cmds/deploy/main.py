@@ -24,6 +24,8 @@ def init_parser(subparsers):
     manila = parser.add_argument_group("Manila Options")
     cinder = parser.add_argument_group("Cinder Options")
 
+    cinder_backup = cinder.add_argument_group("Cinder Backup Options")
+
     deployment_group.add_argument(
         "-aio",
         "--allinone",
@@ -78,6 +80,51 @@ def init_parser(subparsers):
         "--cinder-physical-volume",
         type=str,
         help="The physical volume to use for Cinder (example: /dev/sdb)"
+    )
+
+    cinder_backup.add_argument(
+        "--enable-cinder-backup",
+        type=str,
+        choices=["yes", "no"],
+        default="no",
+        help="Choose whether to install the Cinder Backup service (yes/no)"
+    )
+
+    cinder_backup.add_argument(
+        "--cinder-backup-driver",
+        type=str,
+        choices=["posix", "nfs"],
+        required=True,
+        help="Cinder backup driver to use (posix, nfs)"
+    )
+
+    cinder_backup.add_argument(
+        "--compression-algorithm",
+        type=str,
+        choices=["zlib", "bz2", "zstd", "none"],
+        default="zlib",
+        help="Backup compression algorithm"
+    )
+
+    cinder_backup.add_argument(
+        "--backup-file-size-in-bytes",
+        type=int,
+        default=1999994880,
+        help="Maximum size of each backup file in bytes (Default: 1999994880)"
+    )
+
+    cinder_backup.add_argument(
+        "--backup-sha-block-size-in-bytes",
+        type=int,
+        default=32768,
+        help="Block size in bytes used for SHA checksum calculation (Default: 32768)"
+    )
+
+    cinder_backup.add_argument(
+        "--backup-workers",
+        type=int,
+        default=1,
+        help="Number of concurrent backup operations"
     )
 
     manila_lvm_storage = manila.add_mutually_exclusive_group()

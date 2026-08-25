@@ -45,6 +45,13 @@ def config_openstack(
     os_release: str = "caracal",
     os_mgmt_iface: str = "",
     os_mgmt_gateway: str = "",
+
+    enable_cinder_backup = "no",
+    cinder_backup_driver = "",
+    compression_algorithm = "",
+    backup_file_size_in_bytes = 0,
+    backup_sha_block_size_in_bytes = 0,
+    backup_workers = 0
 ):
 
     try:
@@ -199,6 +206,27 @@ def config_openstack(
     config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
     config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
     config_dict["cinder"]["TARGET_IP_ADDRESS"] = mgmt_ip
+
+    if enable_cinder_backup:
+        config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "yes"
+
+        config_dict["cinder"]["backup"]["DRIVER"] = cinder_backup_driver
+
+        if cinder_backup_driver == "posix":
+            config_dict["cinder"]["backup"]["drivers"]["posix"]["BACKUP_PATH"] = "/var/lib/cinder/backups"
+            config_dict["cinder"]["backup"]["drivers"].setdefault("nfs", {})
+        elif cinder_backup_driver == "nfs":
+            config_dict["cinder"]["backup"]["drivers"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-backups"
+            config_dict["cinder"]["backup"]["drivers"]["nfs"]["MOUNT_POINT_BASE"] = "/var/lib/cinder/cinder/backup" 
+
+            config_dict["cinder"]["backup"]["drivers"].setdefault("posix", {})
+
+        config_dict["cinder"]["backup"]["COMPRESSION_ALGORITHM"] = compression_algorithm
+
+        config_dict["cinder"]["backup"]["BACKUP_FILE_SIZE"] = backup_file_size_in_bytes
+        config_dict["cinder"]["backup"]["BACKUP_SHA_BLOCK_SIZE_BYTES"] = backup_sha_block_size_in_bytes
+
+        config_dict["cinder"]["backup"]["BACKUP_WORKERS"] = backup_workers
 
     config_dict["cinder"].setdefault("lvm", {})
 

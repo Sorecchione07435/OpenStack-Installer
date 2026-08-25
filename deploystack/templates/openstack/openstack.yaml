@@ -266,7 +266,7 @@ cinder:
         MOUNT_POINT_BASE: "/var/lib/cinder/cinder/backup"
         MOUNT_OPTIONS: "" # Optional extra mount options
 
-    # Backup compression
+    # Backup compression algorithm
     # zlib | bz2 | zstd | none
     COMPRESSION_ALGORITHM: "zlib"
 
