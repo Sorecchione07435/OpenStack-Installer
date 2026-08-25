@@ -94,7 +94,7 @@ def init_parser(subparsers):
         "--cinder-backup-driver",
         type=str,
         choices=["posix", "nfs"],
-        required=True,
+        default=None,
         help="Cinder backup driver to use (posix, nfs)"
     )
 
@@ -273,7 +273,7 @@ def deploy(parser, args) -> None:
 
             os_mgmt_iface=args.os_management_interface,
             os_mgmt_gateway=args.os_management_gateway,
-            
+
             os_release=args.os_release,
         )
 
