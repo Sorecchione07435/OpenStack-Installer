@@ -96,7 +96,7 @@ def set_lvm_filter(devices):
 
     return True
 
-def write_loopback_lvm_env(service, lvm_image_file, lvm_loop_dev, vg_name, description, before_services):
+def write_loopback_lvm_env(service, lvm_image_file, vg_name, description, before_services):
 
     env_path = f"/etc/default/{service}-lvm"
     SERVICE_PATH = f"/etc/systemd/system/{service}-loopback.service"
@@ -114,7 +114,6 @@ def write_loopback_lvm_env(service, lvm_image_file, lvm_loop_dev, vg_name, descr
         with open(LVM_ENV_CONF, "r") as f:
                 template = f.read()
                 loopback_env_conf_content = template.format(
-                    lvm_loop_dev=lvm_loop_dev, 
                     lvm_image_file=lvm_image_file,
                     vg_name=vg_name
                 )
@@ -131,7 +130,7 @@ def write_loopback_lvm_env(service, lvm_image_file, lvm_loop_dev, vg_name, descr
 
     return True
 
-def setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, service):
+def setup_loopback_service(lvm_image_file_path, vg_name, service):
 
     print()
 
@@ -140,7 +139,6 @@ def setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, service):
         with open(LOOPBACK_START_SCRIPT, "r") as f:
             template = f.read()
             loopback_service_start_script_content = template.format(
-                lvm_loop_dev=lvm_loop_dev,
                 lvm_image_file_path=lvm_image_file_path,
                 VG_NAME=vg_name
             )
@@ -148,7 +146,6 @@ def setup_loopback_service(lvm_image_file_path, lvm_loop_dev, vg_name, service):
         with open(LOOPBACK_STOP_SCRIPT, "r") as f:
             template = f.read()
             loopback_service_stop_script_content = template.format(
-                lvm_loop_dev=lvm_loop_dev,
                 lvm_image_file_path=lvm_image_file_path,
                 VG_NAME=vg_name
             )
