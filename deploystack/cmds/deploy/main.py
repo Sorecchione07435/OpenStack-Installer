@@ -24,7 +24,7 @@ def init_parser(subparsers):
     manila = parser.add_argument_group("Manila Options")
     cinder = parser.add_argument_group("Cinder Options")
 
-    cinder_backup = cinder.add_argument_group("Cinder Backup Options")
+    cinder_backup = parser.add_argument_group("Cinder Backup Options")
 
     deployment_group.add_argument(
         "-aio",
@@ -250,17 +250,31 @@ def deploy(parser, args) -> None:
             install_horizon=horizon_flag,
             install_cinder=cinder_flag,
             install_manila=manila_flag,
+
             config_file_path=config_file_path,
+
             cinder_physical_volume=cinder_physical_volume,
-            manila_lvm_physical_volume=manila_lvm_physical_volume,
             cinder_lvm_image_size_in_gb=cinder_lvm_size,
+
+            enable_cinder_backup=args.enable_cinder_backup,
+            cinder_backup_driver=args.cinder_backup_driver,
+            compression_algorithm=args.compression_algorithm,
+            backup_file_size_in_bytes=args.backup_file_size_in_bytes,
+            backup_sha_block_size_in_bytes=args.backup_sha_block_size_in_bytes,
+            backup_workers=args.backup_workers,
+
+            manila_lvm_physical_volume=manila_lvm_physical_volume,
             manila_lvm_image_size_in_gb=manila_lvm_size,
+
             neutron_driver=neutron_driver,
+
             manila_backend=manila_backend,
             manila_share_protocols=manila_share_protocols,
+
             os_mgmt_iface=args.os_management_interface,
             os_mgmt_gateway=args.os_management_gateway,
-            os_release=args.os_release
+            
+            os_release=args.os_release,
         )
 
         if args.generate_only:
