@@ -1,15 +1,17 @@
 #!/bin/bash
 
 VG_NAME="{VG_NAME}"
-LOOP_DEV="{lvm_loop_dev}"
 IMAGE_FILE="{lvm_image_file_path}"
+STATE_FILE="/var/lib/deploystack/loop_dev"
 
 /sbin/vgchange -an "$VG_NAME"
 
 if [ -z "$PHYSICAL_VOLUME" ]; then
-    if /sbin/losetup "$LOOP_DEV" 2>/dev/null | grep -q "$IMAGE_FILE"; then
+    LOOP_DEV=$(/sbin/losetup -j "$IMAGE_FILE" | cut -d: -f1)
+    if [ -n "$LOOP_DEV" ]; then
         /sbin/losetup -d "$LOOP_DEV"
     fi
+    rm -f "$STATE_FILE"
 fi
 
 exit 0

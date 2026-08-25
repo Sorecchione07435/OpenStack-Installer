@@ -2,12 +2,16 @@
 Description={description}
 Before={before_services}
 DefaultDependencies=no
-After=local-fs.target
+
+After=local-fs.target snapd.service snapd.seeded.service
+Wants=snapd.seeded.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+
 EnvironmentFile=/etc/default/{service}-lvm
+
 ExecStart=/usr/local/bin/{service}-loopback-start.sh
 ExecStop=/usr/local/bin/{service}-loopback-stop.sh
 

@@ -214,12 +214,12 @@ def config_openstack(
 
         if cinder_backup_driver == "posix":
             config_dict["cinder"]["backup"]["drivers"]["posix"]["BACKUP_PATH"] = "/var/lib/cinder/backups"
-            config_dict["cinder"]["backup"]["drivers"].setdefault("nfs", {})
+            config_dict["cinder"]["backup"]["drivers"].pop("nfs", None)
         elif cinder_backup_driver == "nfs":
             config_dict["cinder"]["backup"]["drivers"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-backups"
             config_dict["cinder"]["backup"]["drivers"]["nfs"]["MOUNT_POINT_BASE"] = "/var/lib/cinder/cinder/backup" 
 
-            config_dict["cinder"]["backup"]["drivers"].setdefault("posix", {})
+            config_dict["cinder"]["backup"]["drivers"].pop("posix", None)
 
         config_dict["cinder"]["backup"]["COMPRESSION_ALGORITHM"] = compression_algorithm
 
