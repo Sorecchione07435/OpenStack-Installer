@@ -16,12 +16,8 @@ SUPPORTED_EXTRA_SPECS = {
 }
 
 def create_share_types(default_type_shares, env):
-    share_type_list = json.loads(
-        os_run_output(
-            ["openstack", "share", "type", "list", "-f", "json"],
-            env=env
-        ) or "[]"
-    )
+    
+    share_type_list = json.loads(os_run_output(["openstack", "share", "type", "list", "-f", "json"], env=env) or "[]")
 
     allowed_extra_specs = {
         "driver_handles_share_servers",
@@ -43,9 +39,6 @@ def create_share_types(default_type_shares, env):
         for extra_spec in share_type.get("extra_specs", []):
             for key, value in extra_spec.items():
                 if key not in allowed_extra_specs:
-                    #print(
-                    #    f"WARNING: ignoring unsupported Manila extra spec '{key}'"
-                    #)
                     continue
 
                 extra_specs[key] = (
@@ -60,14 +53,7 @@ def create_share_types(default_type_shares, env):
             "False"
         )
 
-        cmd = [
-            "openstack",
-            "share",
-            "type",
-            "create",
-            share_type_name,
-            dhss,
-        ]
+        cmd = ["openstack", "share", "type", "create", share_type_name, dhss]
 
         if is_share_public:
             cmd += ["--public", "true"]
@@ -81,11 +67,7 @@ def create_share_types(default_type_shares, env):
 
         print()
 
-        if not os_run(
-            cmd,
-            f"Creating '{share_type_name}' share type... ",
-            env=env
-        ):
+        if not os_run(cmd, f"Creating '{share_type_name}' share type... ", env=env):
             return False
 
         share_type_list.append({"Name": share_type_name})
@@ -98,7 +80,7 @@ def create_shares(shares, env, dhss: bool = False):
 
     for share in shares:
             share_name = share["name"]
-            share_type = share.get("share_type")
+            share_type = share.get("share_type") or "default_share_type"
             share_protocol = share["share_protocol"]
             share_size = share["share_size"]
             is_public = parse_bool(share["is_public"], False)

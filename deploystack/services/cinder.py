@@ -5,7 +5,9 @@ import grp
 import os
 import subprocess
 
-from ..utils.core.commands import run_command
+from pathlib import Path
+
+from ..utils.core.commands import run_command, run_command_sync
 from ..utils.apt.apt import apt_install
 from ..utils.config.parser import get
 from ..utils.config.setter import set_conf_option
@@ -15,13 +17,20 @@ from ..utils.core.system_utils import service_exists, is_debian
 from ..utils.lvm.loopback import write_loopback_lvm_env, setup_loopback_service
 from ..utils.lvm import get_vg_for_pv, ensure_system_user_with_run_command
 
+from ..utils.config.helpers import parse_bool
+
 cinder_conf = "/etc/cinder/cinder.conf"
 tgt_conf_path = "/etc/tgt/conf.d/cinder.conf"
 lvm_conf_path = "/etc/lvm/lvm.conf"
 
-def install_pkgs():
+def install_pkgs(config):
+
+    install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
 
     packages = ["cinder-scheduler", "cinder-api", "cinder-volume", "tgt"]
+
+    if install_cinder_backup:
+        packages.append("cinder-backup")
 
     if not apt_install(packages, ux_text=f"Installing Cinder packages...") : return False
     
@@ -120,6 +129,82 @@ def conf_lvm(config):
 
     return True
 
+def conf_cinder_backup(config):
+
+    print()
+
+    backup_driver = get(config, "cinder.backup.DRIVER").lower()
+
+    backup_compression_algorithm = get(config, "cinder.backup.COMPRESSION_ALGORITHM").lower()
+
+    backup_workers = get(config, "cinder.backup.BACKUP_WORKERS")
+
+    backup_file_size = get(config, "cinder.backup.BACKUP_FILE_SIZE")
+    backup_sha_block_size_bytes = get(config, "cinder.backup.BACKUP_SHA_BLOCK_SIZE_BYTES")
+
+    if backup_driver == "posix":
+
+        backup_filesystem_path = get(config, "cinder.backup.drivers.posix.BACKUP_PATH")
+
+        os.makedirs(backup_filesystem_path, exist_ok=True)
+
+        uid = pwd.getpwnam("cinder").pw_uid
+        gid = grp.getgrnam("cinder").gr_gid
+        os.chown(backup_filesystem_path, uid, gid)
+
+        os.chmod(backup_filesystem_path, 0o750)
+
+        run_command_sync(["sudo", "-u", "cinder", "touch", os.path.join(backup_filesystem_path, "test")])
+
+        os.remove(os.path.join(backup_filesystem_path, "test"))
+
+        set_conf_option(cinder_conf, "DEFAULT", "backup_driver", "cinder.backup.drivers.posix.PosixBackupDriver")
+        set_conf_option(cinder_conf, "DEFAULT", "backup_posix_path", backup_filesystem_path)
+
+    elif backup_driver == "nfs":
+
+        nfs_share = get(config, "cinder.backup.nfs.NFS_SHARE")
+        mount_point_base_dir = get(config, "cinder.backup.drivers.nfs.MOUNT_POINT_BASE")
+
+        mount_options = get(config, "cinder.backup.drivers.nfs.MOUNT_OPTIONS") or None
+
+        ip_address = get(config, "network.HOST_IP")
+
+        exports_file = Path("/etc/exports")
+
+        try:
+            _, export_path = nfs_share.split(":", 1)
+        except ValueError:
+            return False
+        
+        export_line = f"{export_path} {ip_address}(rw,sync,no_subtree_check)"
+
+        with exports_file.open("r") as f:
+            lines = {line.strip() for line in f}
+
+        if export_line not in lines:
+            with exports_file.open("a") as f:
+                f.write(f"{export_line}\n")
+
+            if not run_command(["exportfs", "-ra"], "Applying NFS exports...") : return False
+
+        set_conf_option(cinder_conf, "DEFAULT", "backup_driver", "cinder.backup.drivers.nfs.NFSBackupDriver")
+
+        set_conf_option(cinder_conf, "DEFAULT", "backup_mount_point_base", mount_point_base_dir)
+        set_conf_option(cinder_conf, "DEFAULT", "backup_share", nfs_share)
+
+        if mount_options:
+            set_conf_option(cinder_conf, "DEFAULT", "backup_mount_options", mount_options)
+
+    set_conf_option(cinder_conf, "DEFAULT", "backup_compression_algorithm", backup_compression_algorithm)
+        
+    set_conf_option(cinder_conf, "DEFAULT", "backup_workers", str(backup_workers))
+
+    set_conf_option(cinder_conf, "DEFAULT", "backup_file_size", str(backup_file_size))
+    set_conf_option(cinder_conf, "DEFAULT", "backup_sha_block_size_bytes", str(backup_sha_block_size_bytes))
+
+    return True
+
 def conf_cinder(config):
 
     print()
@@ -132,7 +217,7 @@ def conf_cinder(config):
 
     ip_address = get(config, "network.HOST_IP")
 
-    target_scsi_ip_address = get(config, "cinder.TARGET_IP_ADDRESS")
+    target_scsi_ip_address = get(config, "cinder.TARGET_IP_ADDRESS") or ip_address
 
     volume_clear = get(config, "cinder.VOLUME_CLEAR")
     volume_clear_size = int(get(config, "cinder.VOLUME_CLEAR_SIZE"))
@@ -217,6 +302,7 @@ def conf_cinder(config):
 def finalize(config):
 
     ip_address = get(config, "network.HOST_IP")
+    install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
 
     print()
 
@@ -226,6 +312,9 @@ def finalize(config):
         "apache2", 
         "tgt"
     ]
+
+    if install_cinder_backup:
+        cinder_services.append("cinder-backup")
 
     if service_exists("cinder-api.service") and is_debian():
         cinder_services.append("cinder-api")
@@ -243,8 +332,13 @@ def run_setup_cinder(config):
 
     vg_name = get(config, "cinder.lvm.VOLUME_GROUP")
 
-    if not install_pkgs(): return False 
+    install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
+
+    if not install_pkgs(config): return False 
     if not conf_lvm(config): return False
+
+    if install_cinder_backup:
+        if not conf_cinder_backup(config) : return False
 
     using_loopback = not get(config, "cinder.lvm.PHYSICAL_VOLUME")
 

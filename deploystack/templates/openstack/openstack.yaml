@@ -98,12 +98,16 @@ manila:
   # Manila backend to use.
   # generic: creates share servers using Nova service instances (more complex, multi-node)
   # lvm: exports shares directly from the storage node using LVM (simple, single-node)
-  BACKEND: "generic"
+  BACKEND: ""
 
   # Automatically create Manila shares defined in the configuration.
   # yes: creates configured shares after the backend setup is completed
   # no: only configures Manila backend without creating shares
   CREATE_SHARES: "yes"
+
+  # Share type name that will be used as default for creating new shares
+  # If not set, it will fallback to the name 'default_share_type'
+  DEFAULT_SHARE_TYPE_NAME: "default_share_type"
 
   # Supported share protocols.
   # Examples: NFS, CIFS
@@ -146,7 +150,7 @@ manila:
 
       samba:
         SAMBA_SERVER_USER: "samba-user"
-        SAMBA_SERVER_USER_PASSWORD: "secret"
+        SAMBA_SERVER_USER_PASSWORD: ""
         
       # Backend name identifier.
       BACKEND_NAME: "lvm"
@@ -175,7 +179,7 @@ manila:
 
         MANILA_LVM_LOOP_PATH: "/dev/loop0"
 
-  # Shares to create automatically after deployment.
+  # Shares types to create automatically during deployment.
   share_types:
     - name: "default_share_type"
       is_public: yes
@@ -186,23 +190,41 @@ manila:
         # - revert_to_snapshot_support: no
         # - mount_snapshot_support: no
 
+    # Shares to create during deployment.
   shares:
-    # Share name.
-    - name: default_share
-      share_type: default_share_type
-      share_protocol: NFS
-      share_size: 1
-      is_public: no
-      share_network: manila_internal_service_network
-      access_rules:
-      - type: "ip"
-        access: "10.0.0.0/24"
-        level: "rw"
-      - type: "ip"
-        access: "10.254.0.0/28"
-        level: "rw"
+
+    # Example: Generic DHSS Share
+    #- name: default_share
+    #  share_protocol: NFS
+    #  share_size: 1
+    #  is_public: yes
+    #  share_network: manila_internal_service_network
+    #  access_rules:
+    #  - type: "ip"
+    #    access: "10.0.0.0/24"
+    #    level: "rw"
+    #  - type: "ip"
+    #    access: "10.254.0.0/28"
+    #    level: "rw"
+
+    # Example: LVM Share
+    #- name: default_share
+    #  share_protocol: NFS
+    #  share_size: 1
+    #  is_public: yes
+    #  access_rules:
+    #  - type: "ip"
+    #    access: "10.0.0.0/24"
+    #    level: "rw"
+    #  - type: "ip"
+    #    access: "10.254.0.0/28"
+    #    level: "rw"
 
 cinder:
+
+  # Enable Cinder Backup service for Cinder volumes
+  ENABLE_CINDER_BACKUP: no
+
   lvm:
     # --- Backend ---
 
@@ -227,8 +249,38 @@ cinder:
     # Size of the loopback image in GB
     CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
 
+  backup:
+    # Cinder backup driver to use
+    # posix | nfs | swift (in the future)
+    DRIVER: ""
+
+    # --- Driver: posix (backup to local/mounted filesystem) ---
+    drivers:
+      posix:
+        BACKUP_PATH: "/var/lib/cinder/backups"
+
+      # --- Driver: nfs ---
+      nfs:
+        NFS_SHARE: "" # e.g., "{network.HOST_IP}:/export/cinder-backups"
+
+        MOUNT_POINT_BASE: "/var/lib/cinder/cinder/backup"
+        MOUNT_OPTIONS: "" # Optional extra mount options
+
+    # Backup compression
+    # zlib | bz2 | zstd | none
+    COMPRESSION_ALGORITHM: "zlib"
+
+    # Maximum size of each backup file in bytes (Default: 1999994880)
+    BACKUP_FILE_SIZE: 1999994880 
+
+    # Block size in bytes used for SHA checksum calculation (Default: 32768)
+    BACKUP_SHA_BLOCK_SIZE_BYTES: 32768
+
+    # Number of concurrent backup operations
+    BACKUP_WORKERS: 1
+
   # IP address of the iSCSI target (defaults to network.HOST_IP if left empty)
-  TARGET_IP_ADDRESS: "{network.HOST_IP}"
+  TARGET_IP_ADDRESS: ""
 
   # Volume clearing strategy when a volume is deleted
   # Options: zero (overwrite with zeros), shred (secure erase), none (skip, faster for testing)
