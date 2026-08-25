@@ -161,7 +161,7 @@ def conf_cinder_backup(config):
 
     elif backup_driver == "nfs":
 
-        nfs_share = get(config, "cinder.backup.nfs.NFS_SHARE")
+        nfs_share = get(config, "cinder.backup.drivers.nfs.NFS_SHARE")
         mount_point_base_dir = get(config, "cinder.backup.drivers.nfs.MOUNT_POINT_BASE")
 
         mount_options = get(config, "cinder.backup.drivers.nfs.MOUNT_OPTIONS") or None
@@ -185,7 +185,7 @@ def conf_cinder_backup(config):
                 f.write(f"{export_line}\n")
 
             print()
-            
+
             if not run_command(["exportfs", "-ra"], "Applying NFS exports...") : return False
 
         set_conf_option(cinder_conf, "DEFAULT", "backup_driver", "cinder.backup.drivers.nfs.NFSBackupDriver")
