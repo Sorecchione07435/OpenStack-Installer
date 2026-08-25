@@ -27,7 +27,7 @@ if [ -z "$PHYSICAL_VOLUME" ]; then
 
     echo "$LOOP_DEV" > "$STATE_FILE"
     
-    sed -i -E "s|^\s*filter\s*=.*|    filter = [ \"a|^${{LOOP_DEV}}\\$|\", \"r|.*|\" ]|" "$LVM_CONF"
+    sed -i -E "s#^\s*filter\s*=.*#    filter = [ \"a|^${LOOP_DEV}\$|\", \"r|.*|\" ]#" "$LVM_CONF"
 
     /sbin/pvscan --cache "$LOOP_DEV"
 fi
