@@ -4,7 +4,8 @@ import os
 import re
 import shutil
 import tempfile
-import pformat
+
+from pprint import pformat
 
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
