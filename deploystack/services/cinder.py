@@ -170,8 +170,8 @@ def conf_cinder_backup(config):
 
         if not is_package_installed("nfs-kernel-server"):
             print()
-            
-            if not apt_install(["nfs-kernel-server"], "Installing NFS Kernel Server...") : return False
+
+            if not apt_install(["nfs-kernel-server"], "Installing NFS Kernel Server package...") : return False
 
         exports_file = Path("/etc/exports")
 
@@ -179,6 +179,8 @@ def conf_cinder_backup(config):
             _, export_path = nfs_share.split(":", 1)
         except ValueError:
             return False
+
+        os.makedirs(export_path, exist_ok=True)
         
         export_line = f"{export_path} {ip_address}(rw,sync,no_subtree_check)"
 
