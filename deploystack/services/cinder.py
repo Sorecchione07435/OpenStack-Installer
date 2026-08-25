@@ -182,7 +182,7 @@ def conf_cinder_backup(config):
 
         os.makedirs(export_path, exist_ok=True)
         
-        export_line = f"{export_path} {ip_address}(rw,sync,no_subtree_check)"
+        export_line = (f"{export_path} {ip_address}(rw,sync,no_subtree_check,no_root_squash)")
 
         lines = set()
 
