@@ -90,7 +90,6 @@ def conf_generic_backend(config):
 
     return True
 
-
 def finalize(env):
 
     print()
@@ -104,7 +103,6 @@ def finalize(env):
         return False
 
     return True
-
 
 def finalize_generic_backend(config, env):
 
@@ -191,7 +189,6 @@ def finalize_generic_backend(config, env):
         if not create_shares(shares=shares, env=env, dhss=True): return False
 
     return True
-
 
 def run_setup_generic_backend(config, env):
 
