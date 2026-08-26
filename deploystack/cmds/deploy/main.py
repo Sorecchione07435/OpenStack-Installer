@@ -138,6 +138,7 @@ def init_parser(subparsers):
     manila_lvm_storage.add_argument(
         "--manila-lvm-image-size-in-gb",
         type=int,
+        default=5,
         help="Size of the Manila LVM image in GB (default: 5)"
     )
 
@@ -154,7 +155,7 @@ def init_parser(subparsers):
         "--manila-backend",
         type=str,
         choices=["generic", "lvm"],
-        default=None,
+        default="lvm",
         dest="manila_backend",
         help="The Manila Backend that will be used to configure shares in OpenStack"
     )
@@ -163,7 +164,7 @@ def init_parser(subparsers):
         "--manila-share-protocols",
         nargs="+",
         choices=["nfs", "cifs"],
-        default=None,
+        default="nfs",
         dest="manila_share_protocols",
         help="One or more Manila share protocols (choices: nfs, cifs)."
     )
