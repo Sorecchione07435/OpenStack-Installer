@@ -254,11 +254,12 @@ def deploy(parser, args) -> None:
             cinder_backup_driver = args.cinder_backup_driver = None
             cinder_backup_compression_algorithm = args.compression_algorithm = None
 
-            cinder_lvm_size = (
+
+        cinder_lvm_size = (
             args.cinder_lvm_image_size_in_gb
             if args.cinder_lvm_image_size_in_gb is not None
             else 5
-        ) if cinder_flag == "yes" else 0
+            ) if cinder_flag == "yes" else 0
         
         manila_lvm_vg = (
             args.manila_volume_group
