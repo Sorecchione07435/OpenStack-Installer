@@ -35,7 +35,11 @@ def config_openstack(
     install_cinder: str = "yes",
     install_manila: str = "no",
     config_file_path: str = "",
+
+    cinder_lvm_vg = "",
     cinder_physical_volume = "",
+
+    manila_lvm_vg = "",
     manila_lvm_physical_volume = "",
     cinder_lvm_image_size_in_gb=None,
     manila_lvm_image_size_in_gb=None,
@@ -454,6 +458,7 @@ def config_openstack(
                 })
 
                 config_dict["manila"]["backends"]["lvm"]["storage"].update({
+                    "SHARE_VOLUME_GROUP": manila_lvm_vg,
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/images/manila-volumes.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),

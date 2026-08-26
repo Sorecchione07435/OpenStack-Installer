@@ -62,12 +62,12 @@ def init_parser(subparsers):
     )
 
     manila.add_argument(
-            "--install-manila",
-            type=str,
-            choices=["yes", "no"],
-            default="no",
-            help="Choosing whether to install Manila (Shared Filesystems) service (yes/no)"
-        )
+        "--install-manila",
+        type=str,
+        choices=["yes", "no"],
+        default="no",
+        help="Choosing whether to install Manila (Shared Filesystems) service (yes/no)"
+    )
 
     cinder.add_argument(
         "--cinder-lvm-image-size-in-gb",
@@ -80,6 +80,13 @@ def init_parser(subparsers):
         "--cinder-physical-volume",
         type=str,
         help="The physical volume to use for Cinder (example: /dev/sdb)"
+    )
+
+    cinder.add_argument(
+        "--cinder-volume-group",
+        type=str,
+        default="cinder-volumes",
+        help="Name of the LVM volume group. (default: cinder-volumes)"
     )
 
     cinder_backup.add_argument(
@@ -139,6 +146,12 @@ def init_parser(subparsers):
         "--manila-lvm-image-size-in-gb",
         type=int,
         help="Size of the Manila LVM image in GB (default: 5)"
+    )
+
+    manila_lvm_storage.add_argument(
+        "--manila-volume-group",
+        type=str,
+        help="Name of the LVM volume group used for Manila shares"
     )
 
     general_options.add_argument(
@@ -246,6 +259,13 @@ def deploy(parser, args) -> None:
             if args.cinder_lvm_image_size_in_gb is not None
             else 5
         ) if cinder_flag == "yes" else 0
+        
+        manila_lvm_vg = (
+            args.manila_volume_group
+            if manila_flag == "yes" and args.manila_volume_group is not None
+            else "manila-volumes" if manila_flag == "yes"
+            else None
+        )
 
         manila_lvm_size = (
             args.manila_lvm_image_size_in_gb
@@ -254,12 +274,13 @@ def deploy(parser, args) -> None:
         ) if manila_flag == "yes" else 0
 
         config_openstack(
+            config_file_path=config_file_path,
+
             install_horizon=horizon_flag,
             install_cinder=cinder_flag,
             install_manila=manila_flag,
 
-            config_file_path=config_file_path,
-
+            cinder_lvm_vg=args.cinder_volume_group,
             cinder_physical_volume=cinder_physical_volume,
             cinder_lvm_image_size_in_gb=cinder_lvm_size,
 
@@ -269,6 +290,8 @@ def deploy(parser, args) -> None:
             backup_file_size_in_bytes=args.backup_file_size_in_bytes,
             backup_sha_block_size_in_bytes=args.backup_sha_block_size_in_bytes,
             backup_workers=args.backup_workers,
+
+            manila_lvm_vg=manila_lvm_vg,
 
             manila_lvm_physical_volume=manila_lvm_physical_volume,
             manila_lvm_image_size_in_gb=manila_lvm_size,
