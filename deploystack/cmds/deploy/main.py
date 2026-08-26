@@ -87,7 +87,7 @@ def init_parser(subparsers):
         type=str,
         choices=["yes", "no"],
         default="no",
-        help="Choose whether to install the Cinder Backup service (yes/no)"
+        help="Choose whether to enable the Cinder Backup service (yes/no)"
     )
 
     cinder_backup.add_argument(
@@ -207,7 +207,7 @@ def deploy(parser, args) -> None:
 
         neutron_driver = args.neutron_driver or "ovs"
 
-        install_cinder_backup = args.install_cinder_backup
+        enable_cinder_backup = args.enable_cinder_backup
 
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"
@@ -234,7 +234,7 @@ def deploy(parser, args) -> None:
             else ""
         )
 
-        if install_cinder_backup == "yes":
+        if enable_cinder_backup == "yes":
             cinder_backup_driver = args.cinder_backup_driver = "posix"
             cinder_backup_compression_algorithm = args.compression_algorithm = "zlib"
         else:
@@ -263,7 +263,7 @@ def deploy(parser, args) -> None:
             cinder_physical_volume=cinder_physical_volume,
             cinder_lvm_image_size_in_gb=cinder_lvm_size,
 
-            enable_cinder_backup=install_cinder_backup,
+            enable_cinder_backup=enable_cinder_backup,
             cinder_backup_driver=cinder_backup_driver,
             compression_algorithm=cinder_backup_compression_algorithm,
             backup_file_size_in_bytes=args.backup_file_size_in_bytes,
