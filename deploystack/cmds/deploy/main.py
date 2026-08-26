@@ -254,7 +254,6 @@ def deploy(parser, args) -> None:
             cinder_backup_driver = args.cinder_backup_driver = None
             cinder_backup_compression_algorithm = args.compression_algorithm = None
 
-
         cinder_lvm_size = (
             args.cinder_lvm_image_size_in_gb
             if args.cinder_lvm_image_size_in_gb is not None
