@@ -207,6 +207,8 @@ def deploy(parser, args) -> None:
 
         neutron_driver = args.neutron_driver or "ovs"
 
+        install_cinder_backup = args.install_cinder_backup
+
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"
 
@@ -232,7 +234,14 @@ def deploy(parser, args) -> None:
             else ""
         )
 
-        cinder_lvm_size = (
+        if install_cinder_backup == "yes":
+            cinder_backup_driver = args.cinder_backup_driver = "posix"
+            cinder_backup_compression_algorithm = args.compression_algorithm = "zlib"
+        else:
+            cinder_backup_driver = args.cinder_backup_driver = None
+            cinder_backup_compression_algorithm = args.compression_algorithm = None
+
+            cinder_lvm_size = (
             args.cinder_lvm_image_size_in_gb
             if args.cinder_lvm_image_size_in_gb is not None
             else 5
@@ -254,9 +263,9 @@ def deploy(parser, args) -> None:
             cinder_physical_volume=cinder_physical_volume,
             cinder_lvm_image_size_in_gb=cinder_lvm_size,
 
-            enable_cinder_backup=args.enable_cinder_backup,
-            cinder_backup_driver=args.cinder_backup_driver,
-            compression_algorithm=args.compression_algorithm,
+            enable_cinder_backup=install_cinder_backup,
+            cinder_backup_driver=cinder_backup_driver,
+            compression_algorithm=cinder_backup_compression_algorithm,
             backup_file_size_in_bytes=args.backup_file_size_in_bytes,
             backup_sha_block_size_in_bytes=args.backup_sha_block_size_in_bytes,
             backup_workers=args.backup_workers,
