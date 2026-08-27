@@ -4,7 +4,7 @@ import os
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import get
-from ..utils.core.system_utils import nc_wait
+from ..utils.core.system_utils import nc_wait, is_ubuntu_release, is_package_installed
 from ..utils.core import colors
 
 from ..utils.lvm.loopback import set_lvm_filter
@@ -194,6 +194,8 @@ def install_pkgs(config):
     devices = []
     prereqs_pkgs = ["wget", "rabbitmq-server", "python3-openstackclient", "memcached"]
 
+    os_release = get(config, "openstack.OPENSTACK_RELEASE", "caracal").lower()
+
     install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
     install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
 
@@ -210,6 +212,17 @@ def install_pkgs(config):
         manila_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
 
         devices.append(manila_pv or manila_loop_dev)
+
+    if is_ubuntu_release("24.04") and os_release == "gazpacho":
+        prereqs_pkgs.remove("python3-openstackclient")
+
+        if is_package_installed("python3-openstackclient"):
+            if not run_command(["apt-get", "remove", "-y", "python3-openstackclient"], "Removing conflicting apt openstackclient...") : return False
+
+        if not is_package_installed("python3-pip"):
+            if not apt_install(["python3-pip"], "Installing system python pip package...") : return False
+
+        if not run_command(["pip", "install", "python-openstackclient", "--break-system-packages"], "Installing OpenStack Client from system pip...") : return False
         
     if devices:
         prereqs_pkgs.append("lvm2")
