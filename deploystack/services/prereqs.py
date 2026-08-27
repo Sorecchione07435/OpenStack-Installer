@@ -222,7 +222,9 @@ def install_pkgs(config):
         if not is_package_installed("python3-pip"):
             if not apt_install(["python3-pip"], "Installing system python pip package...") : return False
 
-        if not run_command(["pip", "install", "python-openstackclient", "--break-system-packages"], "Installing OpenStack Client from system pip...") : return False
+        if not run_command(["pip", "install", "python-openstackclient==9.0.0", "--break-system-packages"], "Installing OpenStack Client from system pip...") : return False
+
+        print()
         
     if devices:
         prereqs_pkgs.append("lvm2")
