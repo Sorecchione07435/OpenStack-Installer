@@ -235,11 +235,26 @@ $passwordB64 = "{password_b64}"
 $bytes = [System.Convert]::FromBase64String($passwordB64)
 $password = [System.Text.Encoding]::Unicode.GetString($bytes)
 
+Write-Output "Password decoded: $($password.Length) characters"
+
 $secure = ConvertTo-SecureString $password -AsPlainText -Force
 
-Set-LocalUser -Name $username -Password $secure
-Set-LocalUser -Name $username -PasswordNeverExpires $true
-Enable-LocalUser -Name $username
+try {{
+    Get-LocalUser -Name $username -ErrorAction Stop
+
+    Set-LocalUser -Name $username -Password $secure -ErrorAction Stop
+    Write-Output "=== PASSWORD CHANGED ==="
+
+    Set-LocalUser -Name $username -PasswordNeverExpires $true -ErrorAction Stop
+    Enable-LocalUser -Name $username -ErrorAction Stop
+
+    Write-Output "=== COMPLETED ==="
+}}
+catch {{
+    Write-Error "ERROR: $($_.Exception.Message)"
+    Write-Error "DETAILS: $($_.Exception)"
+    exit 1
+}}
 """
 
     password_hash = sha512_crypt.hash(password)
