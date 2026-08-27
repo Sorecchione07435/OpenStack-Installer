@@ -210,7 +210,6 @@ def get_server_id(name: str) -> str:
         sys.exit(1)
     return exact[0]
 
-
 def get_floating_ip_id(fip_address: str) -> str:
     """Resolve floating IP address to its ID."""
     out = _os("floating", "ip", "list",
@@ -222,17 +221,17 @@ def get_floating_ip_id(fip_address: str) -> str:
         sys.exit(1)
     return fip_id
 
-
 def generate_user_config(ostype: str, default_user: str, password: str,
                           public_key: str = None) -> str:
 
     password_b64 = base64.b64encode(password.encode('utf-16-le')).decode('ascii')
 
     windows_config_drive = f"""
+#ps1_sysnative
+
 $username = "{default_user}"
 $passwordB64 = "{password_b64}"
 
-# Decodifica Base64
 $bytes = [System.Convert]::FromBase64String($passwordB64)
 $password = [System.Text.Encoding]::Unicode.GetString($bytes)
 
@@ -276,7 +275,6 @@ Enable-LocalUser -Name $username
         f.write(content)
 
     return file_path
-
 
 def create_server(name: str, image_id: str, flavor_id: str,
                   network_id: str, keypair_name: str) -> str:
