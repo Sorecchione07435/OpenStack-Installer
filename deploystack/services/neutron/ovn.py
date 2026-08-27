@@ -25,6 +25,8 @@ from .network.provisioner import create_custom_networks, clean_custom_bridges, a
 from .network.routers import create_custom_network_router
 
 neutron_conf = "/etc/neutron/neutron.conf"
+neutron_ovn_metadata_agent_conf = "/etc/neutron/neutron_ovn_metadata_agent.ini"
+
 conf_ml2 = "/etc/neutron/plugins/ml2/ml2_conf.ini"
 conf_nova = "/etc/nova/nova.conf"
 
@@ -33,7 +35,7 @@ def install_pkgs():
     print()
 
     ovn_packages = [
-        "neutron-metadata-agent",   # still needed for VM metadata (Nova)
+        "neutron-ovn-metadata-agent",   # still needed for VM metadata (Nova)
         "ovn-central",              # ovn-northd + NB/SB ovsdb-server
         "ovn-host",                 # ovn-controller on compute nodes
         "ovn-common",               # ovn-nbctl, ovn-sbctl tools
@@ -278,6 +280,8 @@ def conf_ovn_neutron(config):
     tenant_network_type = get(config, "neutron.tenant_network.TYPE", "geneve").lower()
     tenant_network_vni_range = get(config, "neutron.tenant_network.VNI_RANGE", "1:1000")
 
+    service_password = get(config, "passwords.SERVICE_PASSWORD")
+
     ovn_l3_scheduler = get(config, "neutron.ovn.OVN_L3_SCHEDULER", "leastloaded").lower()
     
     provider_networks = get(config, "neutron.provider_networks", [])
@@ -305,6 +309,13 @@ def conf_ovn_neutron(config):
     set_conf_option(conf_ml2, "ml2", "tenant_network_types", tenant_network_type)
     set_conf_option(conf_ml2, "ml2", "extension_drivers", "port_security")
     set_conf_option(conf_ml2, "securitygroup", "enable_ipset", "true")
+
+    set_conf_option(neutron_ovn_metadata_agent_conf, "DEFAULT", "nova_metadata_host", ip_address)
+    set_conf_option(neutron_ovn_metadata_agent_conf, "DEFAULT", "nova_metadata_port", "8775")
+
+    set_conf_option(neutron_ovn_metadata_agent_conf, "DEFAULT", "metadata_proxy_shared_secret", service_password)
+
+    set_conf_option(neutron_ovn_metadata_agent_conf, "ovn", "ovn_sb_connection", f"tcp:{ip_address}:{ovn_sb_port}")
 
     if create_ovn_bridges:
         if ovn_encap_type == "geneve":
@@ -383,7 +394,7 @@ def finalize(config):
         if not run_command(
             ["systemctl", "restart",
             "neutron-server",
-            "neutron-metadata-agent",
+            "neutron-ovn-metadata-agent",
             "nova-compute"],
             "Restarting Neutron and Nova services...", False, None, 3, 5
         ):
@@ -394,7 +405,7 @@ def finalize(config):
         if not run_command(
             ["systemctl", "restart",
             "neutron-periodic-workers", "apache2",
-            "neutron-metadata-agent",
+            "neutron-ovn-metadata-agent",
             "nova-compute"],
             "Restarting Neutron and Nova services...", False, None, 3, 5
         ):
