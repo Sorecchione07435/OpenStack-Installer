@@ -226,8 +226,7 @@ def generate_user_config(ostype: str, default_user: str, password: str,
 
     password_b64 = base64.b64encode(password.encode('utf-16-le')).decode('ascii')
 
-    windows_config_drive = f"""
-#ps1_sysnative
+    windows_config_drive = f"""#ps1_sysnative
 
 $username = "{default_user}"
 $passwordB64 = "{password_b64}"
