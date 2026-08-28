@@ -56,9 +56,10 @@ def conf_glance(config):
     set_conf_option(glance_conf, "glance_store", "filesystem_store_datadir", "/var/lib/glance/images/")
 
     db_migration_cmd = [
-    "sudo", "-u", "glance",
-    "glance-manage", "db_sync"
-]
+        "sudo", "-u", "glance",
+        "glance-manage", "db_sync"
+    ]
+    
     if not run_command(db_migration_cmd, "Running Glance DB Migrations...") : return False
     if not run_command(["glance-manage", "db_load_metadefs"], "Loading Glance metadata definitions...") : return False
 

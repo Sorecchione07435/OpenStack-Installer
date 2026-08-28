@@ -591,12 +591,11 @@ def create_ovn_networks(config, env):
         "--ovn-neutron_sync_mode", "repair"
     ], "Resynchronizing the OVN Northd database..."): return False
 
-    ovs_services =  ["systemctl", "restart",
-            "ovn-ovsdb-server-nb",
-            "ovn-ovsdb-server-sb",
-            "ovn-northd",
-            "ovn-controller",
-            "nova-compute"]
+    ovs_services =  [ "ovn-ovsdb-server-nb",
+        "ovn-ovsdb-server-sb",
+        "ovn-northd",
+        "ovn-controller",
+        "nova-compute"]
 
     if service_exists("neutron-api.service") and not service_exists("neutron-server.service"):
         ovs_services.append("neutron-api")
@@ -607,7 +606,7 @@ def create_ovn_networks(config, env):
         ovs_services.append("neutron-server")
         
     if not run_command(
-        ovs_services,
+        ["systemctl", "restart"] + ovs_services,
         "Restarting OVN services...", False, None, 3, 5
     ):  return False
 

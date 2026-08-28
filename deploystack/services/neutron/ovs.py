@@ -265,7 +265,6 @@ def conf_neutron_ovs(config):
     else:
         set_conf_option(conf_ml2, "ml2", "tenant_network_types", "local")
 
-
     set_conf_option(conf_ml2, "securitygroup", "enable_ipset", "true")
     set_conf_option(conf_ml2, "ml2", "mechanism_drivers", "openvswitch")
 

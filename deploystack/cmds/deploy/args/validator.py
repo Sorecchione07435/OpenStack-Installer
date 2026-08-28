@@ -35,9 +35,20 @@ def validate_cinder_args(parser, args):
         ]
 
         if any(provided):
-            parser.error(
-                "Cinder options require --install-cinder yes"
-            )
+            parser.error("Cinder options require --install-cinder yes")
+
+def validate_cinder_backup_args(parser, args):
+    if args.cinder_backup_driver == "no":
+        provided = [
+            args.cinder_backup_driver,
+            args.compression_algorithm,
+            args.backup_file_size_in_bytes,
+            args.backup_sha_block_size_in_bytes,
+            args.backup_workers
+        ]
+
+        if any(provided):
+            parser.error("Cinder Backup options require --enable-cinder-backup yes")
 
 def validate_deploy_args(parser, args):
 

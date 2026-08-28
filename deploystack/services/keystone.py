@@ -11,7 +11,7 @@ from ..utils.config.setter import set_conf_option
 from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
-from . import get_base_host
+from . import validate_os_release_available, get_base_host
 
 keystone_conf = "/etc/keystone/keystone.conf"
 
@@ -139,9 +139,7 @@ def create_projects_and_demo_user(config, env):
     ]
 
     if ("demo", "demo", "user") not in existing_assignments:
-        create_demo_user_cmds.append(
-            ["openstack", "role", "add", "--project", "demo", "--user", "demo", "user"]
-        )
+        create_demo_user_cmds.append(["openstack", "role", "add", "--project", "demo", "--user", "demo", "user"])
 
     if not run_command(create_service_project_cmd, "Creating service project...", env=env): return False
 
@@ -158,7 +156,7 @@ def create_services_users(config, env):
     install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
     install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
 
-    os_release = get(config, "openstack.OPENSTACK_RELEASE")
+    os_release = get(config, "openstack.OPENSTACK_RELEASE").lower()
 
     services = get_services(env)
     assignments = get_role_assignments(env)
@@ -219,7 +217,7 @@ def create_services_users(config, env):
 
         manila_services = [
             ("manilav2", "OpenStack Shared File Systems V2", "sharev2")
-        ] if os_release == "gazpacho" else [
+        ] if os_release == "gazpacho" and validate_os_release_available("gazpacho") else [
             ("manila", "OpenStack Shared File Systems", "share"),
             ("manilav2", "OpenStack Shared File Systems V2", "sharev2"),
         ]
@@ -259,7 +257,7 @@ def create_services_endpoints(config, env):
     install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
     
     os_region_name = get(config, "openstack.REGION_NAME")
-    os_release = get(config, "openstack.OPENSTACK_RELEASE")
+    os_release = get(config, "openstack.OPENSTACK_RELEASE").lower()
 
     glance_url = f"http://{get_base_host(config)}:9292"
 
@@ -319,7 +317,7 @@ def create_services_endpoints(config, env):
 
     if install_manila:
 
-        if os_release == "gazpacho":
+        if os_release == "gazpacho" and validate_os_release_available("gazpacho") :
             manila_url = f"http://{get_base_host(config)}:8786/v2"
 
             if ("sharev2", "public", os_region_name, manila_url) not in existing_endpoints:
@@ -410,11 +408,15 @@ export OS_IMAGE_API_VERSION=2
 def run_setup_keystone(config, env):
 
     if not install_pkgs(): return False  
+
     if not conf_keystone(config): return False
+    
     if not finalize(config): return False 
+
     if not create_projects_and_demo_user(config, env): return False 
     if not create_services_users(config, env): return False  
     if not create_services_endpoints(config, env): return False  
+
     if not generate_environment_cli_scripts(config): return False
     
     print(f"\n{colors.GREEN}Keystone configured successfully!{colors.RESET}\n")

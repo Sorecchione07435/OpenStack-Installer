@@ -109,28 +109,32 @@ def init_parser(subparsers):
         "--compression-algorithm",
         type=str,
         choices=["zlib", "bz2", "zstd", "none"],
-        default="zlib",
+        #default="zlib",
+        default=None,
         help="Backup compression algorithm"
     )
 
     cinder_backup.add_argument(
         "--backup-file-size-in-bytes",
         type=int,
-        default=1999994880,
+        #default=1999994880,
+        default=None,
         help="Maximum size of each backup file in bytes (Default: 1999994880)"
     )
 
     cinder_backup.add_argument(
         "--backup-sha-block-size-in-bytes",
         type=int,
-        default=32768,
+        #default=32768,
+        default=None,
         help="Block size in bytes used for SHA checksum calculation (Default: 32768)"
     )
 
     cinder_backup.add_argument(
         "--backup-workers",
         type=int,
-        default=1,
+        #default=1,
+        default=None,
         help="Number of concurrent backup operations"
     )
 
@@ -250,10 +254,18 @@ def deploy(parser, args) -> None:
         if enable_cinder_backup == "yes":
             cinder_backup_driver = args.cinder_backup_driver = "posix"
             cinder_backup_compression_algorithm = args.compression_algorithm = "zlib"
+
+            cinder_backup_file_size_in_bytes = args.backup_file_size_in_bytes = 1999994880
+            cinder_backup_sha_block_size_in_bytes = args.backup_sha_block_size_in_bytes = 32768
+            cinder_backup_workers = args.backup_workers = 1
         else:
             cinder_backup_driver = args.cinder_backup_driver = None
             cinder_backup_compression_algorithm = args.compression_algorithm = None
 
+            cinder_backup_file_size_in_bytes = None
+            cinder_backup_sha_block_size_in_bytes = None
+            cinder_backup_workers = None
+            
         cinder_lvm_size = (
             args.cinder_lvm_image_size_in_gb
             if args.cinder_lvm_image_size_in_gb is not None
@@ -287,9 +299,9 @@ def deploy(parser, args) -> None:
             enable_cinder_backup=enable_cinder_backup,
             cinder_backup_driver=cinder_backup_driver,
             compression_algorithm=cinder_backup_compression_algorithm,
-            backup_file_size_in_bytes=args.backup_file_size_in_bytes,
-            backup_sha_block_size_in_bytes=args.backup_sha_block_size_in_bytes,
-            backup_workers=args.backup_workers,
+            backup_file_size_in_bytes=cinder_backup_file_size_in_bytes,
+            backup_sha_block_size_in_bytes=cinder_backup_sha_block_size_in_bytes,
+            backup_workers=cinder_backup_workers,
 
             manila_lvm_vg=manila_lvm_vg,
 

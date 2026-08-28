@@ -100,8 +100,6 @@ def finalize(config):
     
 def run_setup_controller_manila(config, backend_fn, env):
 
-    backend = get(config, "manila.BACKEND")
-
     if not install_pkgs(): return False 
     if not conf_manila(config): return False
     

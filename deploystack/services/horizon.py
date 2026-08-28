@@ -63,6 +63,41 @@ Alias /dashboard/static /var/lib/openstack-dashboard/static/
 </Directory>
 """
 
+def enable_cinder_backup_panel():
+    try:
+        OPENSTACK_CINDER_FEATURES = {
+            "enable_backup": True
+        }
+
+        with open(settings_file, "r") as f:
+            content = f.read()
+
+        content = re.sub(
+            r"OPENSTACK_CINDER_FEATURES\s*=\s*\{.*?\}\s*",
+            "",
+            content,
+            flags=re.DOTALL
+        )
+
+        content += (
+            "\nOPENSTACK_CINDER_FEATURES = "
+            + pformat(OPENSTACK_CINDER_FEATURES)
+            + "\n"
+        )
+
+        with open(settings_file, "w") as f:
+            f.write(content)
+
+        return True
+
+    except Exception as e:
+        print(
+            f"\n{colors.ERROR}"
+            f"Unable to update Horizon Cinder Backup settings: {e}"
+            f"{colors.RESET}\n"
+        )
+        return False
+    
 def atomic_write(path, content):
     dir_name = os.path.dirname(path)
     os.makedirs(dir_name, exist_ok=True)
@@ -137,7 +172,6 @@ def install_pkgs(config):
     if not apt_install(packages, ux_text="Installing Horizon package..."): return False
 
     if install_manila:
-        print()
         if not setup_manila_horizon(config): return False
 
     return True
@@ -163,38 +197,8 @@ def conf_horizon(config):
     settings_to_set["WEBROOT"] = "'/horizon/'" if is_debian() else "'/dashboard/'"
 
     if install_cinder_backup:
-        try:
-            OPENSTACK_CINDER_FEATURES = {
-                "enable_backup": True
-            }
-
-            with open(settings_file, "r") as f:
-                content = f.read()
-
-            content = re.sub(
-                r"OPENSTACK_CINDER_FEATURES\s*=\s*\{.*?\}\s*",
-                "",
-                content,
-                flags=re.DOTALL
-            )
-
-            content += (
-                "\nOPENSTACK_CINDER_FEATURES = "
-                + pformat(OPENSTACK_CINDER_FEATURES)
-                + "\n"
-            )
-
-            with open(settings_file, "w") as f:
-                f.write(content)
-
-        except Exception as e:
-            print(
-                f"\n{colors.ERROR}"
-                f"Unable to update Horizon Cinder Backup settings: {e}"
-                f"{colors.RESET}\n"
-            )
-            return False
-
+        if not enable_cinder_backup_panel() : return False
+        
     content = ""
     if os.path.exists(settings_file):
         with open(settings_file, "r") as f:

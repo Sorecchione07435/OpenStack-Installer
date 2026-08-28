@@ -138,6 +138,8 @@ def add_dashboard_ui_symlink():
 
 def setup_manila_horizon(config):
 
+    print()
+
     backend = get(config, "manila.BACKEND")
     is_generic = backend == "generic"
 
