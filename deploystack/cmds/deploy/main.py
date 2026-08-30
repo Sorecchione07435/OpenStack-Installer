@@ -251,6 +251,8 @@ def deploy(parser, args) -> None:
             else ""
         )
 
+        cinder_backup_driver = None
+
         if enable_cinder_backup == "yes":
             if not args.cinder_backup_driver:
                 cinder_backup_driver = args.cinder_backup_driver = "posix"
