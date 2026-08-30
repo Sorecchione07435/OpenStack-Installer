@@ -14,6 +14,11 @@ def print_banner():
 def main():
     print_banner()
 
+    if os.geteuid() != 0:
+        print(f"{colors.RED}This utility must be run as root.{colors.RESET}")
+        print(f"{colors.YELLOW}Try: sudo <command>{colors.RESET}\n")
+        sys.exit(1)
+
     parser = build_parser()
     # Only parse known args to avoid automatic error exit
     args = parser.parse_args()
