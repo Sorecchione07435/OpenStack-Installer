@@ -310,18 +310,16 @@ def deploy(parser, args) -> None:
             else 5
         ) if manila_flag == "yes" else 0
 
-
-        if args.os_release is None:
-            if is_ubuntu_release("20.04"):
-                os_release = "ussuri"
-            if is_ubuntu_release("22.04"):
-                os_release = "yoga"
-            elif is_ubuntu_release("24.04"):
-                os_release = "caracal"
-            elif is_ubuntu_release("26.04"):
-                os_release = "gazpacho"
-        else:
+        if args.os_release is not None:
             os_release = args.os_release
+        elif is_ubuntu_release("20.04"):
+            os_release = "ussuri"
+        elif is_ubuntu_release("22.04"):
+            os_release = "yoga"
+        elif is_ubuntu_release("24.04"):
+            os_release = "caracal"
+        elif is_ubuntu_release("26.04"):
+            os_release = "gazpacho"
 
         config_openstack(
             config_file_path=config_file_path,
