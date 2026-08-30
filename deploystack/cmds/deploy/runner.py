@@ -41,6 +41,10 @@ def deploy(config_file):
     create_ovs_bridges = get(config, "ovs.CREATE_BRIDGES")
     create_ovn_bridges = get(config, "ovn.CREATE_BRIDGES")
 
+    if os.geteuid() != 0:
+        print(f"{colors.RED}To start the OpenStack deployment, you need to be root or run it with sudo.{colors.RESET}")
+        sys.exit(1)
+
     if (create_ovn_bridges or create_ovs_bridges) and os.path.exists(f"/sys/class/net/{public_iface}/wireless"):
         print(f"{colors.RED}Wi-Fi interfaces are not supported for OVS bridge networking, Switch to Ethernet to continue OpenStack deployment.{colors.RESET}")
 
