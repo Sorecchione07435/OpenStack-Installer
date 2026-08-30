@@ -490,7 +490,7 @@ def validate_cinder_backup(config) -> bool:
     
     if backup_driver not in ("posix", "nfs"):
         print(
-            f"{colors.RED}Error: Invalid value for 'cinder.backup.DRIVER"
+            f"{colors.RED}Error: Invalid value for 'cinder.backup.DRIVER' "
             f"Allowed values are: ('posix', 'nfs').{colors.RESET}"
         )
         ok = False
