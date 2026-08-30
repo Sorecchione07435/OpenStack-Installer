@@ -279,6 +279,9 @@ def deploy(parser, args) -> None:
             cinder_backup_file_size_in_bytes = None
             cinder_backup_sha_block_size_in_bytes = None
             cinder_backup_workers = None
+
+        print(cinder_backup_driver)
+        print(cinder_backup_compression_algorithm)
             
         cinder_lvm_size = (
             args.cinder_lvm_image_size_in_gb
