@@ -654,16 +654,6 @@ def validate_cinder(config) -> bool:
             return False
     
     else:
-        cinder_loopback_size_raw = validate_positive_int(
-            size_raw,
-            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"
-        )
-
-        if cinder_loopback_size_raw is None:
-            ok = False
-        else:
-            size = cinder_loopback_size_raw
-
         required_loopback_fields = [
             "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
             "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
@@ -678,11 +668,18 @@ def validate_cinder(config) -> bool:
         cinder_volume_lvm_image_file_path = get(config, required_loopback_fields[0])
         cinder_lvm_loop_path = (get(config, required_loopback_fields[2]) or "").strip().lower()
 
+        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
+
         if not is_valid_path(cinder_volume_lvm_image_file_path, required_loopback_fields[0]):
             ok = False
 
         if not is_valid_path(cinder_lvm_loop_path, required_loopback_fields[2]):
             ok = False
+
+        if cinder_loopback_size_raw is None:
+            ok = False
+        else:
+            size = cinder_loopback_size_raw
 
         if cinder_lvm_loop_path:
             if not cinder_lvm_loop_path.startswith("/dev/loop"):

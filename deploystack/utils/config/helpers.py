@@ -1,6 +1,7 @@
 import ipaddress
 import psutil
 import subprocess
+import re
 
 from .parser import get
 from ..core import colors
@@ -8,6 +9,7 @@ from ..core import colors
 from pathlib import Path
 
 prohibited_pw_chars = [' ', '$', '`', '\\']
+VALID_PATH_RE = re.compile(r"^/[A-Za-z0-9._/-]+$")
 
 def validate_port(port):
     try:
@@ -23,10 +25,34 @@ def validate_port(port):
 
 def is_valid_path(path: str, field: str) -> bool:
     try:
+        if not isinstance(path, str):
+            raise ValueError
+
+        path = path.strip()
+
+        if not path:
+            raise ValueError
+
+        if not path.startswith("/"):
+            raise ValueError
+
+        if not VALID_PATH_RE.fullmatch(path):
+            raise ValueError
+
+        parts = path.split("/")
+
+        if any(part in ("", ".", "..") for part in parts):
+            raise ValueError
+
         Path(path)
+
         return True
+
     except (TypeError, ValueError):
-        print(f"{colors.RED}Error: '{field}' is an invalid path{colors.RESET}")
+        print(
+            f"{colors.RED}Error: '{field}' is an invalid path"
+            f"{colors.RESET}"
+        )
         return False
 
 def get_root_device():
