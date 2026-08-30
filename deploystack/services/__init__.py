@@ -7,26 +7,85 @@ def get_base_host(config):
     domain = config.get("network", {}).get("HOST_DOMAIN") or None
     return domain or ip
 
-def validate_os_release_available(release_name: str) -> bool:
-    policy_output = run_command_output(["apt-cache", "policy", "keystone"])
+def _get_candidate_version(package_name: str) -> str | None:
+    try:
+        policy_output = run_command_output(["apt-cache", "policy", package_name])
+    except Exception as exc:
+        return None
 
-    release_name = release_name.lower()
+    if not policy_output or "Unable to locate package" in policy_output:
+        return None
 
-    candidate_match = re.search(
-        r"Candidate:\s*(?P<version>\S+)",
+    match = re.search(
+        r"^\s*Candidate:\s*(?P<version>\S+)\s*$",
         policy_output,
         re.MULTILINE,
     )
+    if not match:
+        return None
 
-    if not candidate_match:
+    version = match.group("version")
+    return None if version in ("(none)", "") else version
+
+
+def validate_os_release_available(
+    release_name: str,
+    package_name: str = "keystone",
+) -> bool:
+    release_name = release_name.strip().lower()
+
+    candidate_version = _get_candidate_version(package_name)
+    if not candidate_version:
         return False
 
-    candidate_version = candidate_match.group("version")
+    try:
+        madison_output = run_command_output(["apt-cache", "madison", package_name])
+    except Exception as exc:
+        return _validate_via_policy(package_name, release_name, candidate_version)
 
-    pattern = re.compile(
-        rf"^\s*{re.escape(candidate_version)}\s+\d+\s*$\n"
-        rf"\s+\d+\s+\d+\s+\S+/{re.escape(release_name)}/\S+",
-        re.MULTILINE,
-    )
+    if not madison_output.strip():
+        return _validate_via_policy(package_name, release_name, candidate_version)
 
-    return pattern.search(policy_output) is not None
+    for line in madison_output.splitlines():
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 3:
+            continue
+
+        line_version = parts[1]
+        source = parts[2]
+
+        if line_version != candidate_version:
+            continue
+
+        if re.search(rf"/{re.escape(release_name)}/", source, re.IGNORECASE):
+            return True
+
+    return False
+
+
+def _validate_via_policy(
+    package_name: str,
+    release_name: str,
+    candidate_version: str,
+) -> bool:
+    try:
+        policy_output = run_command_output(["apt-cache", "policy", package_name])
+    except Exception as exc:
+        return False
+
+    table_match = re.search(r"Version table:\s*\n(?P<table>.*)", policy_output, re.DOTALL)
+    version_table = table_match.group("table") if table_match else policy_output
+
+    blocks = re.split(r"^(?=\s*\S+\s+\d+\s*$)", version_table, flags=re.MULTILINE)
+
+    for block in blocks:
+        header_match = re.match(r"\s*(?P<version>\S+)\s+\d+\s*$", block, re.MULTILINE)
+        if not header_match or header_match.group("version") != candidate_version:
+            continue
+
+        source_lines = re.findall(r"^\s*\d+\s+(?P<source>\S.*)$", block, re.MULTILINE)
+        for source in source_lines:
+            if re.search(rf"/{re.escape(release_name)}/", source, re.IGNORECASE):
+                return True
+
+    return False
