@@ -27,7 +27,7 @@ def run_command_output(cmd, ignore_errors=False, env=None):
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         if ignore_errors:
-            sys.exit(1)
+            return None
 
         print(
             f"{colors.RED}"
@@ -35,7 +35,7 @@ def run_command_output(cmd, ignore_errors=False, env=None):
             f"returned exit code {e.returncode}{colors.RESET}\n\n"
             f"Last output: {e.stderr.strip()}\n"
         )
-        sys.exit(1)
+        return None
 
 def run_command_sync(command, env=None):
     try:

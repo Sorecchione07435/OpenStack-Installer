@@ -1,6 +1,15 @@
 import re
 
 from ..utils.core.commands import run_command_output
+from ..utils.core.system_utils import is_ubuntu_release
+
+DEFAULT_UBUNTU_OPENSTACK_RELEASES = {
+    "20.04": "ussuri",
+    "22.04": "yoga",
+    "24.04": "caracal",
+    "26.04": "gazpacho",
+}
+
 
 def get_base_host(config):
     ip = config.get("network", {}).get("HOST_IP")
@@ -33,6 +42,11 @@ def validate_os_release_available(
     package_name: str = "keystone",
 ) -> bool:
     release_name = release_name.strip().lower()
+
+    for ubuntu_release, openstack_release in DEFAULT_UBUNTU_OPENSTACK_RELEASES:
+        if is_ubuntu_release(ubuntu_release):
+            if openstack_release == release_name:
+                return bool(_get_candidate_version(package_name))
 
     candidate_version = _get_candidate_version(package_name)
     if not candidate_version:
