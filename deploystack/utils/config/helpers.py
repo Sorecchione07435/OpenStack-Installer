@@ -41,6 +41,8 @@ def is_valid_path(path: str, field: str) -> bool:
 
         parts = path.split("/")
 
+        parts = parts[1:]
+
         if any(part in ("", ".", "..") for part in parts):
             raise ValueError
 
