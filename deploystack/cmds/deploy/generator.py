@@ -452,28 +452,38 @@ def config_openstack(
                                             "driver_handles_share_servers": "no"
                                     }]
                             }]
-            
-            if not manila_lvm_physical_volume:
-                config_dict["manila"]["backends"]["lvm"].update({
-                    "SHARE_EXPORT_IP": "172.20.10.10",   
+
+            config_dict["manila"]["backends"]["lvm"].update({
+                "SHARE_EXPORT_IP": "172.20.10.10",   
                 })
 
+            for protocol in manila_share_protocols:
+                if protocol.lower() in "cifs":
+                    config_dict["manila"]["backends"]["lvm"].setdefault("samba", {})
+                    config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER"] = "samba-user"
+                    config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
+                else:
+                    config_dict["manila"]["backends"]["lvm"].pop("samba", None)
+
+            config_dict["manila"]["backends"]["lvm"]["storage"]["SHARE_VOLUME_GROUP"] = manila_lvm_vg
+            
+            if not manila_lvm_physical_volume:
                 config_dict["manila"]["backends"]["lvm"]["storage"].update({
-                    "SHARE_VOLUME_GROUP": manila_lvm_vg,
                     "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/images/manila-volumes.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
                 })
 
-                for protocol in manila_share_protocols:
-                    if protocol.lower() in "cifs":
-                        config_dict["manila"]["backends"]["lvm"].setdefault("samba", {})
-                        config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER"] = "samba-user"
-                        config_dict["manila"]["backends"]["lvm"]["samba"]["SAMBA_SERVER_USER_PASSWORD"] = generate_password()
-                    else:
-                        config_dict["manila"]["backends"]["lvm"].pop("samba", None)
             else:
                 config_dict["manila"]["backends"]["lvm"]["storage"]["PHYSICAL_VOLUME"] = manila_lvm_physical_volume
+
+                for key in (
+                    "MANILA_LVM_IMAGE_FILE_PATH",
+                    "MANILA_LVM_IMAGE_SIZE_IN_GB",
+                    "MANILA_LVM_LOOP_PATH",
+                ):
+                    config_dict["manila"]["backends"]["lvm"]["storage"].pop(key, None)
+
 
             config_dict["manila"]["backends"].pop("generic", None)
     else:
