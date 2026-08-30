@@ -218,6 +218,7 @@ def config_openstack(
 
         if cinder_backup_driver == "posix":
             config_dict["cinder"]["backup"]["drivers"]["posix"]["BACKUP_PATH"] = "/var/lib/cinder/backups"
+            
             config_dict["cinder"]["backup"]["drivers"].pop("nfs", None)
         elif cinder_backup_driver == "nfs":
             config_dict["cinder"]["backup"]["drivers"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-backups"
