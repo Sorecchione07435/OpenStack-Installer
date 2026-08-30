@@ -9,11 +9,24 @@ from pathlib import Path
 
 prohibited_pw_chars = [' ', '$', '`', '\\']
 
-def is_valid_path(path: str) -> bool:
+def validate_port(port):
+    try:
+        port = int(port)
+
+        if not 1 <= port <= 65535:
+            return None
+
+        return port
+
+    except (TypeError, ValueError):
+        return None
+
+def is_valid_path(path: str, field: str) -> bool:
     try:
         Path(path)
         return True
     except (TypeError, ValueError):
+        print(f"{colors.RED}Error: '{field}' is an invalid path{colors.RESET}")
         return False
 
 def get_root_device():

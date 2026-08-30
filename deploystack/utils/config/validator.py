@@ -1,15 +1,29 @@
 import shutil
 import os
+import re
 import ipaddress
 import validators
 
 from ipaddress import ip_address, ip_network
 
-from .helpers import interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int, is_valid_path
+from .helpers import interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int, is_valid_path, validate_port
 from ..core import colors
 from .parser import get
 
 from ...utils.config.helpers import parse_bool, prohibited_pw_chars
+
+OPENSTACK_RESERVED_PORTS = {
+    5000,   # Keystone
+    5672,   # RabbitMQ
+    6080,   # Nova VNC
+    8774,   # Nova
+    #8776,   # Cinder
+    #8777,   # Ceilometer
+    9292,   # Glance
+    9696,   # Neutron
+    #8786,   # Manila
+    80
+}
 
 # --- Passwords ---
 def validate_passwords(config) -> bool:
@@ -402,6 +416,50 @@ def validate_neutron(config) -> bool:
             print(f"{colors.RED}Error: Invalid tenant network type '{tenant_type}'{colors.RESET}")
             ok = False
 
+        ovn_nb_port = validate_positive_int(
+            get(config, ovn_fields[2]),
+            ovn_fields[2]
+        )
+
+        ovn_sb_port = validate_positive_int(
+            get(config, ovn_fields[3]),
+            ovn_fields[3]
+        )
+
+        if ovn_nb_port is None:
+            ok = False
+
+        if ovn_sb_port is None:
+            ok = False
+
+        if ovn_nb_port is not None and not validate_port(ovn_nb_port):
+            print(
+                f"{colors.RED}Error: '{ovn_fields[2]}' contains an invalid port."
+                f"{colors.RESET}"
+            )
+            ok = False
+
+        if ovn_sb_port is not None and not validate_port(ovn_sb_port):
+            print(
+                f"{colors.RED}Error: '{ovn_fields[3]}' contains an invalid port."
+                f"{colors.RESET}"
+            )
+            ok = False
+
+        if ovn_nb_port in OPENSTACK_RESERVED_PORTS:
+            print(
+                f"{colors.RED}Error: '{ovn_fields[2]}' contains a reserved port."
+                f"{colors.RESET}"
+            )
+            ok = False
+
+        if ovn_sb_port in OPENSTACK_RESERVED_PORTS:
+            print(
+                f"{colors.RED}Error: '{ovn_fields[3]}' contains a reserved port."
+                f"{colors.RESET}"
+            )
+            ok = False
+
     ok_bridges, defined_bridges = validate_bridges(config, bridges)
     ok_networks = validate_provider_networks(config, provider_networks, defined_bridges)
     ok_default_security_group = validate_default_security_group(config)
@@ -415,16 +473,25 @@ def validate_neutron(config) -> bool:
 def validate_cinder_backup(config) -> bool:
     ok = True
 
-    backup_driver = get(config, "cinder.backup.DRIVER").lower()
+    backup_driver = (get(config, "cinder.backup.DRIVER") or "").strip().lower()
 
-    if not backup_driver:
-        print(f"{colors.RED}Error: 'cinder.backup.DRIVER' is not set{colors.RESET}")
-        ok = False
+    cinder_backup_fields = [
+        "cinder.backup.DRIVER",
+        "cinder.backup.COMPRESSION_ALGORITHM",
+        "cinder.backup.BACKUP_FILE_SIZE",
+        "cinder.backup.BACKUP_SHA_BLOCK_SIZE_BYTES",
+        "cinder.backup.BACKUP_WORKERS",
+    ]
 
+    for field in cinder_backup_fields:
+        if not get(config, field):
+            print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+            ok = False
+    
     if backup_driver not in ("posix", "nfs"):
         print(
             f"{colors.RED}Error: Invalid value for 'cinder.backup.DRIVER"
-            f"Allowed values are: 'posix', 'nfs'.{colors.RESET}"
+            f"Allowed values are: ('posix', 'nfs').{colors.RESET}"
         )
         ok = False
 
@@ -440,13 +507,98 @@ def validate_cinder_backup(config) -> bool:
             print(f"{colors.RED}Error: 'cinder.backup.drivers.posix.BACKUP_PATH' is not set{colors.RESET}")
             ok = False
 
-        if not is_valid_path(posix_backup_path):
-            print(f"{colors.RED}Error: 'cinder.backup.drivers.posix.BACKUP_PATH' is an invalid path{colors.RESET}")
+        if not is_valid_path(posix_backup_path, "cinder.backup.drivers.posix.BACKUP_PATH"):
             ok = False
-    #elif backup_driver == "nfs":
 
-            
+    elif backup_driver == "nfs":
 
+        ALLOWED_NFS_OPTIONS = {
+            "vers",
+            "proto",
+            "port",
+            "timeo",
+            "retrans",
+            "rsize",
+            "wsize",
+            "hard",
+            "soft",
+            "ro",
+            "rw",
+            "sync",
+            "async",
+            "bg",
+            "fg",
+        }
+
+        def is_valid_nfs_options(options: str) -> bool:
+            try:
+                options = options.removeprefix("-o").strip()
+
+                for option in options.split(","):
+                    option = option.strip()
+
+                    if not option:
+                        continue
+
+                    key = option.split("=", 1)[0]
+
+                    if key not in ALLOWED_NFS_OPTIONS:
+                        return False
+
+                return True
+
+            except (AttributeError, ValueError):
+                return False
+
+        def is_valid_nfs_share(share: str) -> bool:
+            pattern = r"^[^:/\s]+:/[^:\s]+$"
+            return bool(re.match(pattern, share))
+        
+        nfs_backup = get(config, "cinder.backup.drivers.nfs")
+        nfs_backup_fields = [
+            "cinder.backup.drivers.nfs.NFS_SHARE",
+            "cinder.backup.drivers.nfs.MOUNT_POINT_BASE",
+        ]
+
+        nfs_share = get(config, nfs_backup_fields[0])
+        mount_point_base = get(config, nfs_backup_fields[1])
+
+        nfs_extra_mount_options = get(config, "cinder.backup.drivers.nfs.MOUNT_OPTIONS")
+
+        if not nfs_backup:
+            print(f"{colors.RED}Error: 'cinder.backup.drivers.nfs' section is missing{colors.RESET}")
+            ok = False
+
+        for field in nfs_backup_fields:
+            if not get(config, field):
+                print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                ok = False
+
+        if not is_valid_nfs_share(nfs_share):
+            print(f"{colors.RED}Error: '{nfs_backup_fields[0]}' is an invalid NFS Share syntax{colors.RESET}")
+            ok = False
+
+        if not is_valid_path(mount_point_base, nfs_backup_fields[1]):
+            ok = False
+
+        if nfs_extra_mount_options:
+            if not is_valid_nfs_options(nfs_extra_mount_options):
+                print(f"{colors.RED}Error: 'cinder.backup.drivers.nfs.MOUNT_OPTIONS' contains invalid options\n\nThe valid options list are: {', '.join(ALLOWED_NFS_OPTIONS)}{colors.RESET}")
+                ok = False
+
+    fields_to_validate_int = [
+        cinder_backup_fields[2],
+        cinder_backup_fields[3],
+        cinder_backup_fields[4]
+    ]
+
+    for int_field in fields_to_validate_int:
+        value = get(config, int_field)
+
+        if validate_positive_int(value, int_field) is None:
+            ok = False
+
+    return ok
 
 # --- Cinder ---
 def validate_cinder(config) -> bool:
@@ -454,13 +606,15 @@ def validate_cinder(config) -> bool:
 
     cinder_config = get(config, "cinder")
 
-    enable_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
+    enable_cinder_backup = get(config, "cinder.ENABLE_CINDER_BACKUP")
 
     size_raw = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
     path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
     pv = (get(config, "cinder.lvm.PHYSICAL_VOLUME") or "").strip().lower()
     volume_clear = (get(config, "cinder.VOLUME_CLEAR") or "").lower()
     volume_clear_size = get(config, "cinder.VOLUME_CLEAR_SIZE")
+
+    OPENSTACK_RESERVED_PORTS.add(8776)
 
     size = None
 
@@ -473,6 +627,10 @@ def validate_cinder(config) -> bool:
     if not cinder_config:
         print(f"{colors.RED}Error: cinder section is missing{colors.RESET}")
         return False
+
+    if enable_cinder_backup not in ("yes", "no"):
+        print(f"{colors.RED}Error: 'cinder.ENABLE_CINDER_BACKUP' must be 'yes' or 'no' (got '{enable_cinder_backup}'){colors.RESET}")
+        ok = False
 
     for field in required_fields:
         if not get(config, field):
@@ -496,10 +654,15 @@ def validate_cinder(config) -> bool:
             return False
     
     else:
-        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
+        cinder_loopback_size_raw = validate_positive_int(
+            size_raw,
+            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"
+        )
 
         if cinder_loopback_size_raw is None:
             ok = False
+        else:
+            size = cinder_loopback_size_raw
 
         required_loopback_fields = [
             "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
@@ -512,13 +675,20 @@ def validate_cinder(config) -> bool:
                 print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                 ok = False
 
-        lvm_loop_path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH") or "").strip().lower()
+        cinder_volume_lvm_image_file_path = get(config, required_loopback_fields[0])
+        cinder_lvm_loop_path = (get(config, required_loopback_fields[2]) or "").strip().lower()
 
-        if lvm_loop_path:
-            if not lvm_loop_path.startswith("/dev/loop"):
+        if not is_valid_path(cinder_volume_lvm_image_file_path, required_loopback_fields[0]):
+            ok = False
+
+        if not is_valid_path(cinder_lvm_loop_path, required_loopback_fields[2]):
+            ok = False
+
+        if cinder_lvm_loop_path:
+            if not cinder_lvm_loop_path.startswith("/dev/loop"):
                 print(
-                    f"{colors.RED}Error: CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH must be a loop device, "
-                    f"found '{lvm_loop_path}'{colors.RESET}"
+                    f"{colors.RED}Error: '{required_loopback_fields[2]}' must be a loop device, "
+                    f"found '{cinder_lvm_loop_path}'{colors.RESET}"
                 )
                 ok = False
 
@@ -565,15 +735,11 @@ def validate_cinder(config) -> bool:
         )
         ok = False
 
-    try:
-        volume_clear_size_val = int(volume_clear_size)
-
-        if volume_clear_size_val < 0:
-            print(f"{colors.RED}Error: 'VOLUME_CLEAR_SIZE' must be >= 0{colors.RESET}")
-            ok = False
-    except (TypeError, ValueError):
-        print(f"{colors.RED}Error: 'cinder.VOLUME_CLEAR_SIZE' must be a integer number, found: {volume_clear_size}{colors.RESET}")
+    if validate_positive_int(volume_clear_size, required_fields[2]) is None:
         ok = False
+
+    if enable_cinder_backup == "yes":
+        ok &= validate_cinder_backup(config)
     
     return ok
 
@@ -608,6 +774,8 @@ def validate_manila(config) -> bool:
 
     create_shares = (get(config, "manila.CREATE_SHARES") or "").lower()
 
+    OPENSTACK_RESERVED_PORTS.add(8786)
+
     if isinstance(share_protocols, str):
         share_protocols = [share_protocols]
 
@@ -619,6 +787,10 @@ def validate_manila(config) -> bool:
     if not manila_config:
         print(f"{colors.RED}Error: manila section is missing{colors.RESET}")
         return False
+
+    if create_shares not in ("yes", "no"):
+        print(f"{colors.RED}Error: 'manila.share_types' must be 'yes' or 'no' (got '{create_shares}'){colors.RESET}")
+        ok = False
 
     if not enabled_backend:
         print(f"{colors.RED}Error: manila.backend is missing{colors.RESET}")
@@ -762,6 +934,8 @@ def validate_manila(config) -> bool:
 
                 if loopback_lvm_size is None:
                     ok = False
+                else:
+                    size = loopback_lvm_size
 
             required_lvm_loopback_fields = [
                 "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH",
@@ -774,7 +948,14 @@ def validate_manila(config) -> bool:
                     print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                     ok = False
 
+            lvm_loop_image_path = (get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH") or "").lower()
             lvm_loop_path = (get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH") or "").lower()
+
+            if not is_valid_path(lvm_loop_image_path, required_lvm_loopback_fields[0]):
+                ok = False
+
+            if not is_valid_path(lvm_loop_path, required_lvm_loopback_fields[2]):
+                ok = False
 
             if lvm_loop_path and not lvm_loop_path.startswith("/dev/loop"):
                 print(f"{colors.RED}Error: MANILA_LVM_LOOP_PATH must be a loop device, "
@@ -1277,6 +1458,7 @@ def validate_optional_services(config) -> bool:
 
     services = [
         "optional_services.INSTALL_CINDER",
+        "optional_services.INSTALL_MANILA",
         "optional_services.INSTALL_HORIZON",
     ]
 
