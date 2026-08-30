@@ -4,6 +4,8 @@ import os
 
 from ...utils.core import colors
 
+from ...utils.core.system_utils import is_ubuntu_release
+
 from .generator import generate_config_file, config_openstack
 from .runner import deploy as runner_deploy
 
@@ -186,7 +188,6 @@ def init_parser(subparsers):
     general_options.add_argument(
         "--os-release",
         type=str,
-        default="caracal",
         dest="os_release",
         help="The OpenStack release to install for deployment (default: caracal)"
     )
@@ -225,6 +226,8 @@ def deploy(parser, args) -> None:
         neutron_driver = args.neutron_driver or "ovs"
 
         enable_cinder_backup = args.enable_cinder_backup
+
+        os_release: str
 
         if neutron_driver not in ("ovs", "ovn"):
             neutron_driver = "ovs"
@@ -307,6 +310,19 @@ def deploy(parser, args) -> None:
             else 5
         ) if manila_flag == "yes" else 0
 
+
+        if args.os_release is None:
+            if is_ubuntu_release("20.04"):
+                os_release = "ussuri"
+            if is_ubuntu_release("22.04"):
+                os_release = "yoga"
+            elif is_ubuntu_release("24.04"):
+                os_release = "caracal"
+            elif is_ubuntu_release("26.04"):
+                os_release = "gazpacho"
+        else:
+            os_release = args.os_release
+
         config_openstack(
             config_file_path=config_file_path,
 
@@ -338,7 +354,7 @@ def deploy(parser, args) -> None:
             os_mgmt_iface=args.os_management_interface,
             os_mgmt_gateway=args.os_management_gateway,
 
-            os_release=args.os_release,
+            os_release=os_release,
         )
 
         if args.generate_only:
