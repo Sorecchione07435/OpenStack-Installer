@@ -14,28 +14,26 @@ def init_openstack_context(config):
     OPENSTACK_ENV = build_openstack_env(config)
 
 def run_command_output(cmd, ignore_errors=False, env=None):
-    try:
-        result = subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env
-        )
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
 
+    if result.returncode == 0:
         return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        if ignore_errors:
-            return None
 
+    if not ignore_errors:
         print(
             f"{colors.RED}"
             f"Error: execution of '{shlex.join(cmd)}' "
-            f"returned exit code {e.returncode}{colors.RESET}\n\n"
-            f"Last output: {e.stderr.strip()}\n"
+            f"returned exit code {result.returncode}{colors.RESET}\n\n"
+            f"Last output: {result.stderr.strip()}\n"
         )
-        return None
+
+    return None
 
 def run_command_sync(command, env=None):
     try:

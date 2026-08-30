@@ -43,7 +43,7 @@ def validate_os_release_available(
 ) -> bool:
     release_name = release_name.strip().lower()
 
-    for ubuntu_release, openstack_release in DEFAULT_UBUNTU_OPENSTACK_RELEASES:
+    for ubuntu_release, openstack_release in DEFAULT_UBUNTU_OPENSTACK_RELEASES.items():
         if is_ubuntu_release(ubuntu_release):
             if openstack_release == release_name:
                 return bool(_get_candidate_version(package_name))
