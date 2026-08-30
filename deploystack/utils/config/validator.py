@@ -443,8 +443,8 @@ def validate_cinder_backup(config) -> bool:
         if not is_valid_path(posix_backup_path):
             print(f"{colors.RED}Error: 'cinder.backup.drivers.posix.BACKUP_PATH' is an invalid path{colors.RESET}")
             ok = False
-    elif backup_driver == "nfs":
-        
+    #elif backup_driver == "nfs":
+
             
 
 
