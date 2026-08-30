@@ -5,7 +5,16 @@ import subprocess
 from .parser import get
 from ..core import colors
 
+from pathlib import Path
+
 prohibited_pw_chars = [' ', '$', '`', '\\']
+
+def is_valid_path(path: str) -> bool:
+    try:
+        Path(path)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 def get_root_device():
     try:

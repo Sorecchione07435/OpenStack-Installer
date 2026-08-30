@@ -252,12 +252,13 @@ def deploy(parser, args) -> None:
         )
 
         if enable_cinder_backup == "yes":
-            cinder_backup_driver = args.cinder_backup_driver = "posix"
-            cinder_backup_compression_algorithm = args.compression_algorithm = "zlib"
+            if not args.cinder_backup_driver:
+                cinder_backup_driver = args.cinder_backup_driver = "posix"
+                cinder_backup_compression_algorithm = args.compression_algorithm = "zlib"
 
-            cinder_backup_file_size_in_bytes = args.backup_file_size_in_bytes = 1999994880
-            cinder_backup_sha_block_size_in_bytes = args.backup_sha_block_size_in_bytes = 32768
-            cinder_backup_workers = args.backup_workers = 1
+                cinder_backup_file_size_in_bytes = args.backup_file_size_in_bytes = 1999994880
+                cinder_backup_sha_block_size_in_bytes = args.backup_sha_block_size_in_bytes = 32768
+                cinder_backup_workers = args.backup_workers = 1
         else:
             cinder_backup_driver = args.cinder_backup_driver = None
             cinder_backup_compression_algorithm = args.compression_algorithm = None

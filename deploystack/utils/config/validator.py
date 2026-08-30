@@ -5,7 +5,7 @@ import validators
 
 from ipaddress import ip_address, ip_network
 
-from .helpers import interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int
+from .helpers import interface_exists, validate_ip, validate_cidr, is_loop_device, is_safe_lvm_device, validate_positive_int, is_valid_path
 from ..core import colors
 from .parser import get
 
@@ -412,11 +412,49 @@ def validate_neutron(config) -> bool:
 
     return ok
 
+def validate_cinder_backup(config) -> bool:
+    ok = True
+
+    backup_driver = get(config, "cinder.backup.DRIVER").lower()
+
+    if not backup_driver:
+        print(f"{colors.RED}Error: 'cinder.backup.DRIVER' is not set{colors.RESET}")
+        ok = False
+
+    if backup_driver not in ("posix", "nfs"):
+        print(
+            f"{colors.RED}Error: Invalid value for 'cinder.backup.DRIVER"
+            f"Allowed values are: 'posix', 'nfs'.{colors.RESET}"
+        )
+        ok = False
+
+    if backup_driver == "posix":
+        posix_backup = get(config, "cinder.backup.drivers.posix")
+        posix_backup_path = get(config, "cinder.backup.drivers.posix.BACKUP_PATH")
+
+        if not posix_backup:
+            print(f"{colors.RED}Error: 'cinder.backup.drivers.posix' section is missing{colors.RESET}")
+            ok = False
+
+        if not posix_backup_path:
+            print(f"{colors.RED}Error: 'cinder.backup.drivers.posix.BACKUP_PATH' is not set{colors.RESET}")
+            ok = False
+
+        if not is_valid_path(posix_backup_path):
+            print(f"{colors.RED}Error: 'cinder.backup.drivers.posix.BACKUP_PATH' is an invalid path{colors.RESET}")
+            ok = False
+    elif backup_driver == "nfs":
+        
+            
+
+
 # --- Cinder ---
 def validate_cinder(config) -> bool:
     ok = True
 
     cinder_config = get(config, "cinder")
+
+    enable_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
 
     size_raw = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
     path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
