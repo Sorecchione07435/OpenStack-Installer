@@ -253,6 +253,12 @@ def deploy(parser, args) -> None:
 
         cinder_backup_driver = None
 
+        cinder_backup_compression_algorithm = None
+        
+        cinder_backup_file_size_in_bytes = None
+        cinder_backup_sha_block_size_in_bytes = None
+        cinder_backup_workers = None
+
         if enable_cinder_backup == "yes":
             if not args.cinder_backup_driver:
                 cinder_backup_driver = args.cinder_backup_driver = "posix"
