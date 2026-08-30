@@ -192,11 +192,13 @@ def setup_iptables_rules(config):
         return result.returncode == 0
 
     def _iptables_chain_exists(chain_name):
-        try:
-            run_command_output(["iptables", "-nL", chain_name])
-            return True
-        except Exception:
-            return False
+        result = subprocess.run(
+            ["iptables", "-nL", chain_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return result.returncode == 0
 
     def ensure_chain(chain_name):
         if not _iptables_chain_exists(chain_name):
@@ -279,9 +281,8 @@ def create_shares_network(config, env):
 
     shares_subnet_id = ""
 
-    print()
-
     if not shares_network_exists:
+        print()
         if not os_run(["openstack", "network", "create", "shares", "--provider-network-type", "flat", "--provider-physical-network", "shares", "--share"], "Creating shares network...", env=env): return False
 
     subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env))
