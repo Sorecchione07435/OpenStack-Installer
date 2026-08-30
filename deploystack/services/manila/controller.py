@@ -73,9 +73,9 @@ def conf_manila(config):
     set_conf_option(manila_conf, "oslo_concurrency", "lock_path", "/var/lock/manila")
 
     db_migration_cmd = [
-    "sudo", "-u", "manila",
-    "manila-manage", "db", "sync"
-    ]
+        "sudo", "-u", "manila",
+        "manila-manage", "db", "sync"
+        ]
 
     if not run_command(db_migration_cmd, "Running Manila DB Migrations...") : return False
 
