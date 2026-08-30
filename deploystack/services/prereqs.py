@@ -10,6 +10,8 @@ from ..utils.core import colors
 from ..utils.lvm.loopback import set_lvm_filter
 from ..utils.config.helpers import parse_bool
 
+from . import validate_os_release_available
+
 UBUNTU_CLOUD_ARCHIVE = {
     ("focal",   "yoga"):      "focal-updates/yoga",
     ("focal",   "zed"):       "focal-updates/zed",
@@ -213,7 +215,7 @@ def install_pkgs(config):
 
         devices.append(manila_pv or manila_loop_dev)
 
-    if is_ubuntu_release("24.04") and os_release == "gazpacho":
+    if is_ubuntu_release("24.04") and os_release == "gazpacho" and validate_os_release_available("gazpacho"):
         prereqs_pkgs.remove("python3-openstackclient")
 
         if is_package_installed("python3-openstackclient"):

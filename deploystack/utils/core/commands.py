@@ -1,26 +1,42 @@
 import subprocess
+import shlex
+
+import time
+import sys
+
 from .spinner import Spinner
 from ...utils.core import colors
 
 from ..core.system_utils import build_openstack_env
-
-import time
-import sys
 
 def init_openstack_context(config):
     global OPENSTACK_ENV
     OPENSTACK_ENV = build_openstack_env(config)
 
 def run_command_output(cmd, ignore_errors=False, env=None):
-    result = subprocess.run(
-        cmd,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        env=env
-    )
-    return result.stdout.strip()
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env
+        )
+
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        if ignore_errors:
+            return ""
+
+        print(
+            f"{colors.RED}"
+            f"Error: execution of '{shlex.join(cmd)}' "
+            f"returned exit code {e.returncode}\n"
+            f"{e.stderr.strip()}"
+            f"{colors.RESET}"
+        )
+        return ""
 
 def run_command_sync(command, env=None):
     try:
