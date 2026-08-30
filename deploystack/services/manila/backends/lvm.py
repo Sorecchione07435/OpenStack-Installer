@@ -183,11 +183,13 @@ def setup_iptables_rules(config):
     print()
 
     def _iptables_rule_exists(rule_args):
-        try:
-            run_command_output(["iptables", "-C"] + rule_args)
-            return True
-        except Exception:
-            return False
+        result = subprocess.run(
+            ["iptables", "-C"] + rule_args,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return result.returncode == 0
 
     def _iptables_chain_exists(chain_name):
         try:
