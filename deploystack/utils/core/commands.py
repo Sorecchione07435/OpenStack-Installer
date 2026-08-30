@@ -178,6 +178,8 @@ def run_command(
                     print("\nLast output:")
                     print("\n".join(output_lines))
                     print()
+                else:
+                    print()
 
             if context is not None and isinstance(context, dict):
                  context.update({
