@@ -32,8 +32,8 @@ def run_command_output(cmd, ignore_errors=False, env=None):
         print(
             f"{colors.RED}"
             f"Error: execution of '{shlex.join(cmd)}' "
-            f"returned exit code {e.returncode}\n"
-            f"{e.stderr.strip()}"
+            f"returned exit code {e.returncode}\n\n"
+            f"Last Command Output: {e.stderr.strip()}"
             f"{colors.RESET}"
         )
         sys.exit(1)
