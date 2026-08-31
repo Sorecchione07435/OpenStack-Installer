@@ -10,7 +10,7 @@ def build_start_parser(subparsers):
     parser.add_argument(
         "resource",
         choices=["cinder", "manila", "all"],
-        default="all"
+        default="all",
         help="Resource to start"
     )
 
@@ -20,3 +20,4 @@ def build_start_parser(subparsers):
 
 def start(args):
     print("start")
+    print(args.resource)
