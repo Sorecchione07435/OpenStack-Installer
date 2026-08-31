@@ -13,6 +13,8 @@ def build_attach_subparser(subparsers):
         default="all"
     )
 
+    parser.set_defaults(func=attach)
+
     return parser
 
 def attach(args):

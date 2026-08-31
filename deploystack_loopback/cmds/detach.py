@@ -12,6 +12,8 @@ def build_detach_parser(subparsers):
         help="Resource to detach"
     )
 
+    parser.set_defaults(func=detach)
+
     return parser
 
 def detach(args):

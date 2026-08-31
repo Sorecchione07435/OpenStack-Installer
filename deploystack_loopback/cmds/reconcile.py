@@ -13,3 +13,4 @@ def build_reconcile_parser(subparsers):
 
 def reconcile(args):
     print("reconcile")
+    print(args)
