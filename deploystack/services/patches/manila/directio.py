@@ -121,6 +121,8 @@ def run_setup_directio_patch():
     if not configure_manila_directio_service():
         return False
 
+    print()
+
     if not run_command(
         ["systemctl", "daemon-reload"],
         "Reloading systemd daemon..."
@@ -132,6 +134,8 @@ def run_setup_directio_patch():
         "Enabling Manila DirectIO patcher service..."
     ):
         return False
+
+    print()
 
     if not run_command(
         ["systemctl", "restart", "manila-share"],
