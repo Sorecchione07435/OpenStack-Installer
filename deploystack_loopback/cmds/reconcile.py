@@ -7,10 +7,7 @@ def build_reconcile_parser(subparsers):
         help="Reconcile loopback resources and LVM state"
     )
 
-    parser.set_defaults(func=reconcile)
-
     return parser
 
 def reconcile(args):
     print("reconcile")
-    print(args)
