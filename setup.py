@@ -46,6 +46,7 @@ setup(
     entry_points={
         "console_scripts": [
             "deploystack=deploystack.main:main",
+            "deploystack-loopback=deploystack-loopback.main:main"
         ],
     },
     classifiers=[
