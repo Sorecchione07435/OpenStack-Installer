@@ -224,7 +224,7 @@ def create_loopback_config(config):
         deploystack_loopback_conf_file,
         "lvm",
         "config",
-        "/etc/lvm/lvm.conf",
+        '"/etc/lvm/lvm.conf"',
     )
 
     if install_cinder and cinder_loop_dev:
