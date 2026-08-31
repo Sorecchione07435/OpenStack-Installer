@@ -1,6 +1,6 @@
 import argparse
 
-from ..utils.colors import Config
+from ..utils.config import Config
 from ..utils.resources.filter import LVMFilter
 
 from ..utils.colors import GREEN, RESET, RED
