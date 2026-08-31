@@ -1,5 +1,8 @@
 import argparse
 
+from ..utils.config import Config
+from ..utils.resources.loopback import Loopback
+
 def build_check_parser(subparsers):
     parser = subparsers.add_parser(
         "check",
@@ -18,6 +21,14 @@ def build_check_parser(subparsers):
     return parser
 
 def check(args):
-    print("check")
-    print(args.resource)
-    
+
+    config = Config()
+    resource = Loopback(config.resource(args.resource))
+
+    status = resource.check()
+
+    print(f"Resource: {args.resource}")
+    print(f"Image: {status['image']}")
+    print(f"Image exists: {status['image_exists']}")
+    print(f"Attached: {status['attached']}")
+    print(f"Loop device: {status['loop_device'] or '-'}")
