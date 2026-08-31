@@ -42,6 +42,57 @@ class LVMFilter:
 
         return devices
 
+    def _write_dev_loop_devices(self, devices):
+        content = self.config.read_text()
+
+        match = re.search(
+            r'^\s*filter\s*=\s*\[(.*?)\]',
+            content,
+            re.MULTILINE | re.DOTALL,
+        )
+
+        if not match:
+            raise RuntimeError(
+                f"LVM filter not found in {self.config}"
+            )
+
+        current_filter = match.group(1)
+
+        rules = re.findall(
+            r'"([^"]+)"',
+            current_filter,
+        )
+
+        rules = [
+            rule
+            for rule in rules
+            if not re.match(r'a\|\^/dev/loop\d+\$\|', rule)
+            and rule != "r|.*|"
+        ]
+
+        for device in devices:
+            rule = f"a|^{device}$|"
+
+            if rule not in rules:
+                rules.append(rule)
+
+        rules.append("r|.*|")
+
+        new_filter = (
+            "filter = [ "
+            + ", ".join(f'"{rule}"' for rule in rules)
+            + " ]"
+        )
+        content = re.sub(
+            r'^\s*filter\s*=\s*\[.*?\]',
+            new_filter,
+            content,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+
+        self.config.write_text(content)
+
     def _write_devices(self, devices):
         content = self.config.read_text()
 
@@ -117,4 +168,4 @@ class LVMFilter:
                 if loop_dev:
                     devices.append(loop_dev)
 
-            self._write_devices(devices)
+            self._write_dev_loop_devices(devices)
