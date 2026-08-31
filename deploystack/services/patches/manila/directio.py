@@ -41,8 +41,6 @@ if "use_direct_io=use_direct_io" in code:
     script_path.write_text(script)
     script_path.chmod(0o755)
 
-    return script_path
-
 def create_manila_patch_service():
 
     service_path = Path("/etc/systemd/system/manila-directio-patcher.service")
@@ -60,8 +58,6 @@ WantedBy=multi-user.target
 """
 
     service_path.write_text(service)
-
-    return service_path
 
 def configure_manila_directio_service():
 
@@ -85,7 +81,6 @@ def configure_manila_directio_service():
         "After",
         "manila-directio-patcher.service",
     )
-
 
 def patch_manila_directio():
     with open(manila_lvm_file_path, "r") as f:
@@ -115,10 +110,9 @@ def run_setup_directio_patch():
     create_manila_patch_script(manila_lvm_file_path)
     create_manila_patch_service()
 
-    if not patch_manila_directio():
-        return False
+    configure_manila_directio_service()
 
-    if not configure_manila_directio_service():
+    if not patch_manila_directio():
         return False
 
     print()
