@@ -16,3 +16,6 @@ def build_check_parser(subparsers):
     return parser
 
 def check(args):
+    print("check")
+    print(args.resource)
+    

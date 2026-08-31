@@ -9,11 +9,12 @@ def build_attach_subparser(subparsers):
     parser.add_argument(
         "resource",
         nargs="?",
-        choices=["cinder" , "manila", "all"]
+        choices=["cinder", "manila", "all"],
         default="all"
     )
 
     return parser
 
 def attach(args):
-
+    print("attach")
+    print(args.resource)

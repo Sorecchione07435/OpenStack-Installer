@@ -8,11 +8,12 @@ def build_detach_parser(subparsers):
 
     parser.add_argument(
         "resource",
-        choices=["cinder", "manila"]
+        choices=["cinder", "manila"],
         help="Resource to detach"
     )
 
     return parser
 
 def detach(args):
-    
+    print("detach")
+    print(args.resource)
