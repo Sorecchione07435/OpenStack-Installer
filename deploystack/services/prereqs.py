@@ -10,7 +10,7 @@ from ..utils.config.parser import get
 from ..utils.core.system_utils import nc_wait, is_ubuntu_release, is_package_installed
 from ..utils.core import colors
 
-from ..utils.config.setter import set_conf_option
+from ..utils.config.setter import set_conf_option, toml_string
 
 from ..utils.lvm.loopback import set_lvm_filter
 from ..utils.config.helpers import parse_bool
@@ -224,7 +224,7 @@ def create_loopback_config(config):
         deploystack_loopback_conf_file,
         "lvm",
         "config",
-        '"/etc/lvm/lvm.conf"',
+        toml_string("/etc/lvm/lvm.conf"),
     )
 
     if install_cinder and cinder_loop_dev:
@@ -238,19 +238,19 @@ def create_loopback_config(config):
             deploystack_loopback_conf_file,
             "cinder",
             "image",
-            lvm_image_path,
+            toml_string(lvm_image_path),
         )
         set_conf_option(
             deploystack_loopback_conf_file,
             "cinder",
             "vg",
-            vg,
+            toml_string(vg),
         )
         set_conf_option(
             deploystack_loopback_conf_file,
             "cinder",
             "state_file",
-            "/var/lib/deploystack/cinder_loop_dev",
+            toml_string("/var/lib/deploystack/cinder_loop_dev"),
         )
 
     if (
@@ -271,19 +271,19 @@ def create_loopback_config(config):
             deploystack_loopback_conf_file,
             "manila",
             "image",
-            lvm_image_path,
+            toml_string(lvm_image_path),
         )
         set_conf_option(
             deploystack_loopback_conf_file,
             "manila",
             "vg",
-            vg,
+            toml_string(vg),
         )
         set_conf_option(
             deploystack_loopback_conf_file,
             "manila",
             "state_file",
-            "/var/lib/deploystack/manila_loop_dev",
+            toml_string("/var/lib/deploystack/manila_loop_dev"),
         )
 
 def install_pkgs(config):

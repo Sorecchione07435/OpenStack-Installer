@@ -1,5 +1,8 @@
 import configparser
 
+def toml_string(value):
+    return f'"{value}"'
+
 def set_samba_option(conf_file, section, option, value):
     with open(conf_file) as f:
         lines = f.readlines()
@@ -38,7 +41,7 @@ def set_conf_option(conf_file, section, option, value, interpolation = True):
         interpolation=None if not interpolation else configparser.BasicInterpolation()
     )
     
-    config.optionxform = str  # mantiene maiuscole/minuscole
+    config.optionxform = str
     config.read(conf_file)
 
     if section not in config:
