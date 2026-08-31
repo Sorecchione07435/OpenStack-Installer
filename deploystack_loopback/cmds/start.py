@@ -1,4 +1,6 @@
-import argparse
+from ..utils.config import Config
+from ..utils.resources.loopback import Loopback
+from ..utils.resources.filter import LVMFilter
 
 def build_start_parser(subparsers):
 
@@ -19,5 +21,17 @@ def build_start_parser(subparsers):
     return parser
 
 def start(args):
-    print("start")
-    print(args.resource)
+
+    config = Config()
+
+    resource = Loopback(config.resource(args.resource))
+
+    loop_dev = resource.attach()
+
+    lvm_filter = LVMFilter(config.lvm_config)
+    lvm_filter.add(loop_dev)
+
+    resource.scan()
+    resource.activate()
+
+    print(f"Started {args.resource}")

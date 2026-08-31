@@ -14,6 +14,11 @@ class Config:
     def resource(self, name):
         return self.data[name]
 
+    def resource_names(self):
+        return [
+            name for name in self.data if name != "lvm"
+        ]
+
     @property
     def lvm_config(self):
         return self.data["lvm"]["config"]

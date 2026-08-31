@@ -1,3 +1,8 @@
+from .check import print_status
+
+from ..utils.config import Config
+from ..utils.resources.loopback import Loopback
+
 def build_status_parser(subparsers):
 
     parser = subparsers.add_parser(
@@ -18,4 +23,21 @@ def build_status_parser(subparsers):
     return parser
 
 def status(args):
-    print("status")
+
+    config = Config()
+
+    if args.resource:
+        resources = {
+            args.resource: Loopback(config.resource(args.resource))
+        }
+    else:
+        resources = {
+            name: Loopback(config.resource(name))
+            for name in config.resource_names()
+        }
+
+    for name, resource in resources.items():
+        status = resource.check()
+
+        print_status(name, status)
+

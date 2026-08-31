@@ -1,6 +1,6 @@
-import argparse
-
 from ..utils.config import Config
+
+from ..utils.resources.loopback import Loopback
 from ..utils.resources.filter import LVMFilter
 
 from ..utils.colors import GREEN, RESET, RED
@@ -76,11 +76,33 @@ def cmd_filter_show(args):
     print_filter(devices)
 
 def cmd_filter_rebuild(args):
-    print("rebuild")
+
+    config = Config()
+
+    resources = [
+        Loopback(config.resource(name))
+        for name in config.resource_names()
+    ]
+
+    lvm_filter = LVMFilter(config.lvm_config)
+    lvm_filter.rebuild(resources)
 
 def cmd_filter_add(args):
-    print("filter_add")
-    print(args.device)
+    config = Config()
+
+    lvm_filter = LVMFilter(config.lvm_config)
+
+    if lvm_filter.add(args.device):
+        print(f"Added: {args.device}")
+    else:
+        print(f"Already present: {args.device}")
 
 def cmd_filter_remove(args):
-    print("filter_remove")
+    config = Config()
+    
+    lvm_filter = LVMFilter(config.lvm_config)
+
+    if lvm_filter.remove(args.device):
+        print(f"Removed: {args.device}")
+    else:
+        print(f"Not present: {args.device}")

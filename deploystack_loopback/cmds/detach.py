@@ -1,5 +1,3 @@
-import argparse
-
 from ..utils.config import Config
 from ..utils.resources.loopback import Loopback
 

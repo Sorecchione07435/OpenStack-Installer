@@ -9,6 +9,24 @@ class Loopback:
         self.vg = config["vg"]
         self.state_file = Path(config["state_file"])
 
+    def loop_device(self):
+        return self._find_loop_device()
+
+    def activate(self):
+        subprocess.run(["/sbin/vgchange", "-ay", self.vg], check=True)
+
+    def deactivate(self):
+        subprocess.run(["/sbin/vgchange", "-an", self.vg], check=True)
+
+    def scan(self):
+
+        loop_dev = self.loop_device()
+
+        if not loop_dev:
+            return
+
+        subprocess.run(["/sbin/pvscan", "--cache", loop_dev], check=True)
+
     def attach(self):
 
         if not self.image.is_file():
@@ -36,11 +54,11 @@ class Loopback:
 
         try:
             subprocess.run(["/sbin/losetup", "--detach", loop_dev], capture_output=True, text=True, check=True)
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as exc:
             raise RuntimeError(
             f"{colors.RED}Failed to detach loop device {loop_dev}: "
-            f"{e.stderr.strip()}{colors.RESET}"
-        ) from e
+            f"{exc.stderr.strip()}{colors.RESET}"
+        ) from exc
 
         self.state_file.unlink(missing_ok=True)
         
