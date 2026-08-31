@@ -13,6 +13,8 @@ def build_check_parser(subparsers):
         default="all"
     )
 
+    parser.set_defaults(func=check)
+
     return parser
 
 def check(args):
