@@ -16,7 +16,16 @@ class Loopback:
         subprocess.run(["/sbin/vgchange", "-ay", self.vg], check=True)
 
     def deactivate(self):
-        subprocess.run(["/sbin/vgchange", "-an", self.vg], check=True)
+        result = subprocess.run(["/sbin/vgchange", "-an", self.vg], capture_output=True, check=True)
+
+        if result.returncode != 0:
+            if "not found" in result.stderr:
+                return
+
+            raise RuntimeError(
+                f"Failed to deactivate {self.vg}: "
+                f"{result.stderr.strip()}"
+            )
 
     def scan(self):
 
