@@ -13,12 +13,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="deploystack-loopback",
-        description="Manage Deploystack LVM loopback storage"
+        description="Manage Deploystack LVM loopback storage",
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(
         dest="command",
-        required=True
+        required=True,
+        title="commands",
+        metavar="<command>",
     )
 
     build_attach_subparser(subparsers)
