@@ -1,5 +1,8 @@
 import argparse
 
+from ..utils.config import Config
+from ..utils.resources.loopback import Loopback
+
 def build_detach_parser(subparsers):
     parser = subparsers.add_parser(
         "detach",
@@ -17,5 +20,11 @@ def build_detach_parser(subparsers):
     return parser
 
 def detach(args):
-    print("detach")
-    print(args.resource)
+
+    config = Config()
+
+    resource = Loopback(config.resource(args.resource))
+
+    resource.detach()
+
+    print(f"Detached {args.resource}")
