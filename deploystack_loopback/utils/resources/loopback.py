@@ -1,6 +1,8 @@
 from pathlib import Path
 import subprocess
 
+from .. import colors
+
 class Loopback:
     def __init__(self, config):
         self.image = Path(config["image"])
@@ -29,12 +31,19 @@ class Loopback:
         loop_dev = self._find_loop_device()
 
         if not loop_dev:
+            self.state_file.unlink(missing_ok=True)
             return
 
-        subprocess.run(["/sbin/losetup", "--detach", loop_dev], check=True)
+        try:
+            subprocess.run(["/sbin/losetup", "--detach", loop_dev], capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+            f"{colors.RED}Failed to detach loop device {loop_dev}: "
+            f"{e.stderr.strip()}{colors.RESET}"
+        ) from e
 
         self.state_file.unlink(missing_ok=True)
-
+        
     def check(self):
         result = {
             "image": str(self.image),

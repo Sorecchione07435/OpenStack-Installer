@@ -26,5 +26,3 @@ def detach(args):
     resource = Loopback(config.resource(args.resource))
 
     resource.detach()
-
-    print(f"Detached {args.resource}")
