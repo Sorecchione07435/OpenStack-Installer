@@ -1,60 +1,142 @@
-import os 
+import os
 
-from ....utils.core.commands import run_command_sync
+from pathlib import Path 
+
+from ....utils.core.commands import run_command_sync, run_command
 from ....utils.core import colors
 
+from ....utils.config.setter import set_conf_option
+
 manila_lvm_file_path = "/usr/lib/python3/dist-packages/manila/share/drivers/lvm.py"
-manila_lvm_loopback_start_script = "/usr/local/bin/manila-loopback-start.sh"
+manila_share_service_drop_in_conf_file = "/etc/systemd/system/manila-share.service.d/deploystack-directio.conf"
 
-def append_service_patch():
-    with open(manila_lvm_loopback_start_script, "r") as f:
-        script = f.read()
+def create_manila_patch_script(manila_lvm_file_path):
 
-    script += f"""
+    script_path = Path(
+        "/usr/local/bin/manila-directio-patcher"
+    )
 
-# Automatic patching block for OpenStack Manila (Ubuntu Resolute)
-python3 -c "
-import os
-p = '{manila_lvm_file_path}'
-if os.path.exists(p):
-    code = open(p).read()
-    if 'use_direct_io=use_direct_io' in code:
-        print('Re-patching Manila Share LVM for direct_io')
-        open(p, 'w').write(code.replace('use_direct_io=use_direct_io', 'use_direct_io=False'))
-        print('Patch completed successfully')
-        os.system('systemctl restart manila-share')
-    else:
-        print('Patch already present')
-"
+    script = f"""#!/usr/bin/python3
+
+from pathlib import Path
+
+path = Path("{manila_lvm_file_path}")
+
+if not path.exists():
+    raise SystemExit(0)
+
+code = path.read_text()
+
+if "use_direct_io=use_direct_io" in code:
+    print("Patching Manila Share LVM for direct_io")
+
+    code = code.replace(
+        "use_direct_io=use_direct_io",
+        "use_direct_io=False",
+    )
+
+    path.write_text(code)
 """
 
-    with open(manila_lvm_loopback_start_script, "w") as f:
-        f.write(script)
+    script_path.write_text(script)
+    script_path.chmod(0o755)
 
-    return True
+    return script_path
+
+def create_manila_patch_service():
+
+    service_path = Path("/etc/systemd/system/manila-directio-patcher.service")
+
+    service = """[Unit]
+Description=DeployStack Manila Direct IO LVM Patcher
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/manila-directio-patcher
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    service_path.write_text(service)
+
+    return service_path
+
+def configure_manila_directio_service():
+
+    if not os.path.exists(manila_share_service_drop_in_conf_file):
+        Path(manila_share_service_drop_in_conf_file).parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        Path(manila_share_service_drop_in_conf_file).touch()
+
+    set_conf_option(
+        manila_share_service_drop_in_conf_file,
+        "Unit",
+        "Requires",
+        "manila-directio-patcher.service",
+    )
+
+    set_conf_option(
+        manila_share_service_drop_in_conf_file,
+        "Unit",
+        "After",
+        "manila-directio-patcher.service",
+    )
+
 
 def patch_manila_directio():
     with open(manila_lvm_file_path, "r") as f:
         code = f.read()
 
     if "use_direct_io=use_direct_io" in code:
-        print(f"{colors.YELLOW}Ubuntu Resolute detected, a patch will be applied to Manila Share to force direct_io to be disabled for snapshots to work properly.{colors.RESET}")
-        
-        new_code = code.replace("use_direct_io=use_direct_io", "use_direct_io=False")
+        print(
+            f"{colors.YELLOW}"
+            "Ubuntu Resolute detected, a patch will be applied to "
+            "Manila Share to force direct_io to be disabled for "
+            "snapshots to work properly."
+            f"{colors.RESET}"
+        )
+
+        new_code = code.replace(
+            "use_direct_io=use_direct_io",
+            "use_direct_io=False",
+        )
 
         with open(manila_lvm_file_path, "w") as f:
             f.write(new_code)
-
-        if not run_command_sync(["systemctl", "restart", "manila-share"]) : return False
 
     return True
 
 def run_setup_directio_patch():
 
-    if not patch_manila_directio(): return False
+    create_manila_patch_script(manila_lvm_file_path)
+    create_manila_patch_service()
 
-    if not append_service_patch(): return False
+    if not patch_manila_directio():
+        return False
+
+    if not configure_manila_directio_service():
+        return False
+
+    if not run_command(
+        ["systemctl", "daemon-reload"],
+        "Reloading systemd daemon..."
+    ):
+        return False
+
+    if not run_command(
+        ["systemctl", "enable", "manila-directio-patcher.service"],
+        "Enabling Manila DirectIO patcher service..."
+    ):
+        return False
+
+    if not run_command(
+        ["systemctl", "restart", "manila-share"],
+        "Restarting Manila Share..."
+    ):
+        return False
 
     return True
-
-
