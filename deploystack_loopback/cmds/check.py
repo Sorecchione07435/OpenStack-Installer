@@ -39,9 +39,9 @@ def check(args):
 
             print_status(name, status)
 
-            return
+        return
             
     resource = Loopback(config.resource(args.resource))
     status = resource.check()
 
-    print_status(name, status)
+    print_status(args.resource, status)
