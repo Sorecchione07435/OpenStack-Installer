@@ -3,13 +3,33 @@ import argparse
 from ..utils.config import Config
 from ..utils.resources.loopback import Loopback
 
+from ..utils import colors
+
 def print_status(name, status):
+
+    image_exists = (
+        f"{colors.GREEN}yes{colors.RESET}"
+        if status["image_exists"]
+        else f"{colors.RED}no{colors.RESET}"
+    )
+
+    attached = (
+        f"{colors.GREEN}yes{colors.RESET}"
+        if status["attached"]
+        else f"{colors.RED}no{colors.RESET}"
+    )
+
+    loop_device = (
+        f"{colors.GREEN}{status['loop_device']}{colors.RESET}"
+        if status["loop_device"]
+        else f"{colors.RED}-{colors.RESET}"
+    )
 
     print(f"Resource: {name}")
     print(f"  Image: {status['image']}")
-    print(f"  Image exists: {status['image_exists']}")
-    print(f"  Attached: {status['attached']}")
-    print(f"  Loop device: {status['loop_device'] or '-'}")
+    print(f"  Image exists: {image_exists}")
+    print(f"  Attached: {attached}")
+    print(f"  Loop device: {loop_device}")
 
 def build_check_parser(subparsers):
     parser = subparsers.add_parser(

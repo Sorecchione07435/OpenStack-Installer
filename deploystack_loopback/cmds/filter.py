@@ -1,5 +1,23 @@
 import argparse
 
+from ..utils.colors import Config
+from ..utils.resources.filter import LVMFilter
+
+from ..utils.colors import GREEN, RESET, RED
+
+def print_filter(devices):
+
+    print("LVM device filter")
+
+    for device in devices:
+        print(
+            f"  {GREEN}{device}{RESET}    allowed"
+        )
+
+    print(
+        f"  {RED}*{RESET}              rejected"
+    )
+
 def build_filter_parser(subparsers):
 
     parser = subparsers.add_parser(
@@ -50,7 +68,12 @@ def build_filter_parser(subparsers):
     return parser
 
 def cmd_filter_show(args):
-    print("show")
+    config = Config()
+
+    lvm_filter = LVMFilter(config.lvm_config)
+    devices = lvm_filter.show()
+
+    print_filter(devices)
 
 def cmd_filter_rebuild(args):
     print("rebuild")
