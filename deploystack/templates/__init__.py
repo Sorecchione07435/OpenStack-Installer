@@ -7,9 +7,6 @@ def _t(*parts) -> str:
 
 # Loopback
 LOOPBACK_SERVICE         = _t("loopback", "loopback.service.tpl")
-LOOPBACK_START_SCRIPT    = _t("loopback", "loopback-start.sh.tpl")
-LOOPBACK_STOP_SCRIPT     = _t("loopback", "loopback-stop.sh.tpl")
-LVM_ENV_CONF             = _t("loopback", "lvm-env-conf.tpl")
 
 # Neutron OVS
 OVS_BRIDGES_INTERFACES          = _t("openvswitch", "ovs_bridges_interfaces.tpl")

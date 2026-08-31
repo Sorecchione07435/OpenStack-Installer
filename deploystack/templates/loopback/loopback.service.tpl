@@ -1,19 +1,16 @@
 [Unit]
 Description={description}
 Before={before_services}
-DefaultDependencies=no
+Wants={before_services}
 
-After=local-fs.target snapd.service snapd.seeded.service
-Wants=snapd.seeded.service
+After=local-fs.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 
-EnvironmentFile=/etc/default/{service}-lvm
-
-ExecStart=/usr/local/bin/{service}-loopback-start.sh
-ExecStop=/usr/local/bin/{service}-loopback-stop.sh
+ExecStart=/usr/bin/deploystack_loopback start {service}
+ExecStop=/usr/bin/deploystack_loopback stop {service}
 
 [Install]
 WantedBy=multi-user.target

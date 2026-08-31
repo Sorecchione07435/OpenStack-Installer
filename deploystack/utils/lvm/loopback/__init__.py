@@ -4,7 +4,7 @@ import subprocess
 
 from ....utils.core.commands import run_command
 from ....utils.core import colors
-from ....templates import LOOPBACK_SERVICE, LOOPBACK_START_SCRIPT, LOOPBACK_STOP_SCRIPT, LVM_ENV_CONF
+from ....templates import LOOPBACK_SERVICE
 
 lvm_conf_path = "/etc/lvm/lvm.conf"
 
@@ -96,9 +96,8 @@ def set_lvm_filter(devices):
 
     return True
 
-def write_loopback_lvm_env(service, lvm_image_file, vg_name, description, before_services):
+def write_loopback_lvm_env(service, description, before_services):
 
-    env_path = f"/etc/default/{service}-lvm"
     SERVICE_PATH = f"/etc/systemd/system/{service}-loopback.service"
 
     try:
@@ -111,57 +110,16 @@ def write_loopback_lvm_env(service, lvm_image_file, vg_name, description, before
                 service=service
             )
 
-        with open(LVM_ENV_CONF, "r") as f:
-                template = f.read()
-                loopback_env_conf_content = template.format(
-                    lvm_image_file=lvm_image_file,
-                    vg_name=vg_name
-                )
-
-        with open(env_path, "w") as f:
-                f.write(loopback_env_conf_content)
-
         with open(SERVICE_PATH, "w") as f:
             f.write(loopback_service_content)
 
     except Exception as e:
-        print(f"\n{colors.RED}Failed to write '{env_path}' with an unhandled exception: {e}{colors.RESET}")
+        print(f"\n{colors.RED}Failed to write '{LOOPBACK_SERVICE}' with an unhandled exception: {e}{colors.RESET}")
         return False
 
     return True
 
-def setup_loopback_service(lvm_image_file_path, vg_name, service):
-
-    print()
-
-    try:
-
-        with open(LOOPBACK_START_SCRIPT, "r") as f:
-            template = f.read()
-            loopback_service_start_script_content = template.format(
-                lvm_image_file_path=lvm_image_file_path,
-                VG_NAME=vg_name
-            )
-
-        with open(LOOPBACK_STOP_SCRIPT, "r") as f:
-            template = f.read()
-            loopback_service_stop_script_content = template.format(
-                lvm_image_file_path=lvm_image_file_path,
-                VG_NAME=vg_name
-            )
-
-        for path, content in [
-            (f"/usr/local/bin/{service}-loopback-start.sh", loopback_service_start_script_content),
-            (f"/usr/local/bin/{service}-loopback-stop.sh", loopback_service_stop_script_content),
-            ]:
-            with open(path, "w") as f:
-                f.write(content)
-
-            os.chmod(path, 0o755)
-
-    except Exception as e:
-        print(f"{colors.RED}Failed to write service files with an unhandled exception: {e}{colors.RESET}")
-        return False
+def setup_loopback_service(service):
 
     if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): return False
 

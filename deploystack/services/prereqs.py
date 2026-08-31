@@ -1,5 +1,8 @@
 import subprocess
 import os
+import sys
+
+from pathlib import Path
 
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
@@ -7,10 +10,14 @@ from ..utils.config.parser import get
 from ..utils.core.system_utils import nc_wait, is_ubuntu_release, is_package_installed
 from ..utils.core import colors
 
+from ..utils.config.setter import set_conf_option
+
 from ..utils.lvm.loopback import set_lvm_filter
 from ..utils.config.helpers import parse_bool
 
 from . import validate_os_release_available
+
+deploystack_loopback_conf_file = "/etc/deploystack-loopback.conf"
 
 UBUNTU_CLOUD_ARCHIVE = {
     ("focal",   "yoga"):      "focal-updates/yoga",
@@ -189,6 +196,96 @@ def _print_supported_combinations(current_codename: str, native: str):
     if native:
         print(f"  Ubuntu {current_codename} -> {native} (native, no UCA needed)")
 
+def create_loopback_config(config):
+
+    install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
+    install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
+
+    is_lvm_manila_backend_enabled = get(config, "manila.BACKEND") == "lvm"
+
+    cinder_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
+    manila_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
+
+    source = Path(sys.prefix) / "bin" / "deploystack_loopback"
+    target = Path("/usr/bin/deploystack_loopback")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if target.exists() or target.is_symlink():
+        target.unlink()
+
+    target.symlink_to(source)
+
+    if ((install_cinder and cinder_loop_dev) or (install_manila and is_lvm_manila_backend_enabled and manila_loop_dev)):
+        if not os.path.exists(deploystack_loopback_conf_file):
+            open(deploystack_loopback_conf_file, "w").close()
+
+    set_conf_option(
+        deploystack_loopback_conf_file,
+        "lvm",
+        "config",
+        "/etc/lvm/lvm.conf",
+    )
+
+    if install_cinder and cinder_loop_dev:
+        vg = get(config, "cinder.lvm.VOLUME_GROUP")
+        lvm_image_path = get(
+            config,
+            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
+        )
+
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "cinder",
+            "image",
+            lvm_image_path,
+        )
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "cinder",
+            "vg",
+            vg,
+        )
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "cinder",
+            "state_file",
+            "/var/lib/deploystack/cinder_loop_dev",
+        )
+
+    if (
+        install_manila
+        and is_lvm_manila_backend_enabled
+        and manila_loop_dev
+    ):
+        vg = get(
+            config,
+            "manila.backends.lvm.storage.SHARE_VOLUME_GROUP",
+        )
+        lvm_image_path = get(
+            config,
+            "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH",
+        )
+
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "manila",
+            "image",
+            lvm_image_path,
+        )
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "manila",
+            "vg",
+            vg,
+        )
+        set_conf_option(
+            deploystack_loopback_conf_file,
+            "manila",
+            "state_file",
+            "/var/lib/deploystack/manila_loop_dev",
+        )
+
 def install_pkgs(config):
 
     print()
@@ -202,6 +299,9 @@ def install_pkgs(config):
     install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
 
     is_lvm_manila_backend_enabled = get(config, "manila.BACKEND") == "lvm"
+
+    cinder_loop_dev = None
+    manila_loop_dev = None
 
     if install_cinder:
         cinder_pv = get(config, "cinder.lvm.PHYSICAL_VOLUME")
@@ -274,6 +374,9 @@ def run_setup_prereqs(config):
         if not set_hostname(config) : return False
 
     if not set_openstack_release(config): return False
+
+    create_loopback_config(config)
+
     if not install_pkgs(config): return False
 
     if not nc_wait(ip_address, 5672) : return False
