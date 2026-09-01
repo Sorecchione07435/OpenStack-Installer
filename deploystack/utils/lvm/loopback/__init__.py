@@ -125,6 +125,6 @@ def setup_loopback_service(service):
 
     if not run_command(["systemctl", "daemon-reload"], "Reloading systemd daemon..."): return False
 
-    if not run_command(["systemctl", "enable", "--now", f"{service}-loopback.service"], f"Enabling and starting {service}-loopback service..."): return False
+    if not run_command(["systemctl", "enable", f"{service}-loopback.service"], f"Enabling {service}-loopback service..."): return False
 
     return True
