@@ -94,6 +94,11 @@ class LVMFilter:
         self.config.write_text(content)
 
     def _write_devices(self, devices, exclude_pattern=None):
+
+        def _is_loop_device_rule(rule):
+            m = re.search(r'/dev/loop\d+', rule)
+            return m is not None
+
         content = self.config.read_text()
 
         match = re.search(
@@ -117,8 +122,8 @@ class LVMFilter:
         rules = [
             rule
             for rule in rules
-            if rule != "r|.*|"
-            and (exclude_pattern is None or not re.match(exclude_pattern, rule))
+            if not _is_loop_device_rule(rule)
+            and rule != "r|.*|"
         ]
 
         for device in devices:
