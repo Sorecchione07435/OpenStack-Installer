@@ -93,16 +93,45 @@ class LVMFilter:
 
         self.config.write_text(content)
 
-    def _write_devices(self, devices):
+    def _write_devices(self, devices, exclude_pattern=None):
         content = self.config.read_text()
 
-        new_filter = (
-            'filter = [ '
-            + ', '.join(
-                f'"a|^{device}$|"'
-                for device in devices
+        match = re.search(
+            r'^\s*filter\s*=\s*\[(.*?)\]',
+            content,
+            re.MULTILINE | re.DOTALL,
+        )
+
+        if not match:
+            raise RuntimeError(
+                f"LVM filter not found in {self.config}"
             )
-            + ', "r|.*|" ]'
+
+        current_filter = match.group(1)
+
+        rules = re.findall(
+            r'"([^"]+)"',
+            current_filter,
+        )
+
+        rules = [
+            rule
+            for rule in rules
+            if rule != "r|.*|"
+            and (exclude_pattern is None or not re.match(exclude_pattern, rule))
+        ]
+
+        for device in devices:
+            rule = f"a|^{device}$|"
+            if rule not in rules:
+                rules.append(rule)
+
+        rules.append("r|.*|")
+
+        new_filter = (
+            "filter = [ "
+            + ", ".join(f'"{rule}"' for rule in rules)
+            + " ]"
         )
 
         content = re.sub(
