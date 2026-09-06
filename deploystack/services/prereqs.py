@@ -229,11 +229,11 @@ def create_loopback_config(config):
         toml_string("/etc/lvm/lvm.conf"),
     )
 
-    if install_cinder and cinder_loop_dev and enabled_backends == "lvm":
-        vg = get(config, "cinder.lvm.VOLUME_GROUP")
+    if install_cinder and cinder_loop_dev and "lvm" in enabled_backends:
+        vg = get(config, "cinder.backends.lvm.VOLUME_GROUP")
         lvm_image_path = get(
             config,
-            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
+            "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
         )
 
         set_conf_option(
