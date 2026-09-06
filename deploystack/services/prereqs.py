@@ -201,6 +201,8 @@ def create_loopback_config(config):
     install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
     install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
 
+    enabled_backends = get(config, "cinder.ENABLED_BACKENDS", []) or []
+
     is_lvm_manila_backend_enabled = get(config, "manila.BACKEND") == "lvm"
 
     cinder_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
@@ -227,7 +229,7 @@ def create_loopback_config(config):
         toml_string("/etc/lvm/lvm.conf"),
     )
 
-    if install_cinder and cinder_loop_dev:
+    if install_cinder and cinder_loop_dev and enabled_backends == "lvm":
         vg = get(config, "cinder.lvm.VOLUME_GROUP")
         lvm_image_path = get(
             config,
