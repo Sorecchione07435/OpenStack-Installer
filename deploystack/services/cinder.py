@@ -165,8 +165,6 @@ def conf_nfs_backend(config):
             print(f"{colors.RED}ERROR: Unable to create NFS mount point {nfs_mount_point}: {e}{colors.RESET}")
             return False
 
-        print()
-
         try:
             uid = pwd.getpwnam("cinder").pw_uid
             gid = grp.getgrnam("cinder").gr_gid
@@ -199,6 +197,8 @@ def conf_nfs_backend(config):
                 f.write(f"{export_line}\n")
 
         print()
+
+        os.makedirs(export_path, exist_ok=True)
 
         if not run_command(["exportfs", "-ra"], "Applying NFS exports...") : return False
 
