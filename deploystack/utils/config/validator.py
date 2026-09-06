@@ -607,133 +607,136 @@ def validate_cinder(config) -> bool:
     cinder_config = get(config, "cinder")
 
     enable_cinder_backup = get(config, "cinder.ENABLE_CINDER_BACKUP")
-
-    size_raw = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
-    path = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
-    pv = (get(config, "cinder.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
-    volume_clear = (get(config, "cinder.backends.lvm.VOLUME_CLEAR") or "").lower()
-    volume_clear_size = get(config, "cinder.backends.lvm.VOLUME_CLEAR_SIZE")
+    enabled_backends = get(config, "cinder.ENABLED_BACKENDS", []) or []
 
     OPENSTACK_RESERVED_PORTS.add(8776)
 
-    size = None
+    if "lvm" in enabled_backends:
 
-    required_fields = [
-        "cinder.backends.lvm.VOLUME_GROUP",
-        "cinder.backends.lvm.VOLUME_CLEAR",
-        "cinder.backends.lvm.VOLUME_CLEAR_SIZE"
-    ]
+        size_raw = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
+        path = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
+        pv = (get(config, "cinder.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
+        volume_clear = (get(config, "cinder.backends.lvm.VOLUME_CLEAR") or "").lower()
+        volume_clear_size = get(config, "cinder.backends.lvm.VOLUME_CLEAR_SIZE")
 
-    if not cinder_config:
-        print(f"{colors.RED}Error: cinder section is missing{colors.RESET}")
-        return False
+        size = None
 
-    if enable_cinder_backup not in ("yes", "no"):
-        print(f"{colors.RED}Error: 'cinder.ENABLE_CINDER_BACKUP' must be 'yes' or 'no' (got '{enable_cinder_backup}'){colors.RESET}")
-        ok = False
-
-    for field in required_fields:
-        if not get(config, field):
-            print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
-            ok = False
-            
-    if pv:
-        if not os.path.exists(pv):
-            print(f"{colors.RED}Error: PHYSICAL_VOLUME '{pv}' does not exist{colors.RESET}")
-            ok = False
-            return False
-
-        if not pv.startswith("/dev/") or pv.startswith("/dev/loop") or is_loop_device(pv):
-            print(f"{colors.RED}Error: loop devices are not allowed as Physical Volume ({pv}){colors.RESET}")
-            ok = False
-            return False
-        
-        if not is_safe_lvm_device(pv):
-            print(f"{colors.RED}Error: Unsafe LVM device blocked for security: {pv}{colors.RESET}")
-            ok = False
-            return False
-    
-    else:
-        required_loopback_fields = [
-            "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
-            "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
-            "cinder.backends.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH",
+        required_fields = [
+            "cinder.backends.lvm.VOLUME_GROUP",
+            "cinder.backends.lvm.VOLUME_CLEAR",
+            "cinder.backends.lvm.VOLUME_CLEAR_SIZE"
         ]
 
-        for field in required_loopback_fields:
-            if not get(config, field) :
+        if not cinder_config:
+            print(f"{colors.RED}Error: cinder section is missing{colors.RESET}")
+            return False
+
+        if enable_cinder_backup not in ("yes", "no"):
+            print(f"{colors.RED}Error: 'cinder.ENABLE_CINDER_BACKUP' must be 'yes' or 'no' (got '{enable_cinder_backup}'){colors.RESET}")
+            ok = False
+
+        for field in required_fields:
+            if not get(config, field):
                 print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
                 ok = False
-
-        cinder_volume_lvm_image_file_path = get(config, required_loopback_fields[0])
-        cinder_lvm_loop_path = (get(config, required_loopback_fields[2]) or "").strip().lower()
-
-        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
-
-        if not is_valid_path(cinder_volume_lvm_image_file_path, required_loopback_fields[0]):
-            ok = False
-
-        if not is_valid_path(cinder_lvm_loop_path, required_loopback_fields[2]):
-            ok = False
-
-        if cinder_loopback_size_raw is None:
-            ok = False
-        else:
-            size = cinder_loopback_size_raw
-
-        if cinder_lvm_loop_path:
-            if not cinder_lvm_loop_path.startswith("/dev/loop"):
-                print(
-                    f"{colors.RED}Error: '{required_loopback_fields[2]}' must be a loop device, "
-                    f"found '{cinder_lvm_loop_path}'{colors.RESET}"
-                )
+                
+        if pv:
+            if not os.path.exists(pv):
+                print(f"{colors.RED}Error: PHYSICAL_VOLUME '{pv}' does not exist{colors.RESET}")
                 ok = False
+                return False
 
-        if path:
-            directory = os.path.dirname(path) or "/"
-
-            while not os.path.exists(directory):
-                parent = os.path.dirname(directory)
-                if parent == directory:
-                    directory = "/"
-                    break
-                directory = parent
-
-            try:
-                _, _, free = shutil.disk_usage(directory)
-                free_gb = free / (1024**3)
-
-                if size is not None and size > free_gb:
-                    print(
-                        f"{colors.YELLOW}Warning: the requested Cinder LVM image size ({size} GB) exceeds "
-                        f"the available disk space ({free_gb:.2f} GB). "
-                        f"The sparse file will be created successfully, but the volume group may run out "
-                        f"of space as volumes are written.{colors.RESET}"
-                    )
-
-            except FileNotFoundError:
-                print(f"{colors.RED}Error: cannot determine disk usage for {directory}{colors.RESET}")
+            if not pv.startswith("/dev/") or pv.startswith("/dev/loop") or is_loop_device(pv):
+                print(f"{colors.RED}Error: loop devices are not allowed as Physical Volume ({pv}){colors.RESET}")
                 ok = False
-
-    target_ip = get(config, "cinder.TARGET_IP_ADDRESS") or ""
-
-    if isinstance(target_ip, dict) or (isinstance(target_ip, str) and "{network.HOST_IP}" in target_ip):
-        pass  
-    elif target_ip and isinstance(target_ip, str):
-        if not validate_ip(target_ip, "cinder.TARGET_IP_ADDRESS"):
-            ok = False
-    else:
-        ok = False
+                return False
+            
+            if not is_safe_lvm_device(pv):
+                print(f"{colors.RED}Error: Unsafe LVM device blocked for security: {pv}{colors.RESET}")
+                ok = False
+                return False
         
-    if volume_clear not in ("zero", "shred", "none"):
-        print(
-            f"{colors.RED}Error: Invalid value for 'cinder.volume_clear'. "
-            f"Allowed values are: 'zero', 'shred', 'none'.{colors.RESET}"
-        )
-        ok = False
+        else:
+            required_loopback_fields = [
+                "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
+                "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
+                "cinder.backends.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH",
+            ]
 
-    if validate_positive_int(volume_clear_size, required_fields[2]) is None:
-        ok = False
+            for field in required_loopback_fields:
+                if not get(config, field) :
+                    print(f"{colors.RED}Error: '{field}' is not set{colors.RESET}")
+                    ok = False
+
+            cinder_volume_lvm_image_file_path = get(config, required_loopback_fields[0])
+            cinder_lvm_loop_path = (get(config, required_loopback_fields[2]) or "").strip().lower()
+
+            cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
+
+            if not is_valid_path(cinder_volume_lvm_image_file_path, required_loopback_fields[0]):
+                ok = False
+
+            if not is_valid_path(cinder_lvm_loop_path, required_loopback_fields[2]):
+                ok = False
+
+            if cinder_loopback_size_raw is None:
+                ok = False
+            else:
+                size = cinder_loopback_size_raw
+
+            if cinder_lvm_loop_path:
+                if not cinder_lvm_loop_path.startswith("/dev/loop"):
+                    print(
+                        f"{colors.RED}Error: '{required_loopback_fields[2]}' must be a loop device, "
+                        f"found '{cinder_lvm_loop_path}'{colors.RESET}"
+                    )
+                    ok = False
+
+            if path:
+                directory = os.path.dirname(path) or "/"
+
+                while not os.path.exists(directory):
+                    parent = os.path.dirname(directory)
+                    if parent == directory:
+                        directory = "/"
+                        break
+                    directory = parent
+
+                try:
+                    _, _, free = shutil.disk_usage(directory)
+                    free_gb = free / (1024**3)
+
+                    if size is not None and size > free_gb:
+                        print(
+                            f"{colors.YELLOW}Warning: the requested Cinder LVM image size ({size} GB) exceeds "
+                            f"the available disk space ({free_gb:.2f} GB). "
+                            f"The sparse file will be created successfully, but the volume group may run out "
+                            f"of space as volumes are written.{colors.RESET}"
+                        )
+
+                except FileNotFoundError:
+                    print(f"{colors.RED}Error: cannot determine disk usage for {directory}{colors.RESET}")
+                    ok = False
+
+        target_ip = get(config, "cinder.TARGET_IP_ADDRESS") or ""
+
+        if isinstance(target_ip, dict) or (isinstance(target_ip, str) and "{network.HOST_IP}" in target_ip):
+            pass  
+        elif target_ip and isinstance(target_ip, str):
+            if not validate_ip(target_ip, "cinder.TARGET_IP_ADDRESS"):
+                ok = False
+        else:
+            ok = False
+            
+        if volume_clear not in ("zero", "shred", "none"):
+            print(
+                f"{colors.RED}Error: Invalid value for 'cinder.volume_clear'. "
+                f"Allowed values are: 'zero', 'shred', 'none'.{colors.RESET}"
+            )
+            ok = False
+
+        if validate_positive_int(volume_clear_size, required_fields[2]) is None:
+            ok = False
 
     if enable_cinder_backup == "yes":
         ok &= validate_cinder_backup(config)
