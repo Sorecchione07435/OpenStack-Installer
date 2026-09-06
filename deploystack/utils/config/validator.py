@@ -620,8 +620,8 @@ def validate_cinder(config) -> bool:
 
     required_fields = [
         "cinder.backends.lvm.VOLUME_GROUP",
-        "cinder.VOLUME_CLEAR",
-        "cinder.VOLUME_CLEAR_SIZE"
+        "cinder.backends.lvm.VOLUME_CLEAR",
+        "cinder.backends.lvm.VOLUME_CLEAR_SIZE"
     ]
 
     if not cinder_config:
