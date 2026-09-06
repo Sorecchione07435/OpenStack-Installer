@@ -737,6 +737,8 @@ def validate_cinder(config) -> bool:
 
     if enable_cinder_backup == "yes":
         ok &= validate_cinder_backup(config)
+
+    print("passed")
     
     return ok
 
