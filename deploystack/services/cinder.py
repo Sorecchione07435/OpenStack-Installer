@@ -39,6 +39,12 @@ def install_pkgs(config):
     install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
     drivers = get_enabled_backend_drivers(config)
 
+    import sys
+
+    print(drivers)
+
+    sys.exit(0)
+    
     packages = ["cinder-scheduler", "cinder-api", "cinder-volume"]
 
     if "lvm" in drivers:
