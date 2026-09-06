@@ -729,12 +729,12 @@ def validate_cinder(config) -> bool:
                     print("setted false 11")
                     ok = False
 
-        target_ip = get(config, "cinder.TARGET_IP_ADDRESS") or ""
+        target_ip = get(config, "cinder.backends.lvm.TARGET_IP_ADDRESS") or ""
 
         if isinstance(target_ip, dict) or (isinstance(target_ip, str) and "{network.HOST_IP}" in target_ip):
             pass  
         elif target_ip and isinstance(target_ip, str):
-            if not validate_ip(target_ip, "cinder.TARGET_IP_ADDRESS"):
+            if not validate_ip(target_ip, "cinder.backends.lvm.TARGET_IP_ADDRESS"):
                 ok = False
         else:
             ok = False
