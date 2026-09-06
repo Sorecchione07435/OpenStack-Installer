@@ -270,7 +270,7 @@ def deploy(parser, args) -> None:
             cinder_enabled_backends = (
                 args.cinder_enabled_backends
                 if args.cinder_enabled_backends is not None
-                else "lvm"
+                else ["lvm"]
             )
 
             cinder_lvm_volume_group = (

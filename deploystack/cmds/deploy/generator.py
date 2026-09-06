@@ -212,9 +212,6 @@ def config_openstack(
 
         config_dict["cinder"]["ENABLED_BACKENDS"] = cinder_enabled_backends or []
         config_dict["cinder"]["backends"] = {}
-        
-        print("ENABLED_BACKENDS:", repr(config_dict["cinder"]["ENABLED_BACKENDS"]))
-        print("TYPE:", type(config_dict["cinder"]["ENABLED_BACKENDS"]))
 
         if enable_cinder_backup.lower() == "yes":
             config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "yes"
