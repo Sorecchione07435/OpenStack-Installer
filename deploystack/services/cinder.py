@@ -451,7 +451,7 @@ def finalize(config):
     ip_address = get(config, "network.HOST_IP")
     install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
 
-    drivers = get_enabled_backend_drivers(config)
+    enabled_backends = get(config, "cinder.ENABLED_BACKENDS", []) or []
 
     print()
 
@@ -461,7 +461,7 @@ def finalize(config):
         "apache2", 
     ]
 
-    if "lvm" in drivers:
+    if "lvm" in enabled_backends:
         cinder_services.append("tgt")
 
     if install_cinder_backup:
