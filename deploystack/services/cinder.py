@@ -73,11 +73,8 @@ def conf_lvm_backend(config):
     else:
         lvm_dev = lvm_loop_dev
 
-        images_dir = Path("/var/lib/cinder/images")
         image_path = Path(lvm_image_file_path)
-
-        if image_path.resolve() == images_dir.resolve():
-            images_dir.mkdir(parents=True, exist_ok=True)
+        image_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not os.path.exists(lvm_image_file_path):
 
