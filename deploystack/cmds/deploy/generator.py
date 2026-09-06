@@ -239,8 +239,6 @@ def config_openstack(
         else:
             config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "no"
             config_dict["cinder"].pop("backup", None)
-
-        config_dict["cinder"].setdefault("lvm", {})
         
         if "lvm" in cinder_enabled_backends :
             if not cinder_physical_volume or cinder_physical_volume.strip() == "":
