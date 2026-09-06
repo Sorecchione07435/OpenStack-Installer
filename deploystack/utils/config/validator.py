@@ -608,18 +608,18 @@ def validate_cinder(config) -> bool:
 
     enable_cinder_backup = get(config, "cinder.ENABLE_CINDER_BACKUP")
 
-    size_raw = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
-    path = (get(config, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
-    pv = (get(config, "cinder.lvm.PHYSICAL_VOLUME") or "").strip().lower()
-    volume_clear = (get(config, "cinder.VOLUME_CLEAR") or "").lower()
-    volume_clear_size = get(config, "cinder.VOLUME_CLEAR_SIZE")
+    size_raw = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB") or "")
+    path = (get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH") or "").strip().lower()
+    pv = (get(config, "cinder.backends.lvm.PHYSICAL_VOLUME") or "").strip().lower()
+    volume_clear = (get(config, "cinder.backends.lvm.VOLUME_CLEAR") or "").lower()
+    volume_clear_size = get(config, "cinder.backends.lvm.VOLUME_CLEAR_SIZE")
 
     OPENSTACK_RESERVED_PORTS.add(8776)
 
     size = None
 
     required_fields = [
-        "cinder.lvm.VOLUME_GROUP",
+        "cinder.backends.lvm.VOLUME_GROUP",
         "cinder.VOLUME_CLEAR",
         "cinder.VOLUME_CLEAR_SIZE"
     ]
@@ -655,9 +655,9 @@ def validate_cinder(config) -> bool:
     
     else:
         required_loopback_fields = [
-            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
-            "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
-            "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH",
+            "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_FILE_PATH",
+            "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB",
+            "cinder.backends.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH",
         ]
 
         for field in required_loopback_fields:
@@ -668,7 +668,7 @@ def validate_cinder(config) -> bool:
         cinder_volume_lvm_image_file_path = get(config, required_loopback_fields[0])
         cinder_lvm_loop_path = (get(config, required_loopback_fields[2]) or "").strip().lower()
 
-        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
+        cinder_loopback_size_raw = validate_positive_int(size_raw, "cinder.backends.lvm.CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB")
 
         if not is_valid_path(cinder_volume_lvm_image_file_path, required_loopback_fields[0]):
             ok = False
