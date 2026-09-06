@@ -306,8 +306,8 @@ def install_pkgs(config):
     manila_loop_dev = None
 
     if install_cinder:
-        cinder_pv = get(config, "cinder.lvm.PHYSICAL_VOLUME")
-        cinder_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
+        cinder_pv = get(config, "cinder.backends.lvm.PHYSICAL_VOLUME")
+        cinder_loop_dev = get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
 
         devices.append(cinder_pv or cinder_loop_dev)
 
