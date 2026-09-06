@@ -24,33 +24,17 @@ cinder_conf = "/etc/cinder/cinder.conf"
 tgt_conf_path = "/etc/tgt/conf.d/cinder.conf"
 lvm_conf_path = "/etc/lvm/lvm.conf"
 
-def get_enabled_backend_drivers(config):
-    backend_ids = get(config, "cinder.ENABLED_BACKENDS", []) or []
-    backends = get(config, "cinder.backends", {}) or {}
-
-    return {
-        str(backends[backend_id].get("DRIVER", "")).lower()
-        for backend_id in backend_ids
-        if backend_id in backends
-    }
-
 def install_pkgs(config):
 
     install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))
-    drivers = get_enabled_backend_drivers(config)
-
-    import sys
-
-    print(drivers)
-
-    sys.exit(0)
+    enabled_backends = get(config, "cinder.ENABLED_BACKENDS", []) or []
     
     packages = ["cinder-scheduler", "cinder-api", "cinder-volume"]
 
-    if "lvm" in drivers:
+    if "lvm" in enabled_backends:
         packages.append("tgt")
 
-    if "nfs" in drivers:
+    if "nfs" in enabled_backends:
         use_external_share = parse_bool(get(config, "cinder.backends.nfs.USE_EXTERNAL_SHARE"), False)
 
         packages.append("nfs-common")
