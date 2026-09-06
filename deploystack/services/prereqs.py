@@ -218,7 +218,7 @@ def create_loopback_config(config):
 
     target.symlink_to(source)
 
-    if ((install_cinder and cinder_loop_dev) or (install_manila and is_lvm_manila_backend_enabled and manila_loop_dev)):
+    if ((install_cinder and cinder_loop_dev and "lvm" in enabled_backends) or (install_manila and is_lvm_manila_backend_enabled and manila_loop_dev)):
         if not os.path.exists(deploystack_loopback_conf_file):
             open(deploystack_loopback_conf_file, "w").close()
 
