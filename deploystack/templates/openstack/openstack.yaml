@@ -321,6 +321,10 @@ cinder:
       # 1.0 means no over-subscription is allowed.
       NFS_OVERSUB_RATIO: 1.0
 
+      # Controls whether snapshot support is enabled for the Cinder NFS driver.
+      # Set to "yes" to enable volume snapshots, or "no" to disable them.
+      ENABLE_SNAPSHOTS: "yes"
+
   backup:
 
     # Cinder backup driver to use.

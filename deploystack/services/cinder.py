@@ -389,6 +389,8 @@ def conf_cinder(config):
         nfs_used_ratio = get(config, "cinder.backends.nfs.NFS_USED_RATIO")
         nfs_oversub_ratio = get(config, "cinder.backends.nfs.NFS_OVERSUB_RATIO") 
 
+        enable_snapshots = parse_bool(get(config, "cinder.backends.nfs.ENABLE_SNAPSHOTS"), False)
+
         set_conf_option(cinder_conf, "nfs", "volume_driver", "cinder.volume.drivers.nfs.NfsDriver")
         set_conf_option(cinder_conf, "nfs", "volume_backend_name", nfs_backend_name)
         set_conf_option(cinder_conf, "nfs", "nfs_shares_config", "/etc/cinder/nfs_shares")
@@ -401,6 +403,9 @@ def conf_cinder(config):
 
         set_conf_option(cinder_conf, "nfs", "nfs_used_ratio", str(nfs_used_ratio))
         set_conf_option(cinder_conf, "nfs", "nfs_oversub_ratio", str(nfs_oversub_ratio))
+
+        if enable_snapshots:
+            set_conf_option(cinder_conf, "nfs", "nfs_snapshot_support", "True")
 
     set_conf_option(cinder_conf, "service_user", "project_domain_name", "Default")
     set_conf_option(cinder_conf, "service_user", "project_name", "service")
