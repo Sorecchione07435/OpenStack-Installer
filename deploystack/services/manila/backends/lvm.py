@@ -8,6 +8,8 @@ import tempfile
 import ipaddress
 import json
 
+from pathlib import Path
+
 from ....utils.core.commands import run_command, os_run, os_run_output, run_commands, run_command_sync, run_command_output
 from ....utils.apt.apt import apt_install
 
@@ -307,8 +309,6 @@ def create_shares_network(config, env):
 
 def conf_lvm(config):
 
-    os.makedirs("/var/lib/manila/images", exist_ok=True)
-
     lvm_physical_volume = get(config, "manila.backends.lvm.storage.PHYSICAL_VOLUME")
     lvm_image_file_path = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH")
     lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
@@ -320,6 +320,12 @@ def conf_lvm(config):
         lvm_dev = lvm_physical_volume
     else:
         lvm_dev = lvm_loop_dev
+
+        images_dir = Path("/var/lib/manila/images")
+        image_path = Path(lvm_image_file_path)
+
+        if image_path.resolve() == images_dir.resolve():
+            images_dir.mkdir(parents=True, exist_ok=True)
 
         if not os.path.exists(lvm_image_file_path):
 
@@ -469,11 +475,6 @@ def finalize_lvm_backend(config, env):
     return True
 
 def run_setup_lvm_backend(config, env):
-
-    lvm_image_file_path = get(config, "manila.backends.lvm.storage.MANILA_LVM_IMAGE_FILE_PATH")
-    lvm_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
-
-    vg_name = get(config, "manila.backends.lvm.storage.SHARE_VOLUME_GROUP")
 
     if not install_pkgs(): return False
 

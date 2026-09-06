@@ -93,7 +93,7 @@ def deploy(config_file):
     
     if install_cinder:
         print("Setting up Cinder\n")
-        if not run_setup_cinder(config):
+        if not run_setup_cinder(config, env):
             sys.exit(1)
             return False
         

@@ -36,6 +36,7 @@ def config_openstack(
     install_manila: str = "no",
     config_file_path: str = "",
 
+    cinder_enabled_backends: str = "",
     cinder_lvm_vg = "",
     cinder_physical_volume = "",
 
@@ -207,48 +208,56 @@ def config_openstack(
             
         cinder_loop = get_free_loops(count=1)[0]
 
-    config_dict["cinder"]["VOLUME_CLEAR"] = "zero"
-    config_dict["cinder"]["VOLUME_CLEAR_SIZE"] = 1
-    config_dict["cinder"]["TARGET_IP_ADDRESS"] = mgmt_ip
+    if install_cinder.lower() == "yes":
 
-    if enable_cinder_backup.lower() == "yes":
-        config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "yes"
+        config_dict["cinder"]["ENABLED_BACKENDS"] = cinder_enabled_backends or []
+        config_dict["cinder"]["backends"] = {}
 
-        config_dict["cinder"]["backup"]["DRIVER"] = cinder_backup_driver
+        if enable_cinder_backup.lower() == "yes":
+            config_dict["cinder"]["ENABLE_CINDER_BACKUP"] = "yes"
 
-        if cinder_backup_driver == "posix":
-            config_dict["cinder"]["backup"]["drivers"]["posix"]["BACKUP_PATH"] = "/var/lib/cinder/backups"
-            
-            config_dict["cinder"]["backup"]["drivers"].pop("nfs", None)
-        elif cinder_backup_driver == "nfs":
-            config_dict["cinder"]["backup"]["drivers"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-backups"
-            config_dict["cinder"]["backup"]["drivers"]["nfs"]["MOUNT_POINT_BASE"] = "/var/lib/cinder/cinder/backup" 
+            config_dict["cinder"]["backup"]["DRIVER"] = cinder_backup_driver
 
-            config_dict["cinder"]["backup"]["drivers"].pop("posix", None)
+            if cinder_backup_driver == "posix":
+                config_dict["cinder"]["backup"]["drivers"]["posix"]["BACKUP_PATH"] = "/var/lib/cinder/backups"
+                
+                config_dict["cinder"]["backup"]["drivers"].pop("nfs", None)
+            elif cinder_backup_driver == "nfs":
+                config_dict["cinder"]["backup"]["drivers"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-backups"
+                config_dict["cinder"]["backup"]["drivers"]["nfs"]["MOUNT_POINT_BASE"] = "/var/lib/cinder/cinder/backup" 
 
-        config_dict["cinder"]["backup"]["COMPRESSION_ALGORITHM"] = compression_algorithm
+                config_dict["cinder"]["backup"]["drivers"].pop("posix", None)
 
-        config_dict["cinder"]["backup"]["BACKUP_FILE_SIZE"] = backup_file_size_in_bytes
-        config_dict["cinder"]["backup"]["BACKUP_SHA_BLOCK_SIZE_BYTES"] = backup_sha_block_size_in_bytes
+            config_dict["cinder"]["backup"]["COMPRESSION_ALGORITHM"] = compression_algorithm
 
-        config_dict["cinder"]["backup"]["BACKUP_WORKERS"] = backup_workers
-    else:
-        config_dict["cinder"].pop("backup", None)
+            config_dict["cinder"]["backup"]["BACKUP_FILE_SIZE"] = backup_file_size_in_bytes
+            config_dict["cinder"]["backup"]["BACKUP_SHA_BLOCK_SIZE_BYTES"] = backup_sha_block_size_in_bytes
 
-    config_dict["cinder"].setdefault("lvm", {})
+            config_dict["cinder"]["backup"]["BACKUP_WORKERS"] = backup_workers
+        else:
+            config_dict["cinder"].pop("backup", None)
 
-    if not cinder_physical_volume or cinder_physical_volume.strip() == "":
-        config_dict["cinder"]["lvm"] = {
-            "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": str(cinder_loop),
-            "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
-            "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": cinder_lvm_image_size_in_gb,
-            "VOLUME_GROUP": "cinder-volumes",
-        }
-    else:
-        config_dict["cinder"]["lvm"] = {
-            "PHYSICAL_VOLUME": cinder_physical_volume,
-            "VOLUME_GROUP": "cinder-volumes",
-        }
+        config_dict["cinder"].setdefault("lvm", {})
+        
+        if "lvm" in cinder_enabled_backends :
+            if not cinder_physical_volume or cinder_physical_volume.strip() == "":
+                config_dict["cinder"]["backends"]["lvm"] = {
+                    "CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH": str(cinder_loop),
+                    "CINDER_VOLUME_LVM_IMAGE_FILE_PATH": "/var/lib/cinder/images/cinder-volumes.img",
+                    "CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB": cinder_lvm_image_size_in_gb,
+                    "VOLUME_GROUP": cinder_lvm_vg,
+                    "TARGET_IP_ADDRESS": mgmt_ip,
+                    "VOLUME_CLEAR": "zero",
+                    "VOLUME_CLEAR_SIZE": 1
+                }
+            else:
+                config_dict["cinder"]["backends"]["lvm"] = {
+                    "PHYSICAL_VOLUME": cinder_physical_volume,
+                    "VOLUME_GROUP": cinder_lvm_vg,
+                }
+
+        if "nfs" in cinder_enabled_backends:
+            config_dict["cinder"]["backends"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-volumes"
 
     if install_manila.lower() == "yes":
 

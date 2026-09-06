@@ -165,7 +165,7 @@ manila:
         # Physical volume configuration
         # -------------------------
 
-        SHARE_VOLUME_GROUP: "manila-volumes"
+        SHARE_VOLUME_GROUP: "manila-shares"
 
         PHYSICAL_VOLUME: ""
 
@@ -173,7 +173,7 @@ manila:
         # Loopback device configuration
         # -------------------------
 
-        MANILA_LVM_IMAGE_FILE_PATH: "/var/lib/manila/manila-volumes.img"
+        MANILA_LVM_IMAGE_FILE_PATH: "/var/lib/manila/images/manila-shares.img"
 
         MANILA_LVM_IMAGE_SIZE_IN_GB: "10"
 
@@ -225,46 +225,136 @@ cinder:
   # Enable Cinder Backup service for Cinder volumes
   ENABLE_CINDER_BACKUP: no
 
-  lvm:
-    # --- Backend ---
+  # Active backend(s) for cinder-volume. Each becomes a separate section
+  # in cinder.conf, referenced by `enabled_backends`.
 
-    # Name of the LVM volume group to use for Cinder volumes
-    VOLUME_GROUP: "cinder-volumes"
+  ENABLED_BACKENDS:
+  - lvm
 
-    # --- Physical volume ---
+  # Volume type used by default when no volume type is specified
+  # during volume creation.
+  DEFAULT_VOLUME_TYPE: "iscsi"
 
-    # Path to a real block device to use as LVM backend
-    # If set, the loopback settings below are ignored
-    # Example: "/dev/sdb"
-    PHYSICAL_VOLUME: ""
+  backends:
+    lvm:
+      # Backend name, used as volume_backend_name and as
+      # reference in volume types (e.g., "iscsi").
+      BACKEND_NAME: "lvm"
 
-    # --- Loopback device (used only if PHYSICAL_VOLUME is not set) ---
+      # Cinder volume type name associated with this backend.
+      VOLUME_TYPE_NAME: "iscsi"
 
-    # Loopback device path
-    CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH: "/dev/loop0"
+      # Name of the LVM volume group used by Cinder to create
+      # and manage logical volumes.
+      VOLUME_GROUP: "cinder-volumes"
 
-    # Path of the loopback image file on disk
-    CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
+      # --- Physical volume ---
 
-    # Size of the loopback image in GB
-    CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
+      # Path to a real block device to use as the LVM physical volume.
+      # If set, the loopback device configuration below is ignored.
+      # Example: "/dev/sdb".
+      PHYSICAL_VOLUME: ""
+
+      # --- Loopback device (used only if PHYSICAL_VOLUME is not set) ---
+
+      # Path of the loopback device used as the LVM physical volume.
+      # The device is backed by the image file specified below.
+      CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH: "/dev/loop0"
+
+      # Path to the disk image file used as backing storage for the
+      # loopback LVM physical volume.
+      CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
+
+      # Size of the loopback image file in GB.
+      # This determines the total capacity available to the LVM backend.
+      CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
+
+      # IP address of the iSCSI target used to expose Cinder LVM volumes.
+      # If left empty, the value of network.HOST_IP is used.
+      TARGET_IP_ADDRESS: ""
+
+      # Volume clearing strategy when a volume is deleted
+      # Options: zero (overwrite with zeros), shred (secure erase), none (skip, faster for testing)
+      VOLUME_CLEAR: "zero"
+
+      # Amount of data to clear in MB (0 = entire volume)
+      VOLUME_CLEAR_SIZE: 1
+
+    nfs:
+      # Backend name, used as volume_backend_name and as
+      # reference in volume types (e.g., "nfs")
+      BACKEND_NAME: "nfs"
+
+      # Cinder volume type name associated with this backend.
+      VOLUME_TYPE_NAME: "nfs"
+
+      # Whether to use an existing NFS share provided by an external
+      # NFS server. If no, the system manages the NFS share locally.
+      USE_EXTERNAL_SHARE: "no"
+
+      # NFS export used to store Cinder volumes as image files.
+      # Format: <NFS-server>:<export-path>
+      # (e.g., 172.20.10.10:/export/cinder-volumes).
+      NFS_SHARE: ""
+
+      # Local directory on the cinder-volume host where the NFS
+      # share is mounted and used to store Cinder volume files.
+      MOUNT_POINT_BASE: "/var/lib/cinder/mnt"
+
+      # Optional mount options passed to the NFS mount command
+      # (e.g., "vers=4.1"). Leave empty to use the system defaults.
+      MOUNT_OPTIONS: ""
+
+      # Controls whether Cinder creates sparse volume files.
+      # Use "sparse" to create sparse files, or "thick" to
+      # allocate the full volume size on the NFS share.
+      NFS_SPARSED_VOLUMES: "sparse"
+
+      # Maximum fraction of the NFS backend capacity that can be
+      # allocated by Cinder. For example, 0.95 allows allocation
+      # up to 95% of the reported backend capacity.
+      NFS_USED_RATIO: 0.95
+
+      # Maximum over-subscription ratio for the NFS backend.
+      # Controls how much virtual capacity can be provisioned compared to
+      # the physical capacity reported by the backend.
+      # 1.0 means no over-subscription is allowed.
+      NFS_OVERSUB_RATIO: 1.0
 
   backup:
-    # Cinder backup driver to use
-    # posix | nfs | swift (in the future)
+
+    # Cinder backup driver to use.
+    # Supported drivers: posix | nfs | swift (future).
     DRIVER: ""
 
-    # --- Driver: posix (backup to local/mounted filesystem) ---
     drivers:
+
+      # --- Driver: posix ---
+      # Backup to a local filesystem or a filesystem mounted on the
+      # cinder-backup host.
+
       posix:
+        # Directory where Cinder backup files are stored.
         BACKUP_PATH: "/var/lib/cinder/backups"
 
       # --- Driver: nfs ---
       nfs:
-        NFS_SHARE: "" # e.g., "{network.HOST_IP}:/export/cinder-backups"
+        # Whether to use an existing NFS share provided by an external
+        # NFS server. If no, the system manages the NFS share locally.
+        USE_EXTERNAL_SHARE: "no"
 
+        # NFS export used to store Cinder backup files.
+        # Format: <NFS-server>:<export-path>
+        # Example: "{network.HOST_IP}:/export/cinder-backups".
+        NFS_SHARE: ""
+
+        # Local directory on the cinder-backup host where the NFS
+        # share is mounted and used to store Cinder backup files.
         MOUNT_POINT_BASE: "/var/lib/cinder/cinder/backup"
-        MOUNT_OPTIONS: "" # Optional extra mount options
+
+        # Optional mount options passed to the NFS mount command.
+        # Example: "vers=4.1".
+        MOUNT_OPTIONS: ""
 
     # Backup compression algorithm
     # zlib | bz2 | zstd | none
@@ -278,16 +368,6 @@ cinder:
 
     # Number of concurrent backup operations
     BACKUP_WORKERS: 1
-
-  # IP address of the iSCSI target (defaults to network.HOST_IP if left empty)
-  TARGET_IP_ADDRESS: ""
-
-  # Volume clearing strategy when a volume is deleted
-  # Options: zero (overwrite with zeros), shred (secure erase), none (skip, faster for testing)
-  VOLUME_CLEAR: "zero"
-
-  # Amount of data to clear in MB (0 = entire volume)
-  VOLUME_CLEAR_SIZE: 1
 
 compute:
   NOVA_COMPUTE_VIRT_TYPE: "kvm"   # kvm | qemu (qemu for VM nested)

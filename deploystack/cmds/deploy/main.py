@@ -72,6 +72,14 @@ def init_parser(subparsers):
     )
 
     cinder.add_argument(
+        "--cinder-enabled-backends",
+        nargs="+",
+        choices=["lvm", "nfs"],
+        dest="cinder_enabled_backends",
+        help="One or more Cinder volume backends to enable (choices: lvm, nfs)."
+    )
+
+    cinder.add_argument(
         "--cinder-lvm-image-size-in-gb",
         type=int,
         default=None,
@@ -242,23 +250,46 @@ def deploy(parser, args) -> None:
             or ["nfs"]
         )
 
-        cinder_physical_volume = (
-            args.cinder_physical_volume
-            if cinder_flag == "yes"
-            else ""
-        )
-
         manila_lvm_physical_volume = (
             args.manila_lvm_physical_volume
             if manila_flag == "yes" and args.manila_lvm_physical_volume
             else ""
         )
 
+        cinder_enabled_backends = None
+        cinder_lvm_volume_group = None
+
         cinder_backup_driver = None
         cinder_backup_compression_algorithm = None
         cinder_backup_file_size_in_bytes = None
         cinder_backup_sha_block_size_in_bytes = None
         cinder_backup_workers = None
+
+        if cinder_flag == "yes":
+
+            cinder_enabled_backends = (
+                args.cinder_enabled_backends
+                if args.cinder_enabled_backends is not None
+                else "lvm"
+            )
+
+            cinder_lvm_volume_group = (
+                args.cinder_volume_group
+                if args.cinder_volume_group is not None
+                else "cinder-volumes"
+            )
+
+            cinder_lvm_size = (
+                args.cinder_lvm_image_size_in_gb
+                if args.cinder_lvm_image_size_in_gb is not None
+                else 5
+                )
+ 
+            cinder_physical_volume = (
+                args.cinder_physical_volume
+                if cinder_flag == "yes"
+                else ""
+            )
 
         if enable_cinder_backup == "yes":
             cinder_backup_driver = (
@@ -290,12 +321,6 @@ def deploy(parser, args) -> None:
                 if args.backup_workers is not None
                 else 1
             )
-
-        cinder_lvm_size = (
-            args.cinder_lvm_image_size_in_gb
-            if args.cinder_lvm_image_size_in_gb is not None
-            else 5
-            ) if cinder_flag == "yes" else 0
         
         manila_lvm_vg = (
             args.manila_volume_group
@@ -328,7 +353,9 @@ def deploy(parser, args) -> None:
             install_cinder=cinder_flag,
             install_manila=manila_flag,
 
-            cinder_lvm_vg=args.cinder_volume_group,
+            cinder_enabled_backends=cinder_enabled_backends,
+
+            cinder_lvm_vg=cinder_lvm_volume_group,
             cinder_physical_volume=cinder_physical_volume,
             cinder_lvm_image_size_in_gb=cinder_lvm_size,
 
