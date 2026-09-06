@@ -37,6 +37,8 @@ def config_openstack(
     config_file_path: str = "",
 
     cinder_enabled_backends: str = "",
+    cinder_nfs_snapshots_enabled: str = "",
+
     cinder_lvm_vg = "",
     cinder_physical_volume = "",
 
@@ -267,7 +269,8 @@ def config_openstack(
                 "MOUNT_POINT_BASE": "/var/lib/cinder/mnt",
                 "NFS_SPARSED_VOLUMES": "sparse",
                 "NFS_USED_RATIO": 0.95,
-                "NFS_OVERSUB_RATIO": 1.0
+                "NFS_OVERSUB_RATIO": 1.0,
+                "ENABLE_SNAPSHOTS": cinder_nfs_snapshots_enabled
             }
 
     if install_manila.lower() == "yes":

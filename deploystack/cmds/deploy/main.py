@@ -80,6 +80,14 @@ def init_parser(subparsers):
     )
 
     cinder.add_argument(
+        "--enable-nfs-snapshots",
+        choices=["yes", "no"],
+        type=str,
+        help="Enable or disable snapshot support for the Cinder NFS driver. "
+         "Use 'yes' to enable snapshots or 'no' to disable them."
+    )
+
+    cinder.add_argument(
         "--cinder-lvm-image-size-in-gb",
         type=int,
         default=None,
@@ -259,6 +267,8 @@ def deploy(parser, args) -> None:
         cinder_enabled_backends = None
         cinder_lvm_volume_group = None
 
+        cinder_nfs_snapshots_enabled = None
+
         cinder_backup_driver = None
         cinder_backup_compression_algorithm = None
         cinder_backup_file_size_in_bytes = None
@@ -289,6 +299,12 @@ def deploy(parser, args) -> None:
                 args.cinder_physical_volume
                 if cinder_flag == "yes"
                 else ""
+            )
+
+            cinder_nfs_snapshots_enabled = (
+                args.enable_nfs_snapshots
+                if cinder_flag == "yes"
+                else "yes"
             )
 
         if enable_cinder_backup == "yes":
@@ -354,6 +370,7 @@ def deploy(parser, args) -> None:
             install_manila=manila_flag,
 
             cinder_enabled_backends=cinder_enabled_backends,
+            cinder_nfs_snapshots_enabled=cinder_nfs_snapshots_enabled,
 
             cinder_lvm_vg=cinder_lvm_volume_group,
             cinder_physical_volume=cinder_physical_volume,
