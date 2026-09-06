@@ -259,7 +259,16 @@ def config_openstack(
                 }
 
         if "nfs" in cinder_enabled_backends:
-            config_dict["cinder"]["backends"]["nfs"]["NFS_SHARE"] = f"{mgmt_ip}:/export/cinder-volumes"
+            config_dict["cinder"]["backends"]["nfs"] = {
+                "BACKEND_NAME": "nfs",
+                "VOLUME_TYPE_NAME": "nfs",
+                "USE_EXTERNAL_SHARE": "no",
+                "NFS_SHARE": f"{mgmt_ip}:/export/cinder-volumes",
+                "MOUNT_POINT_BASE": "/var/lib/cinder/mnt",
+                "NFS_SPARSED_VOLUMES": "sparse",
+                "NFS_USED_RATIO": 0.95,
+                "NFS_OVERSUB_RATIO": 1.0
+            }
 
     if install_manila.lower() == "yes":
 
