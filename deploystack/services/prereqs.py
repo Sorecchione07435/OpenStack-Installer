@@ -205,7 +205,7 @@ def create_loopback_config(config):
 
     is_lvm_manila_backend_enabled = get(config, "manila.BACKEND") == "lvm"
 
-    cinder_loop_dev = get(config, "cinder.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
+    cinder_loop_dev = get(config, "cinder.backends.lvm.CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH")
     manila_loop_dev = get(config, "manila.backends.lvm.storage.MANILA_LVM_LOOP_PATH")
 
     source = Path(sys.prefix) / "bin" / "deploystack_loopback"
