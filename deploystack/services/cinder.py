@@ -366,10 +366,10 @@ def conf_cinder(config):
 
         lvm_backend_name = get(config, "cinder.backends.lvm.BACKEND_NAME")
     
-        volume_clear = get(config, "cinder.lvm.VOLUME_CLEAR")
-        volume_clear_size = int(get(config, "cinder.lvm.VOLUME_CLEAR_SIZE"))
+        volume_clear = get(config, "cinder.backends.lvm.VOLUME_CLEAR")
+        volume_clear_size = int(get(config, "cinder.backends.lvm.VOLUME_CLEAR_SIZE"))
 
-        target_scsi_ip_address = get(config, "cinder.lvm.TARGET_IP_ADDRESS") or ip_address
+        target_scsi_ip_address = get(config, "cinder.backends.lvm.TARGET_IP_ADDRESS") or ip_address
   
         VG_NAME = get(config, "cinder.backends.lvm.VOLUME_GROUP")
 
