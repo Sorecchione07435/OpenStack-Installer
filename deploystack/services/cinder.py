@@ -1,4 +1,4 @@
-# Configure the Block Storage service (Cinder) (Controller + LVM Storage Node)
+# Configure the Block Storage service (Cinder) (Controller + Storage Node)
 
 import pwd
 import grp
