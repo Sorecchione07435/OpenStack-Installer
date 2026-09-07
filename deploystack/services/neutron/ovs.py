@@ -15,6 +15,7 @@ from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
 from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded
 from ...templates import OVS_BRIDGES_INTERFACES, OVS_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
+from ...utils.network.net_utils import get_network_info
 from .utils import enable_ipv4_forwarding
 
 from .network.security_group import add_rules_to_default_sg
@@ -60,7 +61,9 @@ def conf_ovs_bridges(config):
 
     ip_address = get(config, "network.HOST_IP")
     ip_address_netmask = get(config, "network.HOST_IP_NETMASK")
-    ip_address_gateway = get(config, "network.HOST_MGMT_GATEWAY", None)
+
+    mgmt_gateway = get(config, "network.HOST_MGMT_GATEWAY", None)
+    host_default_gateway = get(config, "network.HOST_DEFAULT_GATEWAY", None)
 
     subnet_gateway = get(config, "neutron.public_network.PUBLIC_SUBNET_GATEWAY")
     subnet_dns = get(config, "neutron.public_network.PUBLIC_SUBNET_DNS_SERVERS")
@@ -75,6 +78,13 @@ def conf_ovs_bridges(config):
 
     line1 = False
     custom_bridges = bool(bridges)
+
+    is_l3_bridge: bool = mgmt_gateway is not None
+
+    ip_address_gateway = mgmt_gateway or host_default_gateway
+
+    public_iface_info = get_network_info(interface_name=public_iface)
+    public_iface_ip = public_iface_info["ip"]
 
     bridges_to_manage = [public_bridge]
 
@@ -119,15 +129,31 @@ def conf_ovs_bridges(config):
             end = template.index(end_tag) + len(end_tag)
             template = template[:start] + template[end:]
 
+    if is_l3_bridge:
+        public_bridge_ip_config = (
+            f"  address {public_iface_ip}\n"
+            f"  gateway {ip_address_gateway}"
+        )
+    else:
+        public_bridge_ip_config = ""
+
+    subnet_address_gateway = (
+        f"    gateway {ip_address_gateway if is_dual_nic else subnet_gateway}"
+        if not is_l3_bridge
+        else ""
+    )
+
     bridges_interfaces_content = template.format(
         management_iface=management_iface if is_dual_nic else "",
         ip_address=ip_address,
         ip_address_netmask=ip_address_netmask,
-        subnet_address_gateway=ip_address_gateway if is_dual_nic else subnet_gateway,
+        subnet_address_gateway=subnet_address_gateway,
         subnet_address_dns_servers=subnet_dns,
         public_iface=public_iface,
         public_bridge=public_bridge,
-        internal_bridge=tenant_bridge if use_tenant_bridge else ""
+        internal_bridge=tenant_bridge if use_tenant_bridge else "",
+        is_l3="static" if is_l3_bridge else "manual",
+        public_bridge_ip_config=public_bridge_ip_config
     )
 
     if custom_bridges:

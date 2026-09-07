@@ -493,7 +493,7 @@ def config_openstack(
             
             if not manila_lvm_physical_volume:
                 config_dict["manila"]["backends"]["lvm"]["storage"].update({
-                    "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/images/manila-volumes.img",
+                    "MANILA_LVM_IMAGE_FILE_PATH": "/var/lib/manila/images/manila-shares.img",
                     "MANILA_LVM_IMAGE_SIZE_IN_GB": manila_lvm_image_size_in_gb,
                     "MANILA_LVM_LOOP_PATH": str(manila_loop),
                 })
