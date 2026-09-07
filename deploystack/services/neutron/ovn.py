@@ -66,10 +66,6 @@ def conf_ovn_bridges(config):
     subnet_gateway = get(config, "neutron.public_network.PUBLIC_SUBNET_GATEWAY")
     subnet_dns = get(config, "neutron.public_network.PUBLIC_SUBNET_DNS_SERVERS")
     management_iface = get(config, "network.HOST_MGMT_INTERFACE")
-
-    if not iface_exists(public_bridge):
-        public_iface_info = get_network_info(interface_name=public_iface)
-        public_iface_ip = public_iface_info["ip"]
     
     bridges = get(config, "neutron.bridges", [])
 
@@ -108,7 +104,10 @@ def conf_ovn_bridges(config):
 
     if host_default_gateway:
 
-        if iface_exists(public_bridge):
+        if not iface_exists(public_bridge):
+            public_iface_info = get_network_info(interface_name=public_iface)
+            public_iface_ip = public_iface_info["ip"]
+        else:
             public_bridge_info = get_network_info(interface_name=public_bridge)
             public_iface_ip = public_bridge_info["ip"]
 
