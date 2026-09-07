@@ -66,7 +66,7 @@ def conf_ovn_bridges(config):
     subnet_dns = get(config, "neutron.public_network.PUBLIC_SUBNET_DNS_SERVERS")
     management_iface = get(config, "network.HOST_MGMT_INTERFACE")
     
-    is_l3_bridge: bool = mgmt_gateway is not None
+    is_l3_bridge = bool(mgmt_gateway or host_default_gateway)
 
     ip_address_gateway = mgmt_gateway or host_default_gateway
 

@@ -129,19 +129,30 @@ def conf_ovs_bridges(config):
             end = template.index(end_tag) + len(end_tag)
             template = template[:start] + template[end:]
 
-    if is_l3_bridge:
+    if host_default_gateway:
         public_bridge_ip_config = (
             f"  address {public_iface_ip}\n"
             f"  gateway {ip_address_gateway}"
         )
-    else:
+
+        is_l3_bridge = True
+        subnet_address_gateway = ""
+    elif mgmt_gateway:
         public_bridge_ip_config = ""
 
-    subnet_address_gateway = (
-        f"    gateway {ip_address_gateway if is_dual_nic else subnet_gateway}"
-        if not is_l3_bridge
-        else ""
-    )
+        is_l3_bridge = False
+
+        subnet_address_gateway = f"    gateway {mgmt_gateway}"
+    else:
+        public_bridge_ip_config = ""
+        
+        is_l3_bridge = False
+
+        subnet_address_gateway = (
+            f"    gateway {subnet_gateway}"
+            if subnet_gateway
+            else ""
+        )
 
     bridges_interfaces_content = template.format(
         management_iface=management_iface if is_dual_nic else "",
