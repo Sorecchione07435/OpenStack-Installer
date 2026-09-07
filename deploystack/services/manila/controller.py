@@ -8,16 +8,33 @@ from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait
 
+from ...utils.core.system_utils import is_ubuntu_release, is_package_installed
+
 from ...utils.core import colors
+
+from .. import is_os_release
 
 manila_conf = "/etc/manila/manila.conf"
 
-def install_pkgs():
+def install_pkgs(config):
 
     if not apt_update():
         return False
+
+    manila_packages = ["manila-api", "manila-scheduler", "python3-manilaclient"]
+
+    if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
+        manila_packages.remove("python3-manilaclient")
+
+        if is_package_installed("python3-manilaclient"):
+            if not run_command(["apt-get", "remove", "-y", "python3-manilaclient"], "Removing conflicting apt manilaclient...") : return False
+
+        openstackclient_venv = "/opt/openstackclient-venv"
+        venv_pip = f"{openstackclient_venv}/bin/pip"
+
+        if not run_command([venv_pip, "install", "python-manilaclient==6.0.0"], "Installing Manila Client in venv...") : return False
     
-    if not apt_install(["manila-api", "manila-scheduler", "python3-manilaclient"], "Installing Manila packages..."):
+    if not apt_install(manila_packages, "Installing Manila packages..."):
         return False
     
     return True

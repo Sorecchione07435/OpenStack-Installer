@@ -317,6 +317,11 @@ def install_pkgs(config):
         devices.append(manila_pv or manila_loop_dev)
 
     if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
+
+        print(f"\n{colors.YELLOW}Warning: Ubuntu 24.04 Gazpacho has been detected; "
+              f"OpenStack Client will be installed in an isolated venv to avoid "
+              f"conflicts with system packages.{colors.RESET}\n")
+        
         prereqs_pkgs.remove("python3-openstackclient")
 
         if is_package_installed("python3-openstackclient"):
@@ -332,7 +337,9 @@ def install_pkgs(config):
 
         venv_pip = f"{openstackclient_venv}/bin/pip"
 
-        if not run_command([venv_pip, "install", "--upgrade", "pip"], "Upgrading pip in OpenStack Client venv...") : return False
+        if not run_command([venv_pip, "install", "--upgrade", "pip"], "Upgrading pip in venv...") : return False
+
+        print()
 
         if not run_command([venv_pip, "install", "python-openstackclient==9.0.0"], "Installing OpenStack Client in venv...") : return False
 
