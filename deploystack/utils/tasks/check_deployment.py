@@ -165,7 +165,7 @@ def check_deployment(include_endpoints: bool = True):
         if manila_backend == "lvm":
             add_packages_check(["lvm2", "nfs-kernel-server"])
 
-            if "CIFS" in manila_protocols:
+            if "cifs" in manila_protocols:
                 smb_conf = "/etc/samba/smb.conf"
 
                 samba_services = ["smbd.service"]
@@ -177,12 +177,12 @@ def check_deployment(include_endpoints: bool = True):
                 add_config_files_check([smb_conf])
                 add_services_check(samba_services)
 
-        if "NFS" in manila_protocols:
+        if "nfs" in manila_protocols:
 
             nfs_services = []
 
             if service_exists("nfs-server.service"):
-                samba_services.append("nfs-server.service")
+                nfs_services.append("nfs-server.service")
             
                 add_packages_check(["nfs-server"])
                 add_services_check(nfs_services)
