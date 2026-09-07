@@ -85,9 +85,6 @@ def conf_ovs_bridges(config):
     if not iface_exists(public_bridge):
         public_iface_info = get_network_info(interface_name=public_iface)
         public_iface_ip = public_iface_info["ip"]
-    else:
-        public_bridge_info = get_network_info(interface_name=public_bridge)
-        public_iface_ip = public_bridge_info["ip"]
 
     bridges_to_manage = [public_bridge]
 
@@ -133,6 +130,11 @@ def conf_ovs_bridges(config):
             template = template[:start] + template[end:]
 
     if host_default_gateway:
+
+        if iface_exists(public_bridge:)
+            public_bridge_info = get_network_info(interface_name=public_bridge)
+            public_iface_ip = public_bridge_info["ip"]
+    
         public_bridge_ip_config = (
             f"    address {public_iface_ip}\n"
             f"    gateway {host_default_gateway}"
