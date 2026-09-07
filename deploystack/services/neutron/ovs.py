@@ -82,8 +82,9 @@ def conf_ovs_bridges(config):
 
     is_l3_bridge: bool = mgmt_gateway is not None
 
-    public_iface_info = get_network_info(interface_name=public_iface)
-    public_iface_ip = public_iface_info["ip"]
+    if not iface_exists(public_bridge):
+        public_iface_info = get_network_info(interface_name=public_iface)
+        public_iface_ip = public_iface_info["ip"]
 
     bridges_to_manage = [public_bridge]
 
