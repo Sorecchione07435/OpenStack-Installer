@@ -73,6 +73,15 @@ def conf_ovn_bridges(config):
 
     custom_bridges = bool(bridges)
 
+    if host_default_gateway:
+
+        if iface_exists(public_bridge):
+            public_bridge_info = get_network_info(interface_name=public_bridge)
+            public_iface_ip = public_bridge_info["ip"]
+        else:
+            public_iface_info = get_network_info(interface_name=public_iface)
+            public_iface_ip = public_iface_info["ip"]
+
     for iface in [public_iface, public_bridge]:
         if iface_exists(iface):
             run_command(["ip", "addr", "flush", "dev", iface], f"Flushing IPs on {iface}", ignore_errors=True)
@@ -103,13 +112,6 @@ def conf_ovn_bridges(config):
         template = f.read()
 
     if host_default_gateway:
-
-        if not iface_exists(public_bridge):
-            public_iface_info = get_network_info(interface_name=public_iface)
-            public_iface_ip = public_iface_info["ip"]
-        else:
-            public_bridge_info = get_network_info(interface_name=public_bridge)
-            public_iface_ip = public_bridge_info["ip"]
 
         public_bridge_ip_config = (
             f"    address {public_iface_ip}\n"
