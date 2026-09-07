@@ -16,6 +16,7 @@ from ...utils.core import colors
 from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded
 from ...templates import OVS_BRIDGES_INTERFACES, OVS_DUAL_NIC_BRIDGES_INTERFACES, OVS_PERMISSIONS_SERVICE
 from ...utils.network.net_utils import get_network_info
+from ...utils.config.helpers import parse_bool
 from .utils import enable_ipv4_forwarding
 
 from .network.security_group import add_rules_to_default_sg
@@ -533,7 +534,7 @@ def create_ovs_networks(config, env):
 
 def run_setup_ovs_neutron(config, env):
 
-    create_ovs_bridges = get(config, "neutron.ovs.CREATE_BRIDGES", "no") == "yes"
+    config_ovn_bridges = parse_bool(get(config, "neutron.ovn.CREATE_BRIDGES"), False)
 
     if not install_pkgs(): return False
     

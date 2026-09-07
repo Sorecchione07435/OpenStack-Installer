@@ -15,7 +15,7 @@ from ..utils.config.setter import set_conf_option, toml_string
 from ..utils.lvm.loopback import set_lvm_filter
 from ..utils.config.helpers import parse_bool
 
-from . import validate_os_release_available
+from . import is_os_release
 
 deploystack_loopback_conf_file = "/etc/deploystack-loopback.conf"
 
@@ -77,6 +77,7 @@ def update_etc_hosts(ip_address, domain):
         return False
 
 def set_hostname(config):
+    
     ip_address = get(config, "network.HOST_IP")
     host_domain = get(config, "network.HOST_DOMAIN")
 
@@ -317,7 +318,7 @@ def install_pkgs(config):
 
         devices.append(manila_pv or manila_loop_dev)
 
-    if is_ubuntu_release("24.04") and os_release == "gazpacho" and validate_os_release_available("gazpacho"):
+    if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
         prereqs_pkgs.remove("python3-openstackclient")
 
         if is_package_installed("python3-openstackclient"):

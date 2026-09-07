@@ -1,6 +1,5 @@
 # Configure an Compute Node
 
-import os
 import json
 
 from ..utils.core.commands import run_command, run_commands, os_run_output
@@ -70,9 +69,9 @@ def finalize():
     print()
 
     cell_discover_hosts_migration_cmd = [
-    "sudo", "-u", "nova",
-    "nova-manage", "cell_v2", "discover_hosts", "--verbose"
-]
+        "sudo", "-u", "nova",
+        "nova-manage", "cell_v2", "discover_hosts", "--verbose"
+    ]
     
     if not run_command(cell_discover_hosts_migration_cmd, "Discovering the compute host in Nova Cell V2...") : return False
 

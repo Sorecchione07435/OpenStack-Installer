@@ -2,6 +2,7 @@ import re
 
 from ..utils.core.commands import run_command_output
 from ..utils.core.system_utils import is_ubuntu_release
+from ..utils.config.parser import get
 
 DEFAULT_UBUNTU_OPENSTACK_RELEASES = {
     "20.04": "ussuri",
@@ -103,3 +104,7 @@ def _validate_via_policy(
                 return True
 
     return False
+
+def is_os_release(config, release):
+    os_release = get(config, "openstack.OPENSTACK_RELEASE").lower()
+    return os_release == release and validate_os_release_available(release)

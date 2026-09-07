@@ -15,6 +15,7 @@ from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait, iface_exists
 from ...utils.core import colors
 from ...utils.core.system_utils import service_exists, is_debian, is_module_loaded
+from ...utils.config.helpers import parse_bool
 from ...utils.network.net_utils import get_network_info
 from .utils import enable_ipv4_forwarding
 
@@ -649,7 +650,7 @@ def create_ovn_networks(config, env):
 
 def run_setup_ovn_neutron(config, env):
 
-    config_ovn_bridges = get(config, "neutron.ovn.CREATE_BRIDGES", "no") == "yes"
+    config_ovn_bridges = parse_bool(get(config, "neutron.ovn.CREATE_BRIDGES"), False)
 
     if not install_pkgs(): return False
 

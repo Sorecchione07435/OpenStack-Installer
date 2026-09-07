@@ -181,6 +181,7 @@ def finalize(config):
     return True
 
 def add_default_keypair(env):
+    
     print()
 
     key_name = "default"

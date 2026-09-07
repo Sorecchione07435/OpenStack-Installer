@@ -516,7 +516,6 @@ def create_volume_types(config, env):
 
     return True
 
-
 def run_setup_cinder(config, env):
 
     install_cinder_backup = parse_bool(get(config, "cinder.ENABLE_CINDER_BACKUP", False))

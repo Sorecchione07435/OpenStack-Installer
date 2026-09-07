@@ -160,9 +160,7 @@ def write_resolv_conf(config):
 
     return True
 
-def install_pkgs(config):
-
-    install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
+def install_pkgs():
 
     if not apt_update():
         return False
@@ -170,9 +168,6 @@ def install_pkgs(config):
     packages = ["openstack-dashboard-apache"] if is_debian() else ["openstack-dashboard"]
 
     if not apt_install(packages, ux_text="Installing Horizon package..."): return False
-
-    if install_manila:
-        if not setup_manila_horizon(config): return False
 
     return True
 
@@ -240,13 +235,19 @@ def finalize(config):
     return nc_wait(ip_address, 80)
 
 def run_setup_horizon(config):
+    
+    install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
+
     write_resolv_conf(config)
 
-    if not install_pkgs(config):
+    if not install_pkgs():
         return False
 
     if not conf_horizon(config):
         return False
+    
+    if install_manila:
+        if not setup_manila_horizon(config): return False
 
     if not finalize(config):
         return False

@@ -4,14 +4,15 @@ import os
 import json
 
 from ..utils.core.commands import run_command, run_command_output, run_commands
-from ..utils.core.system_utils import service_exists, is_debian 
+from ..utils.core.system_utils import service_exists, is_debian, nc_wait
 from ..utils.apt.apt import apt_install
 from ..utils.config.parser import get
 from ..utils.config.setter import set_conf_option
-from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
-from . import validate_os_release_available, get_base_host
+from ..utils.config.helpers import parse_bool
+
+from . import get_base_host, is_os_release
 
 keystone_conf = "/etc/keystone/keystone.conf"
 
@@ -153,10 +154,8 @@ def create_services_users(config, env):
 
     service_password = get(config, "passwords.SERVICE_PASSWORD")
 
-    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
-    install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
-
-    os_release = get(config, "openstack.OPENSTACK_RELEASE").lower()
+    install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER"), False)
+    install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA"), False)
 
     services = get_services(env)
     assignments = get_role_assignments(env)
@@ -217,7 +216,7 @@ def create_services_users(config, env):
 
         manila_services = [
             ("manilav2", "OpenStack Shared File Systems V2", "sharev2")
-        ] if os_release == "gazpacho" and validate_os_release_available("gazpacho") else [
+        ] if is_os_release(config, "gazpacho") else [
             ("manila", "OpenStack Shared File Systems", "share"),
             ("manilav2", "OpenStack Shared File Systems V2", "sharev2"),
         ]
@@ -253,11 +252,10 @@ def create_services_endpoints(config, env):
 
     print()
 
-    install_cinder = get(config, "optional_services.INSTALL_CINDER", "no").lower() == "yes"
-    install_manila = get(config, "optional_services.INSTALL_MANILA", "no").lower() == "yes"
+    install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER"), False)
+    install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA"), False)
     
     os_region_name = get(config, "openstack.REGION_NAME")
-    os_release = get(config, "openstack.OPENSTACK_RELEASE").lower()
 
     glance_url = f"http://{get_base_host(config)}:9292"
 
@@ -317,7 +315,7 @@ def create_services_endpoints(config, env):
 
     if install_manila:
 
-        if os_release == "gazpacho" and validate_os_release_available("gazpacho") :
+        if is_os_release(config, "gazpacho"):
             manila_url = f"http://{get_base_host(config)}:8786/v2"
 
             if ("sharev2", "public", os_region_name, manila_url) not in existing_endpoints:
