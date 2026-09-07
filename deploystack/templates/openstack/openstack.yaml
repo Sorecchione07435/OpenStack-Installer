@@ -1,163 +1,292 @@
 passwords:
+  # Administrator password for the OpenStack admin user.
   ADMIN_PASSWORD: ""
+
+  # Password shared by OpenStack services for service-to-service authentication.
   SERVICE_PASSWORD: ""
+
+  # Password used by RabbitMQ for AMQP authentication.
   RABBITMQ_PASSWORD: ""
+
+  # Password used to authenticate to the OpenStack database.
   DATABASE_PASSWORD: ""
+
+  # Password for the OpenStack demo user.
   DEMO_PASSWORD: ""
 
 network:
+  # Management IP address of the OpenStack host.
   HOST_IP: ""
+
+  # Network mask associated with the management interface.
   HOST_IP_NETMASK: ""
+
+  # Management network in CIDR notation.
+  # Example: "192.168.1.0/24".
   HOST_IP_CIDR: ""
-  HOST_IP_GATEWAY: ""
-  HOST_DNS_SERVERS: 
+
+  # Default gateway for the management network.
+  HOST_MGMT_GATEWAY: ""
+
+  # Default network gateway used by the OpenStack host for outbound traffic.
+  # This gateway must be reachable through the management network/interface.
+  HOST_DEFAULT_GATEWAY: ""
+
+  # DNS servers used by the OpenStack host.
+  HOST_DNS_SERVERS:
+    - 8.8.8.8
+
+  # Network interface used for OpenStack management traffic.
+  # Example: "ens160".
   HOST_MGMT_INTERFACE: ""
 
+  # DNS domain name associated with the OpenStack environment.
   HOST_DOMAIN: ""
 
 neutron:
-  DRIVER: "ovs"           # ovs | ovn
-  
+  # Neutron mechanism/ML2 driver used for virtual networking.
+  # ovs | ovn
+  DRIVER: "ovs"
+
   public_network:
+    # CIDR of the public/provider network.
+    # Example: "192.168.100.0/24".
     PUBLIC_SUBNET_CIDR: ""
+
+    # First IP address of the allocation pool for public network ports.
     PUBLIC_SUBNET_RANGE_START: ""
+
+    # Last IP address of the allocation pool for public network ports.
     PUBLIC_SUBNET_RANGE_END: ""
+
+    # Default gateway of the public/provider network.
     PUBLIC_SUBNET_GATEWAY: ""
+
+    # DNS servers advertised to instances connected to the public network.
     PUBLIC_SUBNET_DNS_SERVERS: ""
 
-  # OVS-specific
+  # OVS-specific configuration.
   ovs:
+    # Automatically create and configure the required OVS bridges.
+    # yes | no
     CREATE_BRIDGES: "yes"
+
+    # Physical network interface connected to the external/public network.
+    # Example: "ens192".
     PUBLIC_BRIDGE_INTERFACE: ""
-    PUBLIC_BRIDGE: "br-ex"
-    TUNNEL_BRIDGE: "br-tun" # only for VXLAN networks tenant
-    TENANT_BRIDGE: "br-tenant"  # only OVS, OVN manages it alone
 
-  # OVN-specific
+    # OVS bridge used to connect provider/external networks.
+    PUBLIC_BRIDGE: "br-ex"
+
+    # OVS bridge used for VXLAN tunnel traffic between compute/network nodes.
+    # Used only with VXLAN tenant networks.
+    TUNNEL_BRIDGE: "br-tun"
+
+    # OVS bridge used for tenant network traffic.
+    # Used only with OVS; OVN manages its logical networking automatically.
+    TENANT_BRIDGE: "br-tenant"
+
+  # OVN-specific configuration.
   ovn:
+    # Automatically create and configure the required OVN/OVS bridges.
+    # yes | no
     CREATE_BRIDGES: "yes"
 
+    # TCP port used by the OVN Northbound database.
     OVN_NB_PORT: "6641"
+
+    # TCP port used by the OVN Southbound database.
     OVN_SB_PORT: "6642"
 
-    OVN_PUBLIC_BRIDGE_INTERFACE: "" 
+    # Physical network interface connected to the external/public network.
+    OVN_PUBLIC_BRIDGE_INTERFACE: ""
+
+    # OVS bridge used by OVN for external/provider network connectivity.
     OVN_PUBLIC_BRIDGE: "br-ex"
 
-    OVN_ENCAP_TYPE: "geneve"        # geneve | vxlan
+    # Encapsulation protocol used for tenant network traffic.
+    # geneve | vxlan
+    OVN_ENCAP_TYPE: "geneve"
 
-    OVN_L3_SCHEDULER: "leastloaded" # leastloaded | chance
+    # L3 router scheduling algorithm used by OVN.
+    # leastloaded | chance
+    OVN_L3_SCHEDULER: "leastloaded"
 
+    # Enable distributed Floating IP functionality.
+    # yes | no
     ENABLE_DISTRIBUTED_FLOATING_IP: "no"
 
-  # Tenant network configuration (common to OVS and OVN)
+  # Tenant network configuration shared by OVS and OVN.
   tenant_network:
-    TYPE: "geneve"      # OVN: geneve, vxlan | OVS: flat, vlan, vxlan
+    # Network type used for tenant/project networks.
+    # OVN: geneve | vxlan
+    # OVS: flat | vlan | vxlan
+    TYPE: "geneve"
+
+    # Range of VXLAN/Geneve Virtual Network Identifiers available
+    # for tenant networks.
+    # Example: "1:65536".
     VNI_RANGE: "1:65536"
 
-  # Configure provider networks
+  # Provider/external networks exposed through Neutron.
   provider_networks:
     - name: "public"
+      # OVS/OVN bridge associated with the provider network.
       bridge: "br-ex"
+
+      # Provider network type.
+      # flat | vlan
       type: "flat"
-    # Add more if you have multiple physnets:
-    # - name: "internal"
-    # bridge: "br-internal"
-    # type: "flat"
+
+    # Additional provider networks can be defined here.
+    # Example:
+    # - name: "storage"
+    #   bridge: "br-storage"
+    #   type: "flat"
+
 
   default_security_group:
+    # Default source IP range applied to security group rules.
+    # 0.0.0.0/0 allows traffic from any IPv4 address.
     defaults:
       remote_ip_prefix: "0.0.0.0/0"
 
     services:
       ssh:
+        # Enable SSH access in the default security group.
         enabled: true
+
+        # TCP port used by SSH.
         port: 22
+
+        # Network protocol used by SSH.
         protocol: tcp
 
       icmp:
-        protocol: icmp
+        # Enable ICMP traffic, such as ping.
         enabled: true
 
+        # ICMP protocol.
+        protocol: icmp
+
       http:
+        # Enable HTTP access in the default security group.
         enabled: false
+
+        # TCP port used by HTTP.
         port: 80
+
+        # Network protocol used by HTTP.
         protocol: tcp
 
       https:
+        # Enable HTTPS access in the default security group.
         enabled: false
+
+        # TCP port used by HTTPS.
         port: 443
+
+        # Network protocol used by HTTPS.
         protocol: tcp
 
-    #rules:
-    #  - direction: ingress
-    #    protocol: tcp
-    #    port_range: [8080, 8080]
-    #    remote_ip_prefix: "0.0.0.0/0"
+    # Custom security group rules can be defined here.
+    # rules:
+    #   - direction: ingress
+    #     protocol: tcp
+    #     port_range: [8080, 8080]
+    #     remote_ip_prefix: "0.0.0.0/0"
+
+    # NOT IMPLEMENTED
 
 manila:
-  # Manila backend to use.
-  # generic: creates share servers using Nova service instances (more complex, multi-node)
-  # lvm: exports shares directly from the storage node using LVM (simple, single-node)
+  # Manila backend implementation to use.
+  # generic: creates share servers using Nova service instances.
+  # lvm: exports shares directly from the storage node using LVM.
   BACKEND: ""
 
-  # Automatically create Manila shares defined in the configuration.
-  # yes: creates configured shares after the backend setup is completed
-  # no: only configures Manila backend without creating shares
+  # Automatically create Manila shares defined in this configuration.
+  # yes: create configured shares after backend setup.
+  # no: only configure the Manila backend.
   CREATE_SHARES: "yes"
 
-  # Share type name that will be used as default for creating new shares
-  # If not set, it will fallback to the name 'default_share_type'
+  # Default Manila share type used when no share type is explicitly specified.
+  # Falls back to "default_share_type" if not configured.
   DEFAULT_SHARE_TYPE_NAME: "default_share_type"
 
-  # Supported share protocols.
-  # Examples: NFS, CIFS
-
+  # Share protocols supported by the Manila deployment.
+  # Examples: NFS, CIFS.
   SHARE_PROTOCOLS:
     - NFS
-  
+
+  # Manila helper classes used to provide protocol-specific functionality.
   SHARE_HELPERS:
-      - NFS:
-          name: "manila.share.drivers.helpers.NFSHelper"
-  #   - CIFS:
+    - NFS:
+        name: "manila.share.drivers.helpers.NFSHelper"
+
+  # Example CIFS helper.
+  # - CIFS:
   #     name: "manila.share.drivers.helpers.NASHelper"
 
   backends:
 
     generic:
+      # Backend name used to identify the generic Manila backend.
       BACKEND_NAME: "generic"
 
+      # Nova image used for Manila service instances.
       SERVICE_IMAGE_NAME: "manila-service-image"
 
+      # Network interface driver used by Manila service instances.
       INTERFACE_DRIVER: "manila.network.linux.interface.OVSInterfaceDriver"
 
+      # Connect Manila service instances to the tenant network.
+      # yes | no
       CONNECT_SHARE_SERVER_TO_TENANT_NETWORK: "yes"
 
       service_networks:
         - name: manila_internal_service_network
+          # Neutron network used for the internal Manila service network.
           neutron_network: internal
+
         - name: manila_public_service_network
+          # Neutron network used for the public Manila service network.
           neutron_network: public
 
       # Nova flavor configuration for Manila service instances.
       SERVICE_INSTANCE_FLAVOR:
+        # Name of the Nova flavor.
         NAME: "manila-service-flavor"
+
+        # ID assigned to the Nova flavor.
         ID: 10
+
+        # Amount of RAM assigned to the service instance in MB.
         RAM: 1024
+
+        # Number of virtual CPUs assigned to the service instance.
         VCPUS: 1
+
+        # Disk size assigned to the service instance in GB.
         DISK: 10
 
     lvm:
-
       samba:
+        # Username used by the Samba service to access the CIFS shares.
         SAMBA_SERVER_USER: "samba-user"
+
+        # Password used by the Samba service user.
         SAMBA_SERVER_USER_PASSWORD: ""
-        
-      # Backend name identifier.
+
+      # Backend name used to identify the LVM Manila backend.
       BACKEND_NAME: "lvm"
 
-      # Manila share driver used by this backend.
+      # Manila share driver used by the LVM backend.
       SHARE_DRIVER: "manila.share.drivers.lvm.LVMShareDriver"
 
+      # Private IP address used by clients to access exported Manila shares.
+      # This IP is dedicated to the Manila LVM backend and must not be
+      # configured or assigned on the host before the deployment.
+      # The deployment is responsible for configuring this IP when required.
       SHARE_EXPORT_IP: "172.20.10.10"
 
       storage:
@@ -165,186 +294,200 @@ manila:
         # Physical volume configuration
         # -------------------------
 
+        # LVM volume group used by Manila to store share volumes.
         SHARE_VOLUME_GROUP: "manila-shares"
 
+        # Physical block device used as the LVM physical volume.
+        # Example: "/dev/sdb".
         PHYSICAL_VOLUME: ""
 
         # -------------------------
         # Loopback device configuration
         # -------------------------
 
+        # Path to the disk image used as backing storage for the loopback device.
         MANILA_LVM_IMAGE_FILE_PATH: "/var/lib/manila/images/manila-shares.img"
 
+        # Size of the loopback image in GB.
         MANILA_LVM_IMAGE_SIZE_IN_GB: "10"
 
+        # Loopback device used as the LVM physical volume.
         MANILA_LVM_LOOP_PATH: "/dev/loop0"
 
-  # Shares types to create automatically during deployment.
+
+  # Manila share types to create automatically during deployment.
   share_types:
     - name: "default_share_type"
-      is_public: yes
-      extra_specs:
-        - driver_handles_share_servers: no
-        # - snapshot_support: no
-        # - create_share_from_snapshot_support: no
-        # - revert_to_snapshot_support: no
-        # - mount_snapshot_support: no
 
-    # Shares to create during deployment.
+      # Make the share type available to all projects.
+      is_public: yes
+
+      extra_specs:
+        # Indicates that the backend does not use share servers.
+        # yes | no
+        driver_handles_share_servers: no
+
+        # Optional snapshot capabilities.
+        # snapshot_support: no
+        # create_share_from_snapshot_support: no
+        # revert_to_snapshot_support: no
+        # mount_snapshot_support: no
+
+
+  # Manila shares to create automatically during deployment.
   shares:
 
     # Example: Generic DHSS Share
-    #- name: default_share
-    #  share_protocol: NFS
-    #  share_size: 1
-    #  is_public: yes
-    #  share_network: manila_internal_service_network
-    #  access_rules:
-    #  - type: "ip"
-    #    access: "10.0.0.0/24"
-    #    level: "rw"
-    #  - type: "ip"
-    #    access: "10.254.0.0/28"
-    #    level: "rw"
+    # - name: default_share
+    #   share_protocol: NFS
+    #   share_size: 1
+    #   is_public: yes
+    #   share_network: manila_internal_service_network
+    #   access_rules:
+    #     - type: "ip"
+    #       access: "10.0.0.0/24"
+    #       level: "rw"
+    #     - type: "ip"
+    #       access: "10.254.0.0/28"
+    #       level: "rw"
 
     # Example: LVM Share
-    #- name: default_share
-    #  share_protocol: NFS
-    #  share_size: 1
-    #  is_public: yes
-    #  access_rules:
-    #  - type: "ip"
-    #    access: "10.0.0.0/24"
-    #    level: "rw"
-    #  - type: "ip"
-    #    access: "10.254.0.0/28"
-    #    level: "rw"
+    # - name: default_share
+    #   share_protocol: NFS
+    #   share_size: 1
+    #   is_public: yes
+    #   access_rules:
+    #     - type: "ip"
+    #       access: "10.0.0.0/24"
+    #       level: "rw"
+    #     - type: "ip"
+    #       access: "10.254.0.0/28"
+    #       level: "rw"
 
 cinder:
 
-  # Enable Cinder Backup service for Cinder volumes
+  # Enable the Cinder Backup service.
+  # yes: deploy and enable Cinder Backup.
+  # no: do not deploy Cinder Backup.
   ENABLE_CINDER_BACKUP: no
 
-  # Active backend(s) for cinder-volume. Each becomes a separate section
-  # in cinder.conf, referenced by `enabled_backends`.
-
+  # List of active Cinder volume backends.
+  # Each backend is configured as a separate backend in cinder.conf.
   ENABLED_BACKENDS:
-  - lvm
+    - lvm
 
-  # Volume type used by default when no volume type is specified
-  # during volume creation.
+  # Default Cinder volume type used when no volume type is explicitly specified.
   DEFAULT_VOLUME_TYPE: "iscsi"
 
   backends:
     lvm:
-      # Backend name, used as volume_backend_name and as
-      # reference in volume types (e.g., "iscsi").
+      # Backend identifier used by Cinder and referenced by volume types.
       BACKEND_NAME: "lvm"
 
-      # Cinder volume type name associated with this backend.
+      # Cinder volume type associated with this backend.
       VOLUME_TYPE_NAME: "iscsi"
 
-      # Name of the LVM volume group used by Cinder to create
-      # and manage logical volumes.
+      # LVM volume group used to create and manage Cinder volumes.
       VOLUME_GROUP: "cinder-volumes"
 
       # --- Physical volume ---
 
-      # Path to a real block device to use as the LVM physical volume.
-      # If set, the loopback device configuration below is ignored.
+      # Physical block device used as the LVM physical volume.
       # Example: "/dev/sdb".
+      # If configured, the loopback device configuration is ignored.
       PHYSICAL_VOLUME: ""
 
-      # --- Loopback device (used only if PHYSICAL_VOLUME is not set) ---
+      # --- Loopback device ---
 
-      # Path of the loopback device used as the LVM physical volume.
-      # The device is backed by the image file specified below.
+      # Loopback device used as the LVM physical volume.
       CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_PATH: "/dev/loop0"
 
-      # Path to the disk image file used as backing storage for the
-      # loopback LVM physical volume.
+      # Disk image used as backing storage for the loopback LVM physical volume.
       CINDER_VOLUME_LVM_IMAGE_FILE_PATH: "/var/lib/cinder/cinder-volumes.img"
 
-      # Size of the loopback image file in GB.
-      # This determines the total capacity available to the LVM backend.
+      # Size of the loopback image in GB.
       CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB: "5"
 
-      # IP address of the iSCSI target used to expose Cinder LVM volumes.
-      # If left empty, the value of network.HOST_IP is used.
+      # IP address of the iSCSI target used to expose Cinder volumes.
+      # If empty, network.HOST_IP is used.
       TARGET_IP_ADDRESS: ""
 
-      # Volume clearing strategy when a volume is deleted
-      # Options: zero (overwrite with zeros), shred (secure erase), none (skip, faster for testing)
+      # Volume clearing strategy when a volume is deleted.
+      # zero: overwrite the volume with zeros.
+      # shred: securely erase the volume.
+      # none: do not clear the volume.
       VOLUME_CLEAR: "zero"
 
-      # Amount of data to clear in MB (0 = entire volume)
+      # Amount of data to clear in MB.
+      # 0 means the entire volume.
       VOLUME_CLEAR_SIZE: 1
 
     nfs:
-      # Backend name, used as volume_backend_name and as
-      # reference in volume types (e.g., "nfs")
+      # Backend identifier used by Cinder and referenced by volume types.
       BACKEND_NAME: "nfs"
 
-      # Cinder volume type name associated with this backend.
+      # Cinder volume type associated with this backend.
       VOLUME_TYPE_NAME: "nfs"
 
-      # Whether to use an existing NFS share provided by an external
-      # NFS server. If no, the system manages the NFS share locally.
+      # Use an existing NFS share provided by an external NFS server.
+      # yes: use an external NFS server.
+      # no: manage the NFS share locally.
       USE_EXTERNAL_SHARE: "no"
 
-      # NFS export used to store Cinder volumes as image files.
+      # NFS export used to store Cinder volume files.
       # Format: <NFS-server>:<export-path>
-      # (e.g., 172.20.10.10:/export/cinder-volumes).
+      # Example: "172.20.10.10:/export/cinder-volumes".
       NFS_SHARE: ""
 
-      # Local directory on the cinder-volume host where the NFS
-      # share is mounted and used to store Cinder volume files.
+      # Local directory where the NFS share is mounted.
       MOUNT_POINT_BASE: "/var/lib/cinder/mnt"
 
-      # Optional mount options passed to the NFS mount command
-      # (e.g., "vers=4.1"). Leave empty to use the system defaults.
+      # Optional mount options passed to the NFS mount command.
+      # Example: "vers=4.1".
       MOUNT_OPTIONS: ""
 
-      # Controls whether Cinder creates sparse volume files.
-      # Use "sparse" to create sparse files, or "thick" to
-      # allocate the full volume size on the NFS share.
+      # Controls how NFS volume files are allocated.
+      # sparse: allocate blocks as data is written.
+      # thick: allocate the complete volume size immediately.
       NFS_SPARSED_VOLUMES: "sparse"
 
-      # Maximum fraction of the NFS backend capacity that can be
-      # allocated by Cinder. For example, 0.95 allows allocation
-      # up to 95% of the reported backend capacity.
+      # Maximum fraction of the reported NFS capacity that Cinder can allocate.
+      # Example: 0.95 allows allocation of up to 95% of the reported capacity.
       NFS_USED_RATIO: 0.95
 
       # Maximum over-subscription ratio for the NFS backend.
-      # Controls how much virtual capacity can be provisioned compared to
-      # the physical capacity reported by the backend.
-      # 1.0 means no over-subscription is allowed.
+      # 1.0 means no over-subscription.
+      # Example: 2.0 allows up to twice the physical capacity to be provisioned.
       NFS_OVERSUB_RATIO: 1.0
 
-      # Controls whether snapshot support is enabled for the Cinder NFS driver.
-      # Set to "yes" to enable volume snapshots, or "no" to disable them.
+      # Enable or disable Cinder volume snapshot support.
+      # yes | no
       ENABLE_SNAPSHOTS: "yes"
 
   backup:
 
-    # Cinder backup driver to use.
-    # Supported drivers: posix | nfs | swift (future).
+    # Cinder Backup driver to use.
+    # posix: local filesystem backup.
+    # nfs: backup to an NFS share.
+    # swift: Swift-based backup (future).
     DRIVER: ""
 
     drivers:
 
       # --- Driver: posix ---
-      # Backup to a local filesystem or a filesystem mounted on the
-      # cinder-backup host.
 
+      # POSIX/local filesystem backup configuration.
       posix:
         # Directory where Cinder backup files are stored.
         BACKUP_PATH: "/var/lib/cinder/backups"
 
       # --- Driver: nfs ---
+
+      # NFS backup configuration.
       nfs:
-        # Whether to use an existing NFS share provided by an external
-        # NFS server. If no, the system manages the NFS share locally.
+        # Use an existing NFS share provided by an external NFS server.
+        # yes: use an external NFS server.
+        # no: manage the NFS share locally.
         USE_EXTERNAL_SHARE: "no"
 
         # NFS export used to store Cinder backup files.
@@ -352,43 +495,84 @@ cinder:
         # Example: "{network.HOST_IP}:/export/cinder-backups".
         NFS_SHARE: ""
 
-        # Local directory on the cinder-backup host where the NFS
-        # share is mounted and used to store Cinder backup files.
+        # Local directory where the NFS share is mounted.
         MOUNT_POINT_BASE: "/var/lib/cinder/cinder/backup"
 
         # Optional mount options passed to the NFS mount command.
         # Example: "vers=4.1".
         MOUNT_OPTIONS: ""
 
-    # Backup compression algorithm
+    # Compression algorithm used for Cinder backup data.
     # zlib | bz2 | zstd | none
     COMPRESSION_ALGORITHM: "zlib"
 
-    # Maximum size of each backup file in bytes (Default: 1999994880)
-    BACKUP_FILE_SIZE: 1999994880 
+    # Maximum size of each backup file in bytes.
+    # Default: 1999994880.
+    BACKUP_FILE_SIZE: 1999994880
 
-    # Block size in bytes used for SHA checksum calculation (Default: 32768)
+    # Block size in bytes used when calculating SHA checksums.
+    # Default: 32768.
     BACKUP_SHA_BLOCK_SIZE_BYTES: 32768
 
-    # Number of concurrent backup operations
+    # Number of backup operations that can run concurrently.
     BACKUP_WORKERS: 1
 
+
 compute:
-  NOVA_COMPUTE_VIRT_TYPE: "kvm"   # kvm | qemu (qemu for VM nested)
+  # Virtualization type used by Nova Compute.
+  # kvm | qemu
+  # qemu can be used for nested virtualization scenarios.
+  NOVA_COMPUTE_VIRT_TYPE: "kvm"
+
+  # CPU overcommit ratio used for resource allocation.
+  # Example: 4.0 allows up to 4 vCPUs to be allocated per physical CPU.
   CPU_ALLOCATION_RATIO: 4.0
+
+  # RAM overcommit ratio used for resource allocation.
+  # Example: 1.5 allows up to 1.5 times the physical RAM to be allocated.
   RAM_ALLOCATION_RATIO: 1.5
+
+  # Disk overcommit ratio used for resource allocation.
+  # Example: 1.5 allows up to 1.5 times the available physical disk capacity to be allocated.
   DISK_ALLOCATION_RATIO: 1.5
 
+  # Allow resize operations to be performed on the same compute host.
+  # yes: Nova can keep the instance on the current compute host during resize.
+  # no: a different compute host is required for the resize operation.
+  ALLOW_RESIZE_TO_SAME_HOST: "no"
+
+
 optional_services:
+  # Install and configure Cinder.
+  # yes | no
   INSTALL_CINDER: "yes"
+
+  # Install and configure Manila.
+  # yes | no
   INSTALL_MANILA: "no"
+
+  # Install and configure Horizon.
+  # yes | no
   INSTALL_HORIZON: "yes"
 
-  # ( Coming Soon to be Implemented )
-  #INSTALL_HEAT: no
-  #INSTALL_OCTAVIA: no   # Load Balancer
-  #INSTALL_BARBICAN: no  # Key Manager
+  # Coming soon.
+  # Install and configure Heat.
+  # INSTALL_HEAT: no
+
+  # Coming soon.
+  # Install and configure Octavia (Load Balancer service).
+  # INSTALL_OCTAVIA: no
+
+  # Coming soon.
+  # Install and configure Barbican (Key Manager service).
+  # INSTALL_BARBICAN: no
+
 
 openstack:
+  # OpenStack release/version used for the deployment.
+  # Example: caracal, the 2024.1 OpenStack release.
   OPENSTACK_RELEASE: "caracal"
+
+  # OpenStack region name used by the services and Keystone catalog.
+  # Common default: RegionOne.
   REGION_NAME: "RegionOne"

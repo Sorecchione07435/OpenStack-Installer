@@ -6,6 +6,7 @@ import json
 from ..utils.core.commands import run_command, run_commands, os_run_output
 from ..utils.core.system_utils import has_hw_virtualization, service_exists
 from ..utils.apt.apt import apt_install
+from ..utils.config.helpers import parse_bool
 from ..utils.config.parser import get
 from ..utils.config.setter import set_conf_option
 from ..utils.core import colors
@@ -32,6 +33,8 @@ def conf_nova_compute(config):
     cpu_allocation_ratio = get(config, "compute.CPU_ALLOCATION_RATIO")
     ram_allocation_ratio = get(config, "compute.RAM_ALLOCATION_RATIO")
     disk_allocation_ratio = get(config, "compute.DISK_ALLOCATION_RATIO")
+
+    allow_resize_to_same_host = parse_bool(get(config, "compute.ALLOW_RESIZE_TO_SAME_HOST"), False)
       
     virt_type = get(config, "compute.NOVA_COMPUTE_VIRT_TYPE")
 
@@ -39,7 +42,8 @@ def conf_nova_compute(config):
     set_conf_option(nova_conf, "DEFAULT", "ram_allocation_ratio", str(ram_allocation_ratio))
     set_conf_option(nova_conf, "DEFAULT", "disk_allocation_ratio", str(disk_allocation_ratio))
 
-    set_conf_option(nova_conf, "DEFAULT", "allow_resize_to_same_host", "True")
+    if allow_resize_to_same_host:
+        set_conf_option(nova_conf, "DEFAULT", "allow_resize_to_same_host", "True")
 
     if not has_hw_virtualization():
         set_conf_option(nova_compute_conf, "libvirt", "virt_type", "qemu")

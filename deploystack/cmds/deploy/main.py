@@ -341,7 +341,7 @@ def deploy(parser, args) -> None:
         manila_lvm_vg = (
             args.manila_volume_group
             if manila_flag == "yes" and args.manila_volume_group is not None
-            else "manila-volumes" if manila_flag == "yes"
+            else "manila-shares" if manila_flag == "yes"
             else None
         )
 
