@@ -66,8 +66,6 @@ def conf_ovn_bridges(config):
     subnet_dns = get(config, "neutron.public_network.PUBLIC_SUBNET_DNS_SERVERS")
     management_iface = get(config, "network.HOST_MGMT_INTERFACE")
     
-    is_l3_bridge = bool(mgmt_gateway or host_default_gateway)
-
     ip_address_gateway = mgmt_gateway or host_default_gateway
 
     public_iface_info = get_network_info(interface_name=public_iface)
@@ -108,19 +106,30 @@ def conf_ovn_bridges(config):
     with open(template_file, "r") as f:
         template = f.read()
 
-    if is_l3_bridge:
+    if host_default_gateway:
         public_bridge_ip_config = (
             f"  address {public_iface_ip}\n"
             f"  gateway {ip_address_gateway}"
         )
+
+        is_l3_bridge = True
+        subnet_address_gateway = ""
+    elif mgmt_gateway:
+        public_bridge_ip_config = ""
+
+        is_l3_bridge = False
+
+        subnet_address_gateway = f"    gateway {mgmt_gateway}"
     else:
         public_bridge_ip_config = ""
-    
-    subnet_address_gateway = (
-        f"    gateway {ip_address_gateway if is_dual_nic else subnet_gateway}"
-        if not is_l3_bridge
-        else ""
-    )
+        
+        is_l3_bridge = False
+
+        subnet_address_gateway = (
+            f"    gateway {subnet_gateway}"
+            if subnet_gateway
+            else ""
+        )
 
     bridges_interfaces_content = template.format(
         management_iface=management_iface if is_dual_nic else "",
