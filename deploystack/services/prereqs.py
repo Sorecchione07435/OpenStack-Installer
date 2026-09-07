@@ -77,7 +77,7 @@ def update_etc_hosts(ip_address, domain):
         return False
 
 def set_hostname(config):
-    
+
     ip_address = get(config, "network.HOST_IP")
     host_domain = get(config, "network.HOST_DOMAIN")
 
@@ -295,8 +295,6 @@ def install_pkgs(config):
 
     devices = []
     prereqs_pkgs = ["wget", "rabbitmq-server", "python3-openstackclient", "memcached"]
-
-    os_release = get(config, "openstack.OPENSTACK_RELEASE", "caracal").lower()
 
     install_manila = parse_bool(get(config, "optional_services.INSTALL_MANILA", False))
     install_cinder = parse_bool(get(config, "optional_services.INSTALL_CINDER", False))
