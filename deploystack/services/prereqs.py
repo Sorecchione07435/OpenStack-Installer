@@ -322,10 +322,27 @@ def install_pkgs(config):
         if is_package_installed("python3-openstackclient"):
             if not run_command(["apt-get", "remove", "-y", "python3-openstackclient"], "Removing conflicting apt openstackclient...") : return False
 
-        if not is_package_installed("python3-pip"):
-            if not apt_install(["python3-pip"], "Installing system python pip package...") : return False
+        if not is_package_installed("python3-venv"):
+            if not apt_install(["python3-venv"], "Installing python3-venv package...") : return False
 
-        if not run_command(["/usr/bin/pip3", "install", "python-openstackclient==9.0.0", "--break-system-packages", "--ignore-installed"], "Installing OpenStack Client from system pip...") : return False
+        openstackclient_venv = "/opt/openstackclient-venv"
+
+        if not os.path.exists(openstackclient_venv):
+            if not run_command(["python3", "-m", "venv", openstackclient_venv], "Creating venv for OpenStack Client in /opt...") : return False
+
+        venv_pip = f"{openstackclient_venv}/bin/pip"
+
+        if not run_command([venv_pip, "install", "--upgrade", "pip"], "Upgrading pip in OpenStack Client venv...") : return False
+
+        if not run_command([venv_pip, "install", "python-openstackclient==9.0.0"], "Installing OpenStack Client in venv...") : return False
+
+        venv_openstack_bin = f"{openstackclient_venv}/bin/openstack"
+        system_openstack_link = "/usr/local/bin/openstack"
+
+        target = Path(system_openstack_link)
+        if target.exists() or target.is_symlink():
+            target.unlink()
+        target.symlink_to(venv_openstack_bin)
 
         print()
         
