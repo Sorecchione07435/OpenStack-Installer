@@ -81,8 +81,6 @@ def conf_ovs_bridges(config):
 
     is_l3_bridge: bool = mgmt_gateway is not None
 
-    ip_address_gateway = mgmt_gateway or host_default_gateway
-
     public_iface_info = get_network_info(interface_name=public_iface)
     public_iface_ip = public_iface_info["ip"]
 
@@ -131,8 +129,8 @@ def conf_ovs_bridges(config):
 
     if host_default_gateway:
         public_bridge_ip_config = (
-            f"  address {public_iface_ip}\n"
-            f"  gateway {ip_address_gateway}"
+            f"    address {public_iface_ip}\n"
+            f"    gateway {host_default_gateway}"
         )
 
         is_l3_bridge = True
@@ -149,7 +147,7 @@ def conf_ovs_bridges(config):
         is_l3_bridge = False
 
         subnet_address_gateway = (
-            f"    gateway {subnet_gateway}"
+            f"    gateway {subnet_gateway}\n"
             if subnet_gateway
             else ""
         )
