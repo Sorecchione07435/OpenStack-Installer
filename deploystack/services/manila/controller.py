@@ -117,7 +117,7 @@ def finalize(config):
     
 def run_setup_controller_manila(config, backend_fn, env):
 
-    if not install_pkgs(): return False 
+    if not install_pkgs(config): return False 
     if not conf_manila(config): return False
     
     if not finalize(config): return False
