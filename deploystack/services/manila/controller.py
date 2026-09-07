@@ -24,15 +24,23 @@ def install_pkgs(config):
     manila_packages = ["manila-api", "manila-scheduler", "python3-manilaclient"]
 
     if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
+
+        print()
+
         manila_packages.remove("python3-manilaclient")
 
         if is_package_installed("python3-manilaclient"):
+            print()
             if not run_command(["apt-get", "remove", "-y", "python3-manilaclient"], "Removing conflicting apt manilaclient...") : return False
 
         openstackclient_venv = "/opt/openstackclient-venv"
         venv_pip = f"{openstackclient_venv}/bin/pip"
 
+        print()
+
         if not run_command([venv_pip, "install", "python-manilaclient==6.0.0"], "Installing Manila Client in venv...") : return False
+
+        print()
     
     if not apt_install(manila_packages, "Installing Manila packages..."):
         return False

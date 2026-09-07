@@ -12,6 +12,8 @@ from ..core.commands import run_command_output
 
 from ..core.system_utils import service_exists, is_debian, is_ubuntu_release
 
+from ...services import validate_os_release_available
+
 from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
@@ -152,7 +154,7 @@ def check_deployment(include_endpoints: bool = True):
         if include_endpoints:
             add_endpoints_check(["sharev2"])
 
-            if not is_debian() and not is_ubuntu_release("26.04"):
+            if not is_debian() and not validate_os_release_available("gazpacho"):
                 add_endpoints_check(["share"])
 
         manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
