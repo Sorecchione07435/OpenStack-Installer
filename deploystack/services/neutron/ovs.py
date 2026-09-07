@@ -131,7 +131,7 @@ def conf_ovs_bridges(config):
 
     if host_default_gateway:
 
-        if iface_exists(public_bridge:)
+        if iface_exists(public_bridge):
             public_bridge_info = get_network_info(interface_name=public_bridge)
             public_iface_ip = public_bridge_info["ip"]
     
