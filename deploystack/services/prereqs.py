@@ -318,7 +318,7 @@ def install_pkgs(config):
 
     if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
 
-        print(f"\n{colors.YELLOW}Warning: Ubuntu 24.04 Gazpacho has been detected; "
+        print(f"{colors.YELLOW}Warning: Ubuntu 24.04 Gazpacho has been detected; "
               f"OpenStack Client will be installed in an isolated venv to avoid "
               f"conflicts with system packages.{colors.RESET}\n")
         
