@@ -116,7 +116,7 @@ def config_openstack(
     config_dict["network"]["HOST_IP_NETMASK"] = mgmt_netmask
     config_dict["network"]["HOST_IP_CIDR"] = mgmt_ip_cidr
 
-    if os_mgmt_gateway is not None:
+    if os_mgmt_gateway:
         config_dict["network"]["HOST_MGMT_GATEWAY"] = os_mgmt_gateway
     else:
         config_dict["network"]["HOST_DEFAULT_GATEWAY"] = gateway
