@@ -485,7 +485,17 @@ def create_ovn_networks(config, env):
     ovn_encap_type = get(config, "neutron.ovn.OVN_ENCAP_TYPE").lower()
 
     provider_networks = get(config, "neutron.provider_networks", [])
-    public_network = next((n for n in provider_networks if n["name"] == "public"), None)
+
+    public_network = next(
+        (n for n in provider_networks if n.get("bridge") == public_bridge),
+        None
+    )
+
+    if public_network is None:
+        public_network = next(
+            (n for n in provider_networks if n.get("name") == "public"),
+            None
+        )
 
     create_ovn_bridges = get(config, "neutron.ovn.CREATE_BRIDGES", "no") == "yes"
 

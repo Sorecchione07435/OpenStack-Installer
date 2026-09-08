@@ -390,7 +390,17 @@ def create_ovs_networks(config, env):
     public_subnet_cidr = get(config, "neutron.public_network.PUBLIC_SUBNET_CIDR")   
 
     provider_networks = get(config, "neutron.provider_networks", [])
-    public_network = next((n for n in provider_networks if n["name"] == "public"), None)
+    
+    public_network = next(
+        (n for n in provider_networks if n.get("bridge") == public_bridge),
+        None
+    )
+
+    if public_network is None:
+        public_network = next(
+            (n for n in provider_networks if n.get("name") == "public"),
+            None
+        )
 
     create_ovs_bridges = get(config, "neutron.ovs.CREATE_BRIDGES", "no") == "yes" 
 
