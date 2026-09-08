@@ -10,9 +10,9 @@ from ..config.parser import get_conf_option
 
 from ..core.commands import run_command_output
 
-from ..core.system_utils import service_exists, is_debian, is_ubuntu_release
+from ..core.system_utils import service_exists, is_debian
 
-from ...services import validate_os_release_available
+from ...services import is_os_release
 
 from ..core import colors
 
@@ -154,7 +154,18 @@ def check_deployment(include_endpoints: bool = True):
         if include_endpoints:
             add_endpoints_check(["sharev2"])
 
-            if not is_debian() and not validate_os_release_available("gazpacho"):
+            debian = is_debian()
+            gazpacho = is_os_release("gazpacho")
+
+            print("DEBUG: /etc/os-release:")
+            with open("/etc/os-release") as f:
+                print(f.read())
+
+            print(f"DEBUG: is_debian() = {debian}")
+            print(f"DEBUG: is_os_release('gazpacho') = {gazpacho}")
+            print(f"DEBUG: add share = {not debian and not gazpacho}")
+
+            if not debian and not gazpacho:
                 add_endpoints_check(["share"])
 
         manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
