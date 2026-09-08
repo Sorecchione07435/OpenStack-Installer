@@ -6,8 +6,6 @@ from ..openstackclient import venv_pip
 
 def install_manilaclient_in_venv(release):
 
-    print()
-
     if is_package_installed("python3-manilaclient"):
         print()
         if not run_command(["apt-get", "remove", "-y", "python3-manilaclient"], "Removing conflicting apt manilaclient...") : return False

@@ -518,7 +518,7 @@ def create_ovn_networks(config, env):
                     "--share", "--external",
                     "--provider-physical-network", public_network["name"],
                     "--provider-network-type", "flat",
-                    "public"
+                    public_network["name"]
                 ]
             elif net_type == "vlan" and public_network.get("vlan_range"):
                 start, _ = map(int, public_network["vlan_range"].split(":"))
@@ -529,12 +529,12 @@ def create_ovn_networks(config, env):
                     "--provider-physical-network", public_network["name"],
                     "--provider-network-type", "vlan",
                     "--provider-segment", str(vlan_id),
-                    "public"
+                    public_network["name"]
                 ]
             else:
-                create_public_network_cmd = ["openstack", "network", "create", "--share", "--external", "public"]
+                create_public_network_cmd = ["openstack", "network", "create", "--share", "--external", public_network["name"]]
         else:
-            create_public_network_cmd = ["openstack", "network", "create", "--share", "public"]
+            create_public_network_cmd = ["openstack", "network", "create", "--share", public_network["name"]]
 
         if not os_run(create_public_network_cmd, "Creating public network...", env=env):
             return False
@@ -543,7 +543,7 @@ def create_ovn_networks(config, env):
         if not public_subnet_exists:
             subnet_cmd = [
                 "openstack", "subnet", "create",
-                "--network", "public",
+                "--network", public_network["name"],
                 "--allocation-pool", f"start={public_subnet_range_start},end={public_subnet_range_end}",
                 "--gateway", public_subnet_gateway,
                 "--subnet-range", public_subnet_cidr

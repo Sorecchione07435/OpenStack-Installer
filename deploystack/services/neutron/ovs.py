@@ -423,7 +423,7 @@ def create_ovs_networks(config, env):
                 "--share", "--external",
                 "--provider-physical-network", public_network["name"],
                 "--provider-network-type", "flat",
-                "public"
+                public_network["name"]
     ]
 
     create_flat_internal_network_cmd = ["openstack", "network", "create", "--share",
