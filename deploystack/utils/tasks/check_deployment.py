@@ -247,13 +247,10 @@ def check_deployment(include_endpoints: bool = True):
 
         if "nfs" in manila_protocols:
 
-            nfs_services = []
+            add_packages_check(["nfs-kernel-server"])
 
             if service_exists("nfs-server.service"):
-                nfs_services.append("nfs-server.service")
-            
-                add_packages_check(["nfs-server"])
-                add_services_check(nfs_services)
+                add_services_check(["nfs-server.service"])
 
     if include_endpoints:
         add_endpoints_check(["identity", "compute", "image", "network"])
