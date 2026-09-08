@@ -83,6 +83,9 @@ def upload_cirros_image(env):
     filename = cirros_image_url.split("/")[-1]
     image_file_path = f"/tmp/{filename}"
 
+    if os.path.exists(image_file_path):
+        os.remove(image_file_path)
+
     images_list_json = os_run_output(["openstack", "image", "list", "-f", "json"], env=env)
 
     images_list = json.loads(images_list_json)
