@@ -18,32 +18,32 @@ from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
-# Nome della variabile d'ambiente che abilita il debug.
-# Impostare DEPLOYSTACK_DEBUG=1 (o "true"/"yes") per attivarlo.
-# In produzione va lasciata non impostata (o =0), cosi' il logger resta a livello WARNING.
-DEBUG_ENV_VAR = "DEPLOYSTACK_DEBUG"
+# Name of the environment variable that enables debugging.
+# Set DEPLOYSTACK_DEBUG=1 (or "true"/"yes") to turn it on.
+# In production it should be left unset (or =0), so the logger stays at WARNING level.
+DEBUG_ENV_VAR = "DEPLOYSTACK_DEPLOYMENT_CHECK_ENABLE_DEBUG"
 
 logger = logging.getLogger(__name__)
 
 
 def _env_flag_enabled(var_name: str) -> bool:
-    """Ritorna True se la variabile d'ambiente indicata rappresenta un valore 'vero'."""
+    """Return True if the given environment variable represents a 'true' value."""
     value = os.environ.get(var_name, "")
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
 def is_debug_enabled() -> bool:
-    """Determina se il debugging e' attivo per questo modulo."""
+    """Determine whether debugging is active for this module."""
     return _env_flag_enabled(DEBUG_ENV_VAR)
 
 
 def configure_logging(debug: bool | None = None) -> None:
     """
-    Configura il logger del modulo.
+    Configure the module's logger.
 
-    - debug=None (default): legge lo stato da DEPLOYSTACK_DEBUG.
-    - debug=True: forza il livello DEBUG (verboso, solo per sviluppo/troubleshooting).
-    - debug=False: forza il livello WARNING (comportamento di produzione, silenzioso).
+    - debug=None (default): reads the state from DEPLOYSTACK_DEBUG.
+    - debug=True: forces DEBUG level (verbose, development/troubleshooting only).
+    - debug=False: forces WARNING level (production behavior, quiet).
     """
     if debug is None:
         debug = is_debug_enabled()
@@ -51,7 +51,7 @@ def configure_logging(debug: bool | None = None) -> None:
     level = logging.DEBUG if debug else logging.WARNING
     logger.setLevel(level)
 
-    # Evita di aggiungere handler duplicati se la funzione viene chiamata piu' volte
+    # Avoid adding duplicate handlers if this function is called more than once
     if not logger.handlers:
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter(
@@ -62,11 +62,11 @@ def configure_logging(debug: bool | None = None) -> None:
     logger.propagate = False
 
     if debug:
-        logger.debug(f"Debug logging abilitato per {__name__} (via {DEBUG_ENV_VAR})")
+        logger.debug(f"Debug logging enabled for {__name__} (via {DEBUG_ENV_VAR})")
 
 
-# Configurazione iniziale del logger all'import del modulo,
-# basata sullo stato corrente della variabile d'ambiente.
+# Initial logger configuration at module import time,
+# based on the current state of the environment variable.
 configure_logging()
 
 cinder_pkgs = ["cinder-api", "cinder-scheduler", "cinder-volume", "tgt"]
@@ -93,25 +93,25 @@ class CheckResult:
 
 def check_keystone_auth() -> tuple[bool, str]:
     try:
-        logger.debug("Richiesta token Keystone in corso...")
+        logger.debug("Requesting Keystone token...")
         token = run_command_output(["openstack", "token", "issue", "-f", "value", "-c", "id"])
 
         if token.strip():
-            logger.debug("Token Keystone ottenuto correttamente")
+            logger.debug("Keystone token obtained successfully")
             return True, ""
 
-        logger.debug("Token Keystone vuoto")
+        logger.debug("Empty Keystone token")
         return False, "Empty Keystone token received"
     except subprocess.CalledProcessError as e:
-        logger.debug(f"Keystone auth fallita: {e}")
+        logger.debug(f"Keystone auth failed: {e}")
         return False, "Keystone authentication failed. Check credentials or OS_* environment variables"
 
     except subprocess.TimeoutExpired:
-        logger.debug("Timeout durante la richiesta a Keystone")
+        logger.debug("Timeout while requesting Keystone")
         return False, "Keystone request timed out. Check Keystone service availability"
 
     except FileNotFoundError:
-        logger.debug("Comando 'openstack' non trovato")
+        logger.debug("'openstack' command not found")
         return False, "OpenStack client command not found"
     
     except Exception as e:
@@ -125,10 +125,10 @@ def is_package_installed(pkg_name: str) -> bool:
             capture_output=True, text=True, check=True
         )
         installed = "install ok installed" in result.stdout
-        logger.debug(f"Pacchetto '{pkg_name}': {'installato' if installed else 'NON installato'}")
+        logger.debug(f"Package '{pkg_name}': {'installed' if installed else 'NOT installed'}")
         return installed
     except subprocess.CalledProcessError:
-        logger.debug(f"Pacchetto '{pkg_name}': dpkg-query fallito (probabilmente non installato)")
+        logger.debug(f"Package '{pkg_name}': dpkg-query failed (probably not installed)")
         return False
     
 def check_endpoint(service_name: str) -> bool:
@@ -136,7 +136,7 @@ def check_endpoint(service_name: str) -> bool:
         output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "-f", "json", "-c Enabled"])
 
         result = bool(json.loads(output))
-        logger.debug(f"Endpoint '{service_name}': {'presente' if result else 'assente'}")
+        logger.debug(f"Endpoint '{service_name}': {'present' if result else 'absent'}")
         return result
 
     except (
@@ -145,7 +145,7 @@ def check_endpoint(service_name: str) -> bool:
         subprocess.TimeoutExpired,
         FileNotFoundError
     ) as e:
-        logger.debug(f"Endpoint '{service_name}': errore durante il check ({e})")
+        logger.debug(f"Endpoint '{service_name}': error during check ({e})")
         return False
 
 def check_service_active(svc: str) -> bool:
@@ -155,14 +155,14 @@ def check_service_active(svc: str) -> bool:
             timeout=5
         )
         active = result.returncode == 0
-        logger.debug(f"Servizio '{svc}': {'attivo' if active else 'NON attivo'}")
+        logger.debug(f"Service '{svc}': {'active' if active else 'NOT active'}")
         return active
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-        logger.debug(f"Servizio '{svc}': errore durante il check ({e})")
+        logger.debug(f"Service '{svc}': error during check ({e})")
         return False
 
 def check_deployment(include_endpoints: bool = True):
-    logger.debug(f"check_deployment(include_endpoints={include_endpoints}) avviato")
+    logger.debug(f"check_deployment(include_endpoints={include_endpoints}) started")
     result = CheckResult()
 
     services_list = ["apache2", "glance-api"]
@@ -202,7 +202,7 @@ def check_deployment(include_endpoints: bool = True):
         add_check(CheckCategory.ENDPOINTS, items, check_endpoint)
 
     if all(is_package_installed(pkg) for pkg in cinder_pkgs):
-        logger.debug("Cinder rilevato: aggiungo i relativi check")
+        logger.debug("Cinder detected: adding related checks")
         add_services_check(["cinder-scheduler", "cinder-volume", "tgt"])
         add_packages_check(cinder_pkgs)
         add_config_files_check(["/etc/cinder/cinder.conf", "/etc/tgt/conf.d/cinder.conf"])
@@ -211,7 +211,7 @@ def check_deployment(include_endpoints: bool = True):
             add_endpoints_check(["volumev3"])
 
     if all(is_package_installed(pkg) for pkg in manila_pkgs):
-        logger.debug("Manila rilevato: aggiungo i relativi check")
+        logger.debug("Manila detected: adding related checks")
         manila_conf = "/etc/manila/manila.conf"
 
         add_config_files_check([manila_conf])
@@ -266,7 +266,7 @@ def check_deployment(include_endpoints: bool = True):
             else:
                 result.failed.append(label)
 
-    logger.debug(f"check_deployment completato: {len(result.passed)} passed, {len(result.failed)} failed")
+    logger.debug(f"check_deployment completed: {len(result.passed)} passed, {len(result.failed)} failed")
     return result
 
 def check_env_variables():
@@ -308,8 +308,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug",
         action="store_true",
-        help=f"Abilita il logging di debug (equivalente a impostare {DEBUG_ENV_VAR}=1). "
-             "Non usare in produzione."
+        help=f"Enable debug logging (equivalent to setting {DEBUG_ENV_VAR}=1). "
+             "Do not use in production."
     )
     args = parser.parse_args()
 
@@ -381,6 +381,7 @@ def is_openstack_ready() -> bool:
         print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
         print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
         print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
+        print(f"To get more information run with the environment variable 'DEPLOYSTACK_DEPLOYMENT_CHECK_ENABLE_DEBUG' set to 1\n")
         return False
 
     endpoint_check = check_deployment(include_endpoints=True)
