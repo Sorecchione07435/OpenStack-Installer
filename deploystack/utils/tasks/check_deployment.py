@@ -18,8 +18,56 @@ from ..core import colors
 
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
+# Nome della variabile d'ambiente che abilita il debug.
+# Impostare DEPLOYSTACK_DEBUG=1 (o "true"/"yes") per attivarlo.
+# In produzione va lasciata non impostata (o =0), cosi' il logger resta a livello WARNING.
+DEBUG_ENV_VAR = "DEPLOYSTACK_DEBUG"
+
 logger = logging.getLogger(__name__)
-#logger = logging.get#logger(__name__)
+
+
+def _env_flag_enabled(var_name: str) -> bool:
+    """Ritorna True se la variabile d'ambiente indicata rappresenta un valore 'vero'."""
+    value = os.environ.get(var_name, "")
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def is_debug_enabled() -> bool:
+    """Determina se il debugging e' attivo per questo modulo."""
+    return _env_flag_enabled(DEBUG_ENV_VAR)
+
+
+def configure_logging(debug: bool | None = None) -> None:
+    """
+    Configura il logger del modulo.
+
+    - debug=None (default): legge lo stato da DEPLOYSTACK_DEBUG.
+    - debug=True: forza il livello DEBUG (verboso, solo per sviluppo/troubleshooting).
+    - debug=False: forza il livello WARNING (comportamento di produzione, silenzioso).
+    """
+    if debug is None:
+        debug = is_debug_enabled()
+
+    level = logging.DEBUG if debug else logging.WARNING
+    logger.setLevel(level)
+
+    # Evita di aggiungere handler duplicati se la funzione viene chiamata piu' volte
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        ))
+        logger.addHandler(handler)
+
+    logger.propagate = False
+
+    if debug:
+        logger.debug(f"Debug logging abilitato per {__name__} (via {DEBUG_ENV_VAR})")
+
+
+# Configurazione iniziale del logger all'import del modulo,
+# basata sullo stato corrente della variabile d'ambiente.
+configure_logging()
 
 cinder_pkgs = ["cinder-api", "cinder-scheduler", "cinder-volume", "tgt"]
 manila_pkgs = ["manila-api", "manila-scheduler", "python3-manilaclient", "manila-share"]
@@ -45,19 +93,25 @@ class CheckResult:
 
 def check_keystone_auth() -> tuple[bool, str]:
     try:
+        logger.debug("Richiesta token Keystone in corso...")
         token = run_command_output(["openstack", "token", "issue", "-f", "value", "-c", "id"])
 
         if token.strip():
+            logger.debug("Token Keystone ottenuto correttamente")
             return True, ""
 
+        logger.debug("Token Keystone vuoto")
         return False, "Empty Keystone token received"
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"Keystone auth fallita: {e}")
         return False, "Keystone authentication failed. Check credentials or OS_* environment variables"
 
     except subprocess.TimeoutExpired:
+        logger.debug("Timeout durante la richiesta a Keystone")
         return False, "Keystone request timed out. Check Keystone service availability"
 
     except FileNotFoundError:
+        logger.debug("Comando 'openstack' non trovato")
         return False, "OpenStack client command not found"
     
     except Exception as e:
@@ -70,22 +124,28 @@ def is_package_installed(pkg_name: str) -> bool:
             ["dpkg-query", "-W", "-f=${Status}", pkg_name],
             capture_output=True, text=True, check=True
         )
-        return "install ok installed" in result.stdout
+        installed = "install ok installed" in result.stdout
+        logger.debug(f"Pacchetto '{pkg_name}': {'installato' if installed else 'NON installato'}")
+        return installed
     except subprocess.CalledProcessError:
+        logger.debug(f"Pacchetto '{pkg_name}': dpkg-query fallito (probabilmente non installato)")
         return False
     
 def check_endpoint(service_name: str) -> bool:
     try:
         output = run_command_output(["openstack", "endpoint", "list", "--service", service_name, "-f", "json", "-c Enabled"])
 
-        return bool(json.loads(output))
+        result = bool(json.loads(output))
+        logger.debug(f"Endpoint '{service_name}': {'presente' if result else 'assente'}")
+        return result
 
     except (
         json.JSONDecodeError,
         subprocess.CalledProcessError,
         subprocess.TimeoutExpired,
         FileNotFoundError
-    ):
+    ) as e:
+        logger.debug(f"Endpoint '{service_name}': errore durante il check ({e})")
         return False
 
 def check_service_active(svc: str) -> bool:
@@ -94,11 +154,15 @@ def check_service_active(svc: str) -> bool:
             ["systemctl", "is-active", "--quiet", svc],
             timeout=5
         )
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+        active = result.returncode == 0
+        logger.debug(f"Servizio '{svc}': {'attivo' if active else 'NON attivo'}")
+        return active
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        logger.debug(f"Servizio '{svc}': errore durante il check ({e})")
         return False
 
 def check_deployment(include_endpoints: bool = True):
+    logger.debug(f"check_deployment(include_endpoints={include_endpoints}) avviato")
     result = CheckResult()
 
     services_list = ["apache2", "glance-api"]
@@ -138,6 +202,7 @@ def check_deployment(include_endpoints: bool = True):
         add_check(CheckCategory.ENDPOINTS, items, check_endpoint)
 
     if all(is_package_installed(pkg) for pkg in cinder_pkgs):
+        logger.debug("Cinder rilevato: aggiungo i relativi check")
         add_services_check(["cinder-scheduler", "cinder-volume", "tgt"])
         add_packages_check(cinder_pkgs)
         add_config_files_check(["/etc/cinder/cinder.conf", "/etc/tgt/conf.d/cinder.conf"])
@@ -146,6 +211,7 @@ def check_deployment(include_endpoints: bool = True):
             add_endpoints_check(["volumev3"])
 
     if all(is_package_installed(pkg) for pkg in manila_pkgs):
+        logger.debug("Manila rilevato: aggiungo i relativi check")
         manila_conf = "/etc/manila/manila.conf"
 
         add_config_files_check([manila_conf])
@@ -154,24 +220,15 @@ def check_deployment(include_endpoints: bool = True):
         if include_endpoints:
             add_endpoints_check(["sharev2"])
 
-            debian = is_debian()
-            gazpacho = is_os_release("gazpacho")
-
-            print("DEBUG: /etc/os-release:")
-            with open("/etc/os-release") as f:
-                print(f.read())
-
-            print(f"DEBUG: is_debian() = {debian}")
-            print(f"DEBUG: is_os_release('gazpacho') = {gazpacho}")
-            print(f"DEBUG: add share = {not debian and not gazpacho}")
-
-            if not debian and not gazpacho:
+            if not is_debian() and not is_os_release("gazpacho"):
                 add_endpoints_check(["share"])
 
         manila_backend = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_backends") or "").lower()
         manila_protocols_list = (get_conf_option(manila_conf, "DEFAULT", "enabled_share_protocols") or "").lower()
 
         manila_protocols = [protocol for protocol in manila_protocols_list.split(",") if protocol]
+
+        logger.debug(f"Manila backend='{manila_backend}' protocols={manila_protocols}")
 
         if manila_backend == "lvm":
             add_packages_check(["lvm2", "nfs-kernel-server"])
@@ -209,6 +266,7 @@ def check_deployment(include_endpoints: bool = True):
             else:
                 result.failed.append(label)
 
+    logger.debug(f"check_deployment completato: {len(result.passed)} passed, {len(result.failed)} failed")
     return result
 
 def check_env_variables():
@@ -244,6 +302,19 @@ def check_env_variables():
         raise RuntimeError(" | ".join(error_msg))
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="DeployStack deployment checks")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help=f"Abilita il logging di debug (equivalente a impostare {DEBUG_ENV_VAR}=1). "
+             "Non usare in produzione."
+    )
+    args = parser.parse_args()
+
+    if args.debug:
+        configure_logging(debug=True)
 
     outcome = check_deployment(include_endpoints=False)
     print(outcome)
