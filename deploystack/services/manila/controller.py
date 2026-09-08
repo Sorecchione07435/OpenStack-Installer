@@ -8,7 +8,9 @@ from ...utils.config.parser import get
 from ...utils.config.setter import set_conf_option
 from ...utils.core.system_utils import nc_wait
 
-from ...utils.core.system_utils import is_ubuntu_release, is_package_installed
+from ...utils.core.system_utils import is_ubuntu_release
+
+from ..patches.manila.manilaclient import install_manilaclient_in_venv
 
 from ...utils.core import colors
 
@@ -25,23 +27,12 @@ def install_pkgs(config):
 
     if is_ubuntu_release("24.04") and is_os_release(config, "gazpacho"):
 
-        print()
-
         manila_packages.remove("python3-manilaclient")
 
-        if is_package_installed("python3-manilaclient"):
-            print()
-            if not run_command(["apt-get", "remove", "-y", "python3-manilaclient"], "Removing conflicting apt manilaclient...") : return False
-
-        openstackclient_venv = "/opt/openstackclient-venv"
-        venv_pip = f"{openstackclient_venv}/bin/pip"
+        if not install_manilaclient_in_venv(manila_packages, "gazpacho") : return False
 
         print()
 
-        if not run_command([venv_pip, "install", "python-manilaclient==6.0.0"], "Installing Manila Client in venv...") : return False
-
-        print()
-    
     if not apt_install(manila_packages, "Installing Manila packages..."):
         return False
     
