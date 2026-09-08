@@ -358,6 +358,8 @@ def is_openstack_ready() -> bool:
     if not os.path.exists(MARKER_FILE):
         return False
 
+    debug = is_debug_enabled()
+
     try:
         check_env_variables()
     except RuntimeError:
@@ -377,7 +379,7 @@ def is_openstack_ready() -> bool:
         return False
 
     base_check = check_deployment(include_endpoints=False)
-    if not is_debug_enabled():
+    if not debug:
         if not base_check.ok:
             print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
             print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
@@ -386,8 +388,11 @@ def is_openstack_ready() -> bool:
 
     endpoint_check = check_deployment(include_endpoints=True)
     if not endpoint_check.ok:
-        print(f"{colors.RED}OpenStack is deployed but services are not fully operational:{colors.RESET}")
-        print(endpoint_check)
+        if debug:
+            print()
+
+        print(f"{colors.RED}OpenStack is deployed but services are not fully operational:{colors.RESET}\n")
+        print(f"{endpoint_check}\n")
         return False
 
     return True
