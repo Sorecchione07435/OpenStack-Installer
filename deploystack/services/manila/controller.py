@@ -29,7 +29,7 @@ def install_pkgs(config):
 
         manila_packages.remove("python3-manilaclient")
 
-        if not install_manilaclient_in_venv(manila_packages, "gazpacho") : return False
+        if not install_manilaclient_in_venv("gazpacho") : return False
 
         print()
 
