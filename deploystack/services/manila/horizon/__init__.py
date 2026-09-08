@@ -20,7 +20,7 @@ openstack_dashboard_local_enabled_dir = "/usr/share/openstack-dashboard/openstac
 
 def install_pkgs():
 
-    if not apt_install(["python3-manila-ui"], "Installing Python3 Manila UI Packages..."):
+    if not apt_install(["python3-manila-ui"], "Installing Python3 Manila UI Package..."):
         return False
     
     return True
