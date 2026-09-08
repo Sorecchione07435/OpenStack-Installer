@@ -136,9 +136,12 @@ def conf_ovs_bridges(config):
 
     if host_default_gateway:
     
+        host_dns_servers = get(config, "network.HOST_DNS_SERVERS")
+        
         public_bridge_ip_config = (
             f"    address {public_iface_ip}\n"
-            f"    gateway {host_default_gateway}"
+            f"    gateway {host_default_gateway}\n"
+            f"    nameservers {" ".join(host_dns_servers)}"
         )
 
         is_l3_bridge = True
