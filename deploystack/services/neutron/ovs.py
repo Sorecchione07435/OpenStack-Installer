@@ -447,10 +447,10 @@ def create_ovs_networks(config, env):
         else:
             create_internal_network_cmd = create_flat_internal_network_cmd      
     else:
-        create_public_network_cmd = ["openstack", "network", "create", "--share", "public"] 
+        create_public_network_cmd = ["openstack", "network", "create", "--share", public_network["name"]] 
         create_internal_network_cmd = ["openstack", "network", "create", "internal"]
 
-    public_network_exists = any(net.get("Name") == "public" for net in networks_list)
+    public_network_exists = any(net.get("Name") == public_network["name"] for net in networks_list)
 
     if not public_network_exists:
         if not os_run(
@@ -462,7 +462,7 @@ def create_ovs_networks(config, env):
         if not public_subnet_exists:
             if not os_run(
                 ["openstack", "subnet", "create",
-                "--network", "public",
+                "--network", public_network["name"],
                 "--allocation-pool", f"start={public_subnet_range_start},end={public_subnet_range_end}",
                 "--gateway", public_subnet_gateway,
                 "--subnet-range", public_subnet_cidr,
@@ -517,7 +517,7 @@ def create_ovs_networks(config, env):
 
         if not external_gateways_list.get("external_gateway_info"):
             if not os_run(
-                ["openstack", "router", "set", "internal_router", "--external-gateway", "public"],
+                ["openstack", "router", "set", "internal_router", "--external-gateway", public_network["name"]],
                 "Setting external gateway for internal router...", env=env
             ):
                 return False

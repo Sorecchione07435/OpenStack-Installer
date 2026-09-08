@@ -507,7 +507,7 @@ def create_ovn_networks(config, env):
     subnets_list = json.loads(os_run_output(["openstack", "subnet", "list", "-f", "json"], env=env))
     routers_list = json.loads(os_run_output(["openstack", "router", "list", "-f", "json"], env=env))
 
-    public_network_exists = any(net.get("Name") == "public" for net in networks_list)
+    public_network_exists = any(net.get("Name") == public_network["name"] for net in networks_list)
     if not public_network_exists:
         net_type = public_network.get("type", "flat") if public_network else "flat"
 
@@ -606,7 +606,7 @@ def create_ovn_networks(config, env):
 
         if not external_gateways_list.get("external_gateways"):
             if not os_run(
-                ["openstack", "router", "set", "internal_router", "--external-gateway", "public"],
+                ["openstack", "router", "set", "internal_router", "--external-gateway", public_network["name"]],
                 "Setting external gateway for internal router...", env=env
             ):
                 return False
