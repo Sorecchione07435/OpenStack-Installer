@@ -377,12 +377,12 @@ def is_openstack_ready() -> bool:
         return False
 
     base_check = check_deployment(include_endpoints=False)
-    if not base_check.ok:
-        print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
-        print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
-        print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
-        print(f"To get more information run with the environment variable 'DEPLOYSTACK_DEPLOYMENT_CHECK_ENABLE_DEBUG' set to 1\n")
-        return False
+    if not is_debug_enabled():
+        if not base_check.ok:
+            print(f"{colors.RED}OpenStack is not deployed yet.{colors.RESET}\n")
+            print(f"{colors.YELLOW}  • Run 'deploy --allinone' for a full automated deployment{colors.RESET}")
+            print(f"{colors.YELLOW}  • Or run 'deploy --config-file <config_file>' with a custom config{colors.RESET}\n")
+            return False
 
     endpoint_check = check_deployment(include_endpoints=True)
     if not endpoint_check.ok:
